@@ -1,14 +1,17 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='cotk',
+    name='contk',
     version='0.0.1',
     packages=find_packages(exclude=['tests*']),
     license='MIT',
-    description='Coversational Processing Toolkits',
-    long_description=open('README.md').read(),
-    install_requires=['numpy'],
-    url='https://github.com/',
-    author='cotk-THU',
-    author_email='cotk@example.com'
+    description='Coversational Toolkits',
+    long_description=open('README.md', encoding='UTF-8').read(),
+    install_requires=[
+        'numpy>=1.13',
+        'nltk>=3.2'
+    ],
+    url='https://github.com/hzhwcmhf/contk',
+    author='thu-coai',
+    author_email='contk@example.com'
 )
