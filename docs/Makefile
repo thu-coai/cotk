@@ -2,11 +2,11 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    =
+SPHINXOPTS    = -W
 SPHINXBUILD   = sphinx-build
 SPHINXPROJ    = contk
 SOURCEDIR     = source
-BUILDDIR      = ../../contk_docs/docs
+BUILDDIR      = build
 
 # Put it first so that "make" without argument is like "make help".
 help:

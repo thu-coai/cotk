@@ -1,5 +1,7 @@
 # Conversational Toolkits
 
+[![Build Status](https://travis-ci.com/thu-coai/contk.svg?branch=master)](https://travis-ci.com/thu-coai/contk)
+
 ### Environment
 
 * **python 3**

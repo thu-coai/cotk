@@ -1,0 +1,25 @@
+language: python
+
+python:
+  - 3.6
+
+install:
+  - pip install sphinx
+
+script:
+  - pip install -e .
+  - cd docs
+  - make html
+  - mv ./build/html ./build/docs
+  - rm -r ./build/doctrees
+
+deploy:
+  provider: pages
+  skip-cleanup: true
+  github-token: $DEPLOY_KEY
+  keep-history: true
+  repo: thu-coai/contk_docs
+  target-branch: master
+  local-dir: ./docs/build
+  on:
+    branch: master
