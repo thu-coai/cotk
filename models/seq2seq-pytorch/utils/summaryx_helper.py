@@ -2,20 +2,27 @@
 
 import os
 import os.path
+import json
 
 import tensorboardX as tx
 import torch
 
 class SummaryHelper:
-	def __init__(self, filename):
-		directory = os.path.dirname(filename)
-		if not os.path.exists(directory):
-			os.makedirs(directory)
-		self.writer = tx.SummaryWriter(filename)
+	def __init__(self, filename, args=None):
+		self.writer = None
+		self.filename = filename
+		self.args = args
 
 	def addGroup(self, *, scalar=[], tensor=[], image=[], text=[], embedding=[], prefix=""):
 
 		def write(i, data):
+			if self.writer is None:
+				directory = os.path.dirname(self.filename)
+				if not os.path.exists(directory):
+					os.makedirs(directory)
+				self.writer = tx.SummaryWriter(self.filename)
+				self.writer.add_text("args", json.dumps(self.args, indent=2).replace("\n", "  \n\n"), i)
+
 			for name in scalar:
 				if name in data:
 					self.writer.add_scalar("%s/%s" % (prefix, name), data[name], i)
@@ -27,7 +34,8 @@ class SummaryHelper:
 					self.writer.add_image("%s/%s" % (prefix, name), data[name], i)
 			for name in text:
 				if name in data:
-					self.writer.add_text("%s/%s" % (prefix, name), data[name], i)
+					markdown_text = data[name].replace("\n", "  \n\n")
+					self.writer.add_text("%s/%s" % (prefix, name), markdown_text, i)
 			for name in embedding:
 				if name in data:
 					emb = data[name]

@@ -48,9 +48,22 @@ class BaseNetwork(nn.Module):
 		exclude_set = exclude_set or []
 		own_state = self.state_dict()
 		own_state_new = OrderedDict()
+
+		if isinstance(exclude_set, str):
+			exclude_set = [exclude_set]
+		if isinstance(exclude_set, list):
+			exclude_set_list = exclude_set
+			exclude_set = lambda name: self.in_collection(name, exclude_set_list) or \
+								self.remove_collection_name(name) in exclude_set_list
+		if isinstance(whitelist, str):
+			whitelist = [whitelist]
+		if isinstance(whitelist, list):
+			whitelist_list = whitelist
+			whitelist = lambda name: self.in_collection(name, whitelist_list) or \
+								self.remove_collection_name(name) in whitelist_list
+
 		for name, param in own_state.items():
-			if self.in_collection(name, exclude_set) or whitelist and \
-					not self.in_collection(name, whitelist):
+			if (exclude_set and exclude_set(name)) or (whitelist and not whitelist(name)):
 				logging.warning('discard loading %s', name)
 			else:
 				own_state_new[self.remove_collection_name(name)] = param

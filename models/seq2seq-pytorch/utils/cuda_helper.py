@@ -41,11 +41,11 @@ def init(device=None, __cuda=False):
 		_tensor_type = torch.FloatTensor
 		_long_tensor_type = torch.LongTensor
 
-def TensorType():
-	return _tensor_type
+def Tensor(*x):
+	return _tensor_type(*x)
 
-def LongTensorType():
-	return _long_tensor_type
+def LongTensor(*x):
+	return _long_tensor_type(*x)
 
 def cuda(*x):
 	return _cuda(*x)

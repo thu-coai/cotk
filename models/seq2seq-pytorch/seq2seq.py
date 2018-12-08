@@ -5,8 +5,9 @@ import os
 
 import torch
 from torch import nn, optim
+import numpy as np
 
-from utils import Storage, cuda, BaseModel, SummaryHelper, getMean
+from utils import Storage, cuda, BaseModel, SummaryHelper, get_mean, storage_to_list
 from network import Network
 
 class Seq2seq(BaseModel):
@@ -21,14 +22,15 @@ class Seq2seq(BaseModel):
 		self.create_summary()
 
 	def create_summary(self):
-		self.summaryHelper = SummaryHelper("tensorboard/%s_%s" % \
-				(self.param.args.logname, time.strftime("%H%M%S", time.localtime())))
-
+		args = self.param.args
+		self.summaryHelper = SummaryHelper("%s/%s_%s" % \
+				(args.log_dir, args.name, time.strftime("%H%M%S", time.localtime())), \
+				args)
 		self.trainSummary = self.summaryHelper.addGroup(\
 			scalar=["loss", "word_loss", "perplexity"],\
-			prefix="gen")
+			prefix="train")
 
-		scalarlist = ["word_loss", "perplexity"]
+		scalarlist = ["word_loss", "perplexity_avg_on_batch"]
 		tensorlist = []
 		textlist = []
 		emblist = []
@@ -85,7 +87,7 @@ class Seq2seq(BaseModel):
 			self.net.forward(incoming)
 
 			loss = incoming.result.loss
-			self.trainSummary(self.now_batch, self.convertGPUtoCPU(incoming.result))
+			self.trainSummary(self.now_batch, storage_to_list(incoming.result))
 			logging.info("batch %d : gen loss=%f", self.now_batch, loss.detach().cpu().numpy())
 
 			loss.backward()
@@ -111,13 +113,15 @@ class Seq2seq(BaseModel):
 
 		detail_arr = Storage()
 		for i in args.show_sample:
-			incoming = self.get_select_batch(dm, key, i)
+			index = [i * args.batch_size + j for j in range(args.batch_size)]
+			incoming = self.get_select_batch(dm, key, index)
 			incoming.args = Storage()
 			with torch.no_grad():
 				self.net.detail_forward(incoming)
 			detail_arr["show_str%d" % i] = incoming.result.show_str
 
-		detail_arr.update({key:getMean(result_arr, key) for key, _ in result_arr[0].items()})
+		detail_arr.update({key:get_mean(result_arr, key) for key in result_arr[0]})
+		detail_arr.perplexity_avg_on_batch = np.exp(detail_arr.word_loss)
 		return detail_arr
 
 	def train_process(self):
@@ -141,14 +145,19 @@ class Seq2seq(BaseModel):
 			self.testSummary(self.now_batch, testloss_detail)
 			logging.info("epoch %d, evaluate test", self.now_epoch)
 
-			self.save_checkpoint()
+			if devloss_detail.loss.tolist() < self.best_loss:
+				self.best_loss = devloss_detail.loss.tolist()
+				self.save_checkpoint(True)
+			else:
+				self.save_checkpoint()
 
 	def test(self, key):
 		args = self.param.args
 		dm = self.param.volatile.dm
-		
-		dm.restart(key, 1, shuffle=False)
-		result_arr = []
+
+		dm.restart(key, args.batch_size, shuffle=False)
+		metric1 = dm.get_teacher_forcing_metric()
+
 		while True:
 			incoming = self.get_next_batch(dm, key, restart=False)
 			if incoming is None:
@@ -156,10 +165,16 @@ class Seq2seq(BaseModel):
 			incoming.args = Storage()
 			with torch.no_grad():
 				self.net.forward(incoming)
-			result_arr.append(incoming.result)
+				gen_prob = nn.functional.softmax(incoming.gen.w, -1)
+			data = Storage()
+			data.resp = incoming.data.resp.detach().cpu().numpy().transpose(1, 0)
+			data.resp_length = incoming.data.resp_length
+			data.gen_prob = gen_prob.detach().cpu().numpy().transpose(1, 0, 2)
+			metric1.forward(data)
+		res = metric1.close()
 
-		dm.restart(key, 1, shuffle=False)
-		detail_arr = []
+		dm.restart(key, args.batch_size, shuffle=False)
+		metric2 = dm.get_inference_metric()
 		while True:
 			incoming = self.get_next_batch(dm, key, restart=False)
 			if incoming is None:
@@ -167,19 +182,27 @@ class Seq2seq(BaseModel):
 			incoming.args = Storage()
 			with torch.no_grad():
 				self.net.detail_forward(incoming)
-			detail_arr.append(incoming.result)
-		show_metric = ["perplexity"]
+			data = Storage()
+			data.resp = incoming.data.resp.detach().cpu().numpy().transpose(1, 0)
+			data.post = incoming.data.post.detach().cpu().numpy().transpose(1, 0)
+			data.gen = incoming.gen.w_o.detach().cpu().numpy().transpose(1, 0)
+			metric2.forward(data)
+		res.update(metric2.close())
 
-		logging.info("%s Test Result:", key)
-		for s in show_metric:
-			logging.info("\t%s:\t%f", s, getMean(result_arr, s))
+		if not os.path.exists(args.out_dir):
+			os.makedirs(args.out_dir)
+		filename = args.out_dir + "/%s_%s.txt" % (args.name, key)
 
-		if not os.path.exists(args.outdir):
-			os.makedirs(args.outdir)
-		filename = args.outdir + "/%s.txt" % key
 		with open(filename, 'w') as f:
-			for i in detail_arr:
-				f.write(i.show_str)
+			logging.info("%s Test Result:", key)
+			for key, value in res.items():
+				if isinstance(value, float):
+					logging.info("\t%s:\t%f", key, value)
+					f.write("%s:\t%f\n" % (key, value))
+			for i in range(len(res['post'])):
+				f.write("post:\t%s\n" % " ".join(res['post'][i]))
+				f.write("resp:\t%s\n" % " ".join(res['resp'][i]))
+				f.write("gen:\t%s\n" % " ".join(res['gen'][i]))
 			f.flush()
 		logging.info("result output to %s.", filename)
 

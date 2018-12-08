@@ -2,7 +2,7 @@
 import math
 import numpy as np
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.nn import Parameter
 from torch.nn._functions.rnn import GRUCell as F_GRUCell
 from torch.nn.modules.rnn import GRU
@@ -33,7 +33,7 @@ def sortSequenceByMemo(data, memo):
 		res[i, :] = data[idx, :]
 	return res
 
-def revertSequence(data, memo, isseq = False):
+def revertSequence(data, memo, isseq=False):
 	shape, memo, zero_num = memo
 	if isseq:
 		res = zeros(data.shape[0], data.shape[1]+zero_num, data.shape[2])
@@ -50,16 +50,16 @@ def flattenSequence(data, length):
 	arr = []
 	for i in range(length.size):
 		arr.append(data[0:length[i], i])
-	return torch.cat(arr, dim = 0)
+	return torch.cat(arr, dim=0)
 
 def copySequence(data, length): # for BOW loss
 	arr = []
 	for i in range(length.size):
 		arr.append(data[i].repeat(length[i], 1))
-	return torch.cat(arr, dim = 0)
+	return torch.cat(arr, dim=0)
 
 class MyGRU(nn.Module):
-	def __init__(self, input_size, hidden_size, layers = 1, bidirectional = False, initpara = True):
+	def __init__(self, input_size, hidden_size, layers=1, bidirectional=False, initpara=True):
 		super(MyGRU, self).__init__()
 
 		self.input_size, self.hidden_size, self.layers, self.bidirectional = \
@@ -70,7 +70,7 @@ class MyGRU(nn.Module):
 			if bidirectional:
 				self.h_init = Parameter(torch.Tensor(2 * layers, 1, hidden_size))
 			else:
-				self.h_init = Parameter(torch.Tensor(layers, 1, hidden_size))		
+				self.h_init = Parameter(torch.Tensor(layers, 1, hidden_size))
 		self.reset_parameters()
 
 	def reset_parameters(self):

@@ -1,7 +1,5 @@
 # coding:utf-8
 
-import logging
-
 class Storage(dict):
 	def __init__(self, *args, **kw):
 		dict.__init__(self, *args, **kw)
@@ -18,30 +16,35 @@ class Storage(dict):
 	def __delattr__(self, key):
 		del self[key]
 
-	def compare(self, newobj):
-		for i, j in newobj.items():
-			if i not in self:
-				logging.info("%s new: %s", i, j)
-			elif isinstance(self[i], Storage):
-				self[i].compare(j)
-			else:
-				if self[i] != j:
-					logging.info("%s old: %s; new: %s", i, self[i], j)
+	def __sub__(self, b):
+		'''Delete all items which b has (ignore values).
+		'''
+		res = Storage()
+		for i, j in self.items():
+			if i not in b:
+				res[i] = j
+			elif isinstance(j, Storage) and isinstance(b[i], Storage):
+				diff = j - b[i]
+				res[i] = diff
+		return res
 
-	def join(self, commonobj):
-		for i, j in commonobj.items():
+	def __xor__(self, b):
+		'''Return different items in two Storages (only intersection keys).
+		'''
+		res = Storage()
+		for i, j in self.items():
+			if i in b:
+				if isinstance(j, Storage) and isinstance(b[i], Storage):
+					res[i] = j ^ b[i]
+				elif j != b[i]:
+					res[i] = (j, b[i])
+		return res
+
+	def update(self, b):
+		'''will NOT overwrite existed key.
+		'''
+		for i, j in b.items():
 			if i not in self:
 				self[i] = j
-			elif isinstance(self[i], Storage):
-				self[i].join(j)
-			else:
-				if self[i] != j:
-					logging.info("args: %s common: %s; new: %s", i, j, self[i])
-
-	def check(self, checkobj):
-		for i, j in checkobj.items():
-			if i not in self:
-				logging.info("args not find: %s", i)
-				exit()
-			elif isinstance(self[i], Storage):
-				self[i].check(j)
+			elif isinstance(self[i], Storage) and isinstance(j, Storage):
+				self[i].update(j)

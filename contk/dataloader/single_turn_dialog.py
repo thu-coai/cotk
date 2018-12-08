@@ -5,29 +5,31 @@ import random
 import numpy as np
 
 from .dataloader import Dataloader
+from ..metric import MetricChain, PerlplexityMetric, BleuCorpusMetric, SingleDialogRecorder
 
 class SingleTurnDialog(Dataloader):
 	r"""Base class for single-turn dialog datasets.
 
 	Attributes:
 		ext_vocab (list): special tokens, must be placed at beginning of `vocab_list`.
-			default: ``["<pad>", "<unk>", "<go>", "<eos>"]``
-		pad_id (int): token for padding. default: 0
-		unk_id (int): token for unkown words. default: 1
-		go_id (int): token at the beginning of sentences. default: 2
-		eos_id (int): token at the end of sentences. default: 3
-		key_name (list): name of subsets of the data. default: ``["train", "dev", "test"]``
+			default: `["<pad>", "<unk>", "<go>", "<eos>"]`
+		pad_id (int): token for padding. default: `0`
+		unk_id (int): token for unkown words. default: `1`
+		go_id (int): token at the beginning of sentences. default: `2`
+		eos_id (int): token at the end of sentences. default: `3`
+		key_name (list): name of subsets of the data. default: `["train", "dev", "test"]`
 		vocab_list (list): all tokens of the datasets.
 		word2id (dict):  a dict mapping tokens to index.
-			Maybe you want to use :meth:`.sen_to_index` instead.
+			Maybe you want to use :meth:`sen_to_index` instead.
 
 	Note:
-		(For developer) You must initialize following attributes in the subclasses.
+		**(For developer)** You must initialize following attributes in the subclasses.
 
 		* vocab (list): don't forget `ext_vocab`.
 		* word2id (dict): should be initialized by ``{w: i for i, w in enumerate(self.vocab_list)}``
 		* data (dict): a dict mapping `key_name` to lists, which contains sentences in index form.
-		* index (dict): a dict mapping `key_name` to lists, should be initialized by ``list(range(len(data[key])))``
+		* index (dict): a dict mapping `key_name` to lists, should be initialized
+		  by ``list(range(len(data[key])))``
 	"""
 	def __init__(self, _key_name=None):
 		super().__init__()
@@ -57,7 +59,7 @@ class SingleTurnDialog(Dataloader):
 
 	@property
 	def vocab_size(self):
-		'''Equals to len(self.vocab_list). Read only.
+		'''Equals to `len(self.vocab_list)`. Read only.
 		'''
 		return len(self.vocab_list)
 
@@ -68,7 +70,7 @@ class SingleTurnDialog(Dataloader):
 		Arguments:
 			key (str): must be contained in `key_name`
 			batch_size (None or int): default (None): use last batch_size.
-			shuffle (bool): whether to shuffle the data. default: ``True``
+			shuffle (bool): whether to shuffle the data. default: `True`
 		'''
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
@@ -91,7 +93,7 @@ class SingleTurnDialog(Dataloader):
 				len(self.index[key]) % self.batch_size[key]))
 
 	def get_batch(self, key, index):
-		'''Get a batch of specified `index`.```
+		'''Get a batch of specified `index`.
 
 		Arguments:
 			key (str): must be contained in `key_name`
@@ -111,10 +113,11 @@ class SingleTurnDialog(Dataloader):
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
 		res = {}
+		batch_size = len(index)
 		res["post_length"] = np.array(list(map(lambda i: len(self.data[key]['post'][i]), index)))
 		res["resp_length"] = np.array(list(map(lambda i: len(self.data[key]['resp'][i]), index)))
-		res["post"] = np.zeros((self.batch_size[key], np.max(res["post_length"])), dtype=int)
-		res["resp"] = np.zeros((self.batch_size[key], np.max(res["resp_length"])), dtype=int)
+		res["post"] = np.zeros((batch_size, np.max(res["post_length"])), dtype=int)
+		res["resp"] = np.zeros((batch_size, np.max(res["resp_length"])), dtype=int)
 		for i, j in enumerate(index):
 			post = self.data[key]['post'][j]
 			resp = self.data[key]['resp'][j]
@@ -122,20 +125,24 @@ class SingleTurnDialog(Dataloader):
 			res["resp"][i, :len(resp)] = resp
 		return res
 
-	def get_next_batch(self, key):
+	def get_next_batch(self, key, ignore_left_samples=False):
 		'''Get next batch.
 
 		Arguments:
 			key (str): must be contained in `key_name`
+			ignore_left_samples (bool): Ignore the last batch, whose sample num
+				is smaller than `batch_size`. Default: `False`
 
 		Returns:
-			A dict like :func:.get_batch, or None if the epoch is end.
+			A dict like :func:`get_batch`, or None if the epoch is end.
 		'''
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
 		batch_id = self.batch_id[key]
 		start, end = batch_id * self.batch_size[key], (batch_id + 1) * self.batch_size[key]
-		if end > len(self.index[key]):
+		if start >= len(self.index[key]):
+			return None
+		if ignore_left_samples and end > len(self.index[key]):
 			return None
 		index = self.index[key][start:end]
 		res = self.get_batch(key, index)
@@ -175,24 +182,52 @@ class SingleTurnDialog(Dataloader):
 		'''
 		if trim:
 			try:
-				index = index[:index.index(self.pad_id)]
+				index = index[:list(index).index(self.pad_id)]
 			except ValueError:
 				pass
 		return list(map(lambda word: self.vocab_list[word], index))
 
+	def get_teacher_forcing_metric(self, gen_prob_key="gen_prob"):
+		'''Get metric for teacher-forcing mode.
+
+		It contains:
+
+		* :class:`.metric.PerlplexityMetric`
+
+		Arguments:
+			gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerlplexityMetric`
+		'''
+		return PerlplexityMetric(gen_prob_key=gen_prob_key)
+
+	def get_inference_metric(self, gen_key="gen"):
+		'''Get metric for inference.
+
+		
+
+		It contains:
+
+		* :class:`.metric.BleuCorpusMetric`
+		* :class:`.metric.SingleDialogRecorder`
+
+		Arguments:
+			gen_key (str): default: "gen". Refer to :class:`.metric.BleuCorpusMetric` or :class:`.metric.SingleDialogRecorder`
+		'''
+		metric = MetricChain()
+		metric.add_metric(BleuCorpusMetric(gen_key=gen_key))
+		metric.add_metric(SingleDialogRecorder(self, gen_key=gen_key))
+		return metric
 
 class OpenSubtitles(SingleTurnDialog):
-	'''A dataloder for OpenSubtitles dataset. 
+	'''A dataloder for OpenSubtitles dataset.
 
 	Arguments:
 		file_path (str): a str indicates the dir of OpenSubtitles dataset.
 		min_vocab_times (int): A cut-off threshold of `UNK` tokens. All tokens appear
-			less than `min_vocab_times`	will be replaced by ``<unk>``. Default: 10.
+			less than `min_vocab_times`	will be replaced by `<unk>`. Default: 10.
 		max_sen_length (int): All sentences longer than `max_sen_length` will be shortened
 			to first `max_sen_length` tokens. Default: 50.
 
-	Arguments:
-		Inherited from :class:.SingleTurnDialog
+	Refer to :class:`.SingleTurnDialog` for other attributes.
 
 	Todo:
 		* add references

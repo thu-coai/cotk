@@ -1,5 +1,5 @@
 r"""
-``contk.wordvector`` provides classes and functions downloading and
+`contk.wordvector` provides classes and functions downloading and
 loading wordvector automatically.
 """
 

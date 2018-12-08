@@ -23,15 +23,24 @@ class AnnealHelper:
 				if self.instance.param.other_weights[self.name] < self.end:
 					self.instance.param.other_weights[self.name] = self.end
 
-def createSet(value):
-	return ("set", {"value": value})
+	def over(self):
+		return self.instance.param.other_weights[self.name] == self.end
 
-def createHold(value):
-	return ("hold", {"value": value})
+class AnnealParameter(tuple):
+	'''Set parameter for AnnealHelper. BaseModel will automatically create AnnealHelper.
+	'''
+	@staticmethod
+	def create_set(value):
+		return AnnealParameter("set", {"value": value})
 
-def createAnneal(beginValue, startBatch, startValue, endValue, multi):
-	return ("anneal", {"beginValue": beginValue, "startBatch": startBatch, "startValue": startValue, "endValue":endValue, "multi":multi})
+	@staticmethod
+	def create_hold(value):
+		return AnnealParameter("hold", {"value": value})
 
-def createSetAndAnneal(startValue, endValue, multi):
-	return ("set&anneal", {"startValue": startValue, "endValue":endValue, "multi":multi})
+	@staticmethod
+	def create_anneal(beginValue, startBatch, startValue, endValue, multi):
+		return AnnealParameter("anneal", {"beginValue": beginValue, "startBatch": startBatch, "startValue": startValue, "endValue":endValue, "multi":multi})
 
+	@staticmethod
+	def create_set_and_anneal(startValue, endValue, multi):
+		return AnnealParameter("set&anneal", {"startValue": startValue, "endValue":endValue, "multi":multi})

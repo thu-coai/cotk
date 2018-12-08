@@ -4,7 +4,7 @@ import logging
 import torch
 from torch import nn
 
-from utils import zeros, LongTensorType,\
+from utils import zeros, LongTensor,\
 			BaseNetwork, MyGRU, Storage, gumbel_max, flattenSequence
 
 # pylint: disable=W0221
@@ -105,7 +105,7 @@ class GenNetwork(nn.Module):
 		batch_size = inp.batch_size
 		dm = self.param.volatile.dm
 
-		first_emb = inp.embLayer(LongTensorType()([dm.go_id])).repeat(batch_size, 1)
+		first_emb = inp.embLayer(LongTensor([dm.go_id])).repeat(batch_size, 1)
 		gen.w_pro = []
 		gen.w_o = []
 		gen.emb = []
@@ -172,6 +172,6 @@ class GenNetwork(nn.Module):
 		incoming.result.post_str = post_str = \
 				[" ".join(dm.index_to_sen(incoming.data.post[:, i].detach().cpu().numpy().tolist()))\
 				for i in range(batch_size)]
-		incoming.result.show_str = "    \n\n".join(["post: " + a + "  \n\n" + "resp: " + b + "  \n\n" + \
-				"golden: " + c + "  \n\n" \
+		incoming.result.show_str = "\n".join(["post: " + a + "\n" + "resp: " + b + "\n" + \
+				"golden: " + c + "\n" \
 				for a, b, c in zip(post_str, resp_str, golden_str)])
