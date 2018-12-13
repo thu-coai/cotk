@@ -5,21 +5,30 @@ python:
 
 install:
   - pip install sphinx
+  - pip install pytest-cov
+  - pip install codacy-coverage
 
 script:
   - pip install -e .
+  - py.test --cov=contk tests/ --cov-report xml
   - cd docs
   - make html
   - mv ./build/html ./build/docs
   - rm -r ./build/doctrees
+  - cd ..
 
 deploy:
-  provider: pages
-  skip-cleanup: true
-  github-token: $DEPLOY_KEY
-  keep-history: true
-  repo: thu-coai/contk_docs
-  target-branch: master
-  local-dir: ./docs/build
-  on:
-    branch: master
+  - provider: pages
+    skip-cleanup: true
+    github-token: $DEPLOY_KEY
+    keep-history: true
+    repo: thu-coai/contk_docs
+    target-branch: master
+    local-dir: ./docs/build
+    on:
+      branch: master
+  - provider: script
+    skip-cleanup: true
+    script: python-codacy-coverage -r coverage.xml
+    on:
+      branch: unittest

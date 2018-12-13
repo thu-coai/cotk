@@ -8,54 +8,86 @@ from .dataloader import Dataloader
 from ..metric import MetricChain, PerlplexityMetric, BleuCorpusMetric, SingleDialogRecorder
 
 class SingleTurnDialog(Dataloader):
-	r"""Base class for single-turn dialog datasets.
+	r"""Base class for single-turn dialog datasets. This is an abstract class.
+
+	Arguments:
+		ext_vocab (list): special tokens. default: `["<pad>", "<unk>", "<go>", "<eos>"]`
+		key_name (list): name of subsets of the data. default: `["train", "dev", "test"]`
 
 	Attributes:
-		ext_vocab (list): special tokens, must be placed at beginning of `vocab_list`.
-			default: `["<pad>", "<unk>", "<go>", "<eos>"]`
-		pad_id (int): token for padding. default: `0`
-		unk_id (int): token for unkown words. default: `1`
-		go_id (int): token at the beginning of sentences. default: `2`
-		eos_id (int): token at the end of sentences. default: `3`
-		key_name (list): name of subsets of the data. default: `["train", "dev", "test"]`
-		vocab_list (list): all tokens of the datasets.
-		word2id (dict):  a dict mapping tokens to index.
+		ext_vocab (list): special tokens, be placed at beginning of `vocab_list`.
+			Foe example: `["<pad>", "<unk>", "<go>", "<eos>"]`
+		pad_id (int): token for padding, always equal to `0`
+		unk_id (int): token for unkown words, always equal to `1`
+		go_id (int): token at the beginning of sentences, always equal to `2`
+		eos_id (int): token at the end of sentences, always equal to `3`
+		key_name (list): name of subsets of the data. For example: `["train", "dev", "test"]`
+		vocab_list (list): vocabulary list of the datasets.
+		word2id (dict): a dict mapping tokens to index.
 			Maybe you want to use :meth:`sen_to_index` instead.
-
-	Note:
-		**(For developer)** You must initialize following attributes in the subclasses.
-
-		* vocab (list): don't forget `ext_vocab`.
-		* word2id (dict): should be initialized by ``{w: i for i, w in enumerate(self.vocab_list)}``
-		* data (dict): a dict mapping `key_name` to lists, which contains sentences in index form.
-		* index (dict): a dict mapping `key_name` to lists, should be initialized
-		  by ``list(range(len(data[key])))``
 	"""
-	def __init__(self, _key_name=None):
+	def __init__(self,		\
+			ext_vocab=None, \
+			key_name=None,	\
+		):
 		super().__init__()
 
 		# initialize by default value. (can be overwritten by subclass)
-		self.ext_vocab = ["<pad>", "<unk>", "<go>", "<eos>"]
-		self.pad_id = 0
-		self.unk_id = 1
-		self.go_id = 2
-		self.eos_id = 3
-		if not _key_name:
-			_key_name = ["train", "dev", "test"]
-		self.key_name = _key_name
+		self.ext_vocab = ext_vocab or ["<pad>", "<unk>", "<go>", "<eos>"]
+		self.pad_id = self.ext_vocab.index("<pad>")
+		self.unk_id = self.ext_vocab.index("<unk>")
+		self.go_id = self.ext_vocab.index("<go>")
+		self.eos_id = self.ext_vocab.index("<eos>")
+		self.key_name = key_name or ["train", "dev", "test"]
 
 		# initialize by subclass
-		self.vocab_list = []
-		self.word2id = {}
-		self.data = {}
-		self.index = {}
+		self.vocab_list, self.data = self._load_data()
+		self.word2id = {w: i for i, w in enumerate(self.vocab_list)}
 
-		# don't need initialize
+		# postprocess initialization
+		self.index = {}
 		self.batch_id = {}
 		self.batch_size = {}
 		for key in self.key_name:
 			self.batch_id[key] = 0
 			self.batch_size[key] = None
+			self.index[key] = list(range(len(self.data[key]['post'])))
+
+	def _load_data(self):
+		r'''This function is called during the initialization.
+
+		Returns:
+			(tuple): tuple containing (refer to the following example):
+
+				vocab_list (list): vocabulary list of the datasets.
+				data (dict): a dict contains data.
+
+		Examples:
+		.. highlight:: python
+    	.. code-block:: python
+			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", \
+						  "are", "you", "hello", "i", "am", \
+						  "fine"]
+			data = {
+				"train": [
+					"post": [
+						[2, 5, 6, 7, 3],  # first post: <go> how are you <eos>
+						[2, 8, 3],        # second post: <go> hello <eos>
+					],
+					"resp": [
+						[2, 9, 10, 11, 3], # first response: <go> i am fine <eos>
+						[2, 8, 3], # first response: <go> hello <eos>
+					]
+				],
+				"dev": [...],   # similar to train
+				"test": [...],  # similar to train
+			}
+
+		Notes:
+			You can use ``ext_vocab``, ``key_name``, ``pad_id``, ``unk_id``, ``go_id``,
+			``eos_id``, but other attributes are not initialized.
+		'''
+		raise NotImplementedError("This function should be implemented by subclasses.")
 
 	@property
 	def vocab_size(self):
@@ -74,14 +106,8 @@ class SingleTurnDialog(Dataloader):
 		'''
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
-		if not shuffle:
-			if batch_size is None and self.batch_size[key] is None:
-				raise ValueError("You need batch_size to intialize.")
-			if self.batch_size[key] is not None and \
-					batch_size is not None and batch_size != self.batch_size[key]:
-				raise ValueError("If you want to change batch_size, you must shuffle.")
-		if shuffle and batch_size is None:
-			raise ValueError("You need batch_size to shuffle.")
+		if batch_size is None and self.batch_size[key] is None:
+			raise ValueError("You need batch_size to intialize.")
 		if shuffle:
 			random.shuffle(self.index[key])
 
@@ -105,7 +131,7 @@ class SingleTurnDialog(Dataloader):
 
 		Examples:
 			>>> dataloader.get_batch('train', 1)
-			>>> 
+			>>>
 
 		Todo:
 			* fix the missing example
@@ -131,13 +157,15 @@ class SingleTurnDialog(Dataloader):
 		Arguments:
 			key (str): must be contained in `key_name`
 			ignore_left_samples (bool): Ignore the last batch, whose sample num
-				is smaller than `batch_size`. Default: `False`
+				is not equal to `batch_size`. Default: `False`
 
 		Returns:
 			A dict like :func:`get_batch`, or None if the epoch is end.
 		'''
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
+		if self.batch_size[key] is None:
+			raise RuntimeError("Please run restart before calling this function.")
 		batch_id = self.batch_id[key]
 		start, end = batch_id * self.batch_size[key], (batch_id + 1) * self.batch_size[key]
 		if start >= len(self.index[key]):
@@ -158,12 +186,12 @@ class SingleTurnDialog(Dataloader):
 		Examples:
 			>>> dataloader.sen_to_index(
 			...		["<go>", "I", "have", "been", "to", "Sichuan", "province", "eos"])
-			>>> 
+			>>>
 
 		Todo:
 			* fix the missing example
 		'''
-		return list(map(lambda word: self.word2id.get(word, self.unk_id, sen)))
+		return list(map(lambda word: self.word2id.get(word, self.unk_id), sen))
 
 	def index_to_sen(self, index, trim=True):
 		'''Convert a sentences from index to string representation
@@ -175,7 +203,7 @@ class SingleTurnDialog(Dataloader):
 		Examples:
 			>>> dataloader.index_to_sen(
 			...		[])
-			>>> 
+			>>>
 
 		Todo:
 			* fix the missing example
@@ -202,15 +230,14 @@ class SingleTurnDialog(Dataloader):
 	def get_inference_metric(self, gen_key="gen"):
 		'''Get metric for inference.
 
-		
-
 		It contains:
 
 		* :class:`.metric.BleuCorpusMetric`
 		* :class:`.metric.SingleDialogRecorder`
 
 		Arguments:
-			gen_key (str): default: "gen". Refer to :class:`.metric.BleuCorpusMetric` or :class:`.metric.SingleDialogRecorder`
+			gen_key (str): default: "gen". Refer to :class:`.metric.BleuCorpusMetric` or
+			               :class:`.metric.SingleDialogRecorder`
 		'''
 		metric = MetricChain()
 		metric.add_metric(BleuCorpusMetric(gen_key=gen_key))
@@ -227,44 +254,49 @@ class OpenSubtitles(SingleTurnDialog):
 		max_sen_length (int): All sentences longer than `max_sen_length` will be shortened
 			to first `max_sen_length` tokens. Default: 50.
 
-	Refer to :class:`.SingleTurnDialog` for other attributes.
+	Refer to :class:`.SingleTurnDialog` for attributes.
 
 	Todo:
 		* add references
 	'''
 	def __init__(self, file_path, min_vocab_times=10, max_sen_length=50):
+		self._file_path = file_path
+		self._min_vocab_times = min_vocab_times
+		self._max_sen_length = max_sen_length
 		super(OpenSubtitles, self).__init__()
 
+	def _load_data(self):
+		r'''Loading dataset, invoked by SingleTurnDialog.__init__
+		'''
 		origin_data = {}
 		for key in self.key_name:
-			f_file = open("%s/opensub_pair_%s.post" % (file_path, key))
-			g_file = open("%s/opensub_pair_%s.response" % (file_path, key))
+			f_file = open("%s/opensub_pair_%s.post" % (self._file_path, key))
+			g_file = open("%s/opensub_pair_%s.response" % (self._file_path, key))
 			origin_data[key] = {}
 			origin_data[key]['post'] = list(map(lambda line: line.split(), f_file.readlines()))
 			origin_data[key]['resp'] = list(map(lambda line: line.split(), g_file.readlines()))
 
 		vocab = list(chain(*(origin_data['train']['post'] + origin_data['train']['resp'])))
-		left_vocab = list(filter(lambda x: x[1] >= min_vocab_times, Counter(vocab).most_common()))
-		self.vocab_list = self.ext_vocab + list(map(lambda x: x[0], left_vocab))
-		self.word2id = {w: i for i, w in enumerate(self.vocab_list)}
-		print("vocab list length = %d" % len(self.vocab_list))
+		left_vocab = list(filter(lambda x: x[1] >= self._min_vocab_times, Counter(vocab).most_common()))
+		vocab_list = self.ext_vocab + list(map(lambda x: x[0], left_vocab))
+		word2id = {w: i for i, w in enumerate(vocab_list)}
+		print("vocab list length = %d" % len(vocab_list))
 
 		line2id = lambda line: ([self.go_id] + \
-					list(map(lambda word: self.word2id[word] if word in self.word2id else self.unk_id, line)) + \
-					[self.eos_id])[:max_sen_length]
+					list(map(lambda word: word2id[word] if word in word2id else self.unk_id, line)) + \
+					[self.eos_id])[:self._max_sen_length]
 
+		data = {}
 		for key in self.key_name:
-			self.data[key] = {}
+			data[key] = {}
 
-			self.data[key]['post'] = list(map(line2id, origin_data[key]['post']))
-			self.data[key]['resp'] = list(map(line2id, origin_data[key]['resp']))
+			data[key]['post'] = list(map(line2id, origin_data[key]['post']))
+			data[key]['resp'] = list(map(line2id, origin_data[key]['resp']))
 			vocab = list(chain(*(origin_data[key]['post'] + origin_data[key]['resp'])))
 			vocab_num = len(vocab)
-			oov_num = len(list(filter(lambda word: word not in self.word2id, vocab)))
+			oov_num = len(list(filter(lambda word: word not in word2id, vocab)))
 			length = list(map(len, origin_data[key]['post'] + origin_data[key]['resp']))
-			cut_num = np.sum(np.maximum(np.array(length) - max_sen_length + 1, 0))
+			cut_num = np.sum(np.maximum(np.array(length) - self._max_sen_length + 1, 0))
 			print("%s set. OOV rate: %f, max length before cut: %d, cut word rate: %f" % \
 					(key, oov_num / vocab_num, max(length), cut_num / vocab_num))
-
-		for key in self.key_name:
-			self.index[key] = list(range(len(self.data[key]['post'])))
+		return vocab_list, data
