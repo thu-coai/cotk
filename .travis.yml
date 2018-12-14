@@ -30,4 +30,6 @@ deploy:
   - provider: script
     skip-cleanup: true
     script: coveralls
-
+    on:
+      all_branches: true
+      condition: true
