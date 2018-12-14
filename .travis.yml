@@ -5,12 +5,12 @@ python:
 
 install:
   - pip install sphinx
-  - pip install pytest-cov
-  - pip install codacy-coverage
+  - pip install pytest-cov==2.4.0
+  - pip install python-coveralls
 
 script:
   - pip install -e .
-  - py.test --cov=contk tests/ --cov-report xml
+  - py.test --cov=contk tests/ --cov-report term-missing
   - cd docs
   - make html
   - mv ./build/html ./build/docs
@@ -29,6 +29,5 @@ deploy:
       branch: master
   - provider: script
     skip-cleanup: true
-    script: python-codacy-coverage -r coverage.xml
-    on:
-      branch: unittest
+    script: coveralls
+

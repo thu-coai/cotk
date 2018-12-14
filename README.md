@@ -1,6 +1,7 @@
 # Conversational Toolkits
 
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/16340c4a92544d5cb3cefbc1b320fe7e)](https://app.codacy.com/app/hzhwcmhf/contk?utm_source=github.com&utm_medium=referral&utm_content=thu-coai/contk&utm_campaign=Badge_Grade_Settings)
+[![CodeFactor](https://www.codefactor.io/repository/github/thu-coai/contk/badge)](https://www.codefactor.io/repository/github/thu-coai/contk)
+[![Coverage Status](https://coveralls.io/repos/github/thu-coai/contk/badge.svg?branch=master)](https://coveralls.io/github/thu-coai/contk?branch=master)
 [![Build Status](https://travis-ci.com/thu-coai/contk.svg?branch=master)](https://travis-ci.com/thu-coai/contk)
 
 ## Environment
