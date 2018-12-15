@@ -84,19 +84,19 @@ class TestSingleTurnDialog():
 		assert sample_num == len(dl.data["train"]["post"])
 
 	def base_test_convert(self, dl):
-		sent_id = [1, 2, 3]
-		sent = ["<unk>", "<go>", "<eos>"]
+		sent_id = [0, 1, 2]
+		sent = ["<pad>", "<unk>", "<go>"]
 		assert sent == dl.index_to_sen(sent_id)
 		assert sent_id == dl.sen_to_index(sent)
 
-		sent = ["<unk>", "<go>", "<eos>", "<unkownword>", "<pad>"]
-		sent_id = [1, 2, 3, 1, 0]
+		sent = ["<unk>", "<go>", "<pad>", "<unkownword>", "<pad>", "<go>"]
+		sent_id = [1, 2, 0, 1, 0, 2]
 		assert sent_id == dl.sen_to_index(sent)
 
-		sent_id = [1, 2, 3, 1, 0]
-		sent = ["<unk>", "<go>", "<eos>", "<unk>", "<pad>"]
+		sent_id = [0, 1, 2, 0, 0, 3, 1, 0, 0]
+		sent = ["<pad>", "<unk>", "<go>", "<pad>", "<pad>", "<eos>", "<unk>", "<pad>", "<pad>"]
 		assert sent == dl.index_to_sen(sent_id, trim=False)
-		sent = ["<unk>", "<go>", "<eos>", "<unk>"]
+		sent = ["<pad>", "<unk>", "<go>"]
 		assert sent == dl.index_to_sen(sent_id)
 
 	def base_test_teacher_forcing_metric(self, dl):

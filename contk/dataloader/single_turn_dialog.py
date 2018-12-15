@@ -7,6 +7,8 @@ import numpy as np
 from .dataloader import Dataloader
 from ..metric import MetricChain, PerlplexityMetric, BleuCorpusMetric, SingleDialogRecorder
 
+from .._utils import trim_before_target
+
 class SingleTurnDialog(Dataloader):
 	r"""Base class for single-turn dialog datasets. This is an abstract class.
 
@@ -193,12 +195,36 @@ class SingleTurnDialog(Dataloader):
 		'''
 		return list(map(lambda word: self.word2id.get(word, self.unk_id), sen))
 
+	def trim_index(self, index):
+		'''Trim index. There will be two steps:
+			* find first `<eos>` and abondon words after it (included the `<eos>`).
+			* ignore `<pad>` s at the end of the sentence.
+
+		Arguments:
+			index (list): a list of int
+
+		Examples:
+			>>> dataloader.index_to_sen(
+			...		[])
+			>>>
+
+		Todo:
+			* fix the missing example
+		'''
+
+		index = trim_before_target(list(index), self.eos_id)
+		idx = len(index)
+		while index[idx-1] == self.pad_id:
+			idx -= 1
+		index = index[:idx]
+		return index
+
 	def index_to_sen(self, index, trim=True):
 		'''Convert a sentences from index to string representation
 
 		Arguments:
 			index (list): a list of int
-			trim (bool): if True, ignore `pad_id` at the end of `index`.
+			trim (bool): if True, call :func:`trim_index` before convertion.
 
 		Examples:
 			>>> dataloader.index_to_sen(
@@ -209,10 +235,7 @@ class SingleTurnDialog(Dataloader):
 			* fix the missing example
 		'''
 		if trim:
-			try:
-				index = index[:list(index).index(self.pad_id)]
-			except ValueError:
-				pass
+			index = self.trim_index(index)
 		return list(map(lambda word: self.vocab_list[word], index))
 
 	def get_teacher_forcing_metric(self, gen_prob_key="gen_prob"):
@@ -225,7 +248,7 @@ class SingleTurnDialog(Dataloader):
 		Arguments:
 			gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerlplexityMetric`
 		'''
-		return PerlplexityMetric(gen_prob_key=gen_prob_key)
+		return PerlplexityMetric(self, gen_prob_key=gen_prob_key)
 
 	def get_inference_metric(self, gen_key="gen"):
 		'''Get metric for inference.
@@ -240,7 +263,7 @@ class SingleTurnDialog(Dataloader):
 			               :class:`.metric.SingleDialogRecorder`
 		'''
 		metric = MetricChain()
-		metric.add_metric(BleuCorpusMetric(gen_key=gen_key))
+		metric.add_metric(BleuCorpusMetric(self, gen_key=gen_key))
 		metric.add_metric(SingleDialogRecorder(self, gen_key=gen_key))
 		return metric
 

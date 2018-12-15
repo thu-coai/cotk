@@ -170,7 +170,7 @@ class Seq2seq(BaseModel):
 			data.resp = incoming.data.resp.detach().cpu().numpy().transpose(1, 0)
 			data.resp_length = incoming.data.resp_length
 			data.gen_prob = gen_prob.detach().cpu().numpy().transpose(1, 0, 2)
-			metric1.forward(data)
+			#metric1.forward(data)
 		res = metric1.close()
 
 		dm.restart(key, args.batch_size, shuffle=False)

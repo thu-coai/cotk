@@ -130,7 +130,7 @@ gen:    i don' t know .
 
 |               | Perplexity | BLEU  |
 | ------------- | ---------- | ----- |
-| OpenSubtitles | 51.45      | 0.319 |
+| OpenSubtitles | 51.45      | 0.165 |
 
 ### Author
 
