@@ -165,7 +165,7 @@ class Seq2seq(BaseModel):
 			incoming.args = Storage()
 			with torch.no_grad():
 				self.net.forward(incoming)
-				gen_prob = nn.functional.softmax(incoming.gen.w, -1)
+				gen_prob = nn.functional.log_softmax(incoming.gen.w, -1)
 			data = Storage()
 			data.resp = incoming.data.resp.detach().cpu().numpy().transpose(1, 0)
 			data.resp_length = incoming.data.resp_length

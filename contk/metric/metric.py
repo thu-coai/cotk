@@ -4,6 +4,7 @@ a fair metric for every model.
 """
 import numpy as np
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
+import random
 
 class MetricBase:
 	'''Base class for metrics.
@@ -19,16 +20,17 @@ class PerlplexityMetric(MetricBase):
 			Default: ``resp``.
 		data_len_key (str): Length of reference sentences are passed to :func:`forward`
 			by ``data[data_len_key]``. Default: ``resp_length``.
-		gen_prob_key (str): Sentence generations model outputs are passed to :func:`forward`
-			by ``data[gen_prob_key]``. Default: ``gen_prob``.
+		gen_prob_key (str): Sentence generations model outputs of **log softmax** probability
+			are passed to :func:`forward` by ``data[gen_prob_key]``. Default: ``gen_prob``.
 	'''
-	def __init__(self, data_key="resp", data_len_key="resp_length", gen_prob_key="gen_prob"):
+	def __init__(self, data_key="resp", data_len_key="resp_length", gen_prob_key="gen_prob", full_check=False):
 		super().__init__()
 		self.data_key = data_key
 		self.data_len_key = data_len_key
 		self.gen_prob_key = gen_prob_key
 		self.word_loss = 0
 		self.length_sum = 0
+		self.full_check = full_check
 
 	def forward(self, data):
 		'''Processing a batch of data.
@@ -39,22 +41,37 @@ class PerlplexityMetric(MetricBase):
 				Contains ``<go>`` and ``<eos>``. Size: `[batch_size, max_sentence_length]`
 			data[data_len_key] (list): Length of Reference sentences. Contains ``<go>`` and ``<eos>``.
 				Size: `[batch_size]`
-			data[gen_prob_key] (list or :class:`numpy.array`): Setence generations model outputs.
-				Contains ``<eos>``, but without ``<go>``.
+			data[gen_prob_key] (list or :class:`numpy.array`): Setence generations model outputs of
+				**log softmax** probability. Contains ``<eos>``, but without ``<go>``.
 				Size: `[batch_size, gen_sentence_length, vocab_size]`.
 
 		Warning:
-			``data[gen_prob_key]`` must be processed after softmax. That means, every elements in the
-			tensor must be positive and sum to 1 in the last dim.
+			``data[gen_prob_key]`` must be processed after log_softmax. That means,
+			``np.sum(np.exp(gen_prob), -1)`` equals ``np.ones((batch_size, gen_sentence_length))``
 		'''
 		resp = data[self.data_key]
 		resp_length = data[self.data_len_key]
 		gen_prob = data[self.gen_prob_key]
 		if resp.shape[0] != resp_length.shape[0]:
 			raise ValueError("Batch num is not matched.")
+
+		# perform random check to assert the probability is valid
+		checkid = random.randint(0, len(resp_length)-1)
+		checkrow = random.randint(0, resp_length[checkid]-2)
+		if not np.isclose(np.sum(np.exp(gen_prob[checkid][checkrow])), 1):
+			print("gen_prob[%d][%d] exp sum is equal to %f." % (checkid, checkrow, \
+				np.sum(np.exp(gen_prob[checkid][checkrow]))))
+			raise ValueError("data[gen_prob_key] must be processed after log_softmax.")
+
 		for i, single_length in enumerate(resp_length):
-			self.word_loss += -np.sum(np.log(gen_prob[i][\
-				list(range(single_length-1)), resp[i][1:single_length]]))
+			# perform full check to assert the probability is valid
+			if self.full_check:
+				expsum = np.sum(np.exp(gen_prob[i][:single_length]), -1)
+				if not np.allclose(expsum, [1] * single_length):
+					raise ValueError("data[gen_prob_key] must be processed after log_softmax.")
+
+			self.word_loss += -np.sum(gen_prob[i][\
+				list(range(single_length-1)), resp[i][1:single_length]])
 			self.length_sum += single_length - 1
 
 	def close(self):
