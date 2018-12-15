@@ -105,22 +105,30 @@ class TestSingleTurnDialog():
 	def base_test_teacher_inference_metric(self, dl):
 		assert isinstance(dl.get_inference_metric(), MetricBase)
 
+	def base_test_multi_runs(self, dl_list):
+		assert all(x.vocab_list == dl_list[0].vocab_list for x in dl_list)
+
 @pytest.fixture
 def load_opensubtitles():
-	return OpenSubtitles("./tests/dataloader/dummy_opensubtitles")
+	def _load_opensubtitles():
+		return OpenSubtitles("./tests/dataloader/dummy_opensubtitles")
+	return _load_opensubtitles
 
 class TestOpenSubtitles(TestSingleTurnDialog):
 	def test_init(self, load_opensubtitles):
-		super().base_test_init(load_opensubtitles)
+		super().base_test_init(load_opensubtitles())
 
 	def test_restart(self, load_opensubtitles):
-		super().base_test_restart(load_opensubtitles)
+		super().base_test_restart(load_opensubtitles())
 
 	def test_get_batch(self, load_opensubtitles):
-		super().base_test_get_batch(load_opensubtitles)
+		super().base_test_get_batch(load_opensubtitles())
 
 	def test_get_next_batch(self, load_opensubtitles):
-		super().base_test_get_next_batch(load_opensubtitles)
+		super().base_test_get_next_batch(load_opensubtitles())
 
 	def test_convert(self, load_opensubtitles):
-		super().base_test_convert(load_opensubtitles)
+		super().base_test_convert(load_opensubtitles())
+
+	def test_init_multi_runs(self, load_opensubtitles):
+		super().base_test_multi_runs([load_opensubtitles() for i in range(3)])

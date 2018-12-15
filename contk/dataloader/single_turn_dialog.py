@@ -277,7 +277,9 @@ class OpenSubtitles(SingleTurnDialog):
 			origin_data[key]['resp'] = list(map(lambda line: line.split(), g_file.readlines()))
 
 		vocab = list(chain(*(origin_data['train']['post'] + origin_data['train']['resp'])))
-		left_vocab = list(filter(lambda x: x[1] >= self._min_vocab_times, Counter(vocab).most_common()))
+		# Important: Sort the words preventing the index changes between different runs
+		vocab = sorted(Counter(vocab).most_common(), key=lambda pair:(-pair[1], pair[0]))
+		left_vocab = list(filter(lambda x: x[1] >= self._min_vocab_times, vocab))
 		vocab_list = self.ext_vocab + list(map(lambda x: x[0], left_vocab))
 		word2id = {w: i for i, w in enumerate(vocab_list)}
 		print("vocab list length = %d" % len(vocab_list))
