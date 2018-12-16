@@ -3,6 +3,7 @@
 Seq2seq is a basic model for single turn dialog. Here, we implement seq2seq with attention mechanism. You can refer to the following papers for details:
 
 Sutskever, I., Vinyals, O., & Le, Q. V. (2014). Sequence to sequence learning with neural networks. In *Advances in Neural Information Processing Systems*.
+
 Bahdanau, D., Cho, K., & Bengio, Y. (2015). Neural machine translation by jointly learning to align and translate. In *International Conference on Learning Representation*.
 
 ### Require Packages
@@ -103,8 +104,8 @@ Execute ``python run.py --mode test --restore best``
 The following output will be in `./output/[name]_[dev|test].txt`:
 
 ```
-bleu:	0.029748
-perplexity:	40.416881
+bleu:	0.186838
+perplexity:	40.417562
 post:	if it were anyone but <unk> s son .
 resp:	<unk> is a great fighter .
 gen:	i don' t know what to do .
@@ -124,7 +125,7 @@ gen:	when the boys s out , then we started .
 
 |               | Perplexity | BLEU  |
 | ------------- | ---------- | ----- |
-| OpenSubtitles | 36.88 | 0.02 |
+| OpenSubtitles | 40.42 | 0.187 |
 
 ### Author
 

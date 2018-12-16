@@ -17,15 +17,14 @@ def output_projection_layer(num_units, num_symbols, num_samples=None, name="my_d
             weights = tf.transpose(tf.get_variable("kernel", [num_units, num_symbols]))
             bias = tf.get_variable("bias", [num_symbols])
 
-            local_dis = tf.nn.softmax(tf.einsum('aij,kj->aik', outputs, weights) + bias)
+            local_dis = tf.nn.log_softmax(tf.einsum('aij,kj->aik', outputs, weights) + bias)
             local_labels = tf.reshape(targets, [-1])
             local_masks = tf.reshape(masks, [-1])
 
             y_prob = tf.reshape(local_dis, [-1, num_symbols])
             labels_onehot = tf.one_hot(local_labels, num_symbols)
             labels_onehot = tf.clip_by_value(labels_onehot, 0.0, 1.0)
-            y_prob = tf.clip_by_value(y_prob, 1e-18, 1.0)
-            local_loss = tf.reduce_sum(-labels_onehot * tf.log(y_prob), 1) * local_masks
+            local_loss = tf.reduce_sum(-labels_onehot * y_prob, 1) * local_masks
             
             loss = tf.reduce_sum(local_loss)
             total_size = tf.reduce_sum(local_masks)
