@@ -21,7 +21,7 @@ class SingleTurnDialog(Dataloader):
 
 	Attributes:
 		ext_vocab (list): special tokens, be placed at beginning of `vocab_list`.
-			Foe example: `["<pad>", "<unk>", "<go>", "<eos>"]`
+			For example: `["<pad>", "<unk>", "<go>", "<eos>"]`
 		pad_id (int): token for padding, always equal to `0`
 		unk_id (int): token for unkown words, always equal to `1`
 		go_id (int): token at the beginning of sentences, always equal to `2`

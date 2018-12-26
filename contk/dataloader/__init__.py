@@ -7,5 +7,6 @@ your model from one dataset to other datasets.
 
 from .dataloader import Dataloader
 from .single_turn_dialog import SingleTurnDialog, OpenSubtitles
+from .language_generation import LanguageGeneration, MSCOCO
 
-__all__ = ['Dataloader', 'SingleTurnDialog', 'OpenSubtitles']
+__all__ = ['Dataloader', 'SingleTurnDialog', 'OpenSubtitles', 'LanguageGeneration', 'MSCOCO']
