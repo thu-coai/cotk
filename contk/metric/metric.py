@@ -2,9 +2,10 @@ r"""
 ``contk.metrics`` provides classes and functions evaluating results of models. It provides
 a fair metric for every model.
 """
+import random
+
 import numpy as np
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
-import random
 
 class MetricBase:
 	'''Base class for metrics.

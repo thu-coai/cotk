@@ -1,3 +1,6 @@
+'''
+A module for word vector
+'''
 class WordVector:
 	r'''Base of all word vector loader
 	'''

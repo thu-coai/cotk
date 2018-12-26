@@ -1,3 +1,6 @@
+'''
+A module for dataloader
+'''
 class Dataloader():
 	'''Base class of Dataloader.
 	'''

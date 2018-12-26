@@ -1,3 +1,6 @@
+'''
+A module for single turn dialog.
+'''
 from collections import Counter
 from itertools import chain
 import random
@@ -301,7 +304,7 @@ class OpenSubtitles(SingleTurnDialog):
 
 		vocab = list(chain(*(origin_data['train']['post'] + origin_data['train']['resp'])))
 		# Important: Sort the words preventing the index changes between different runs
-		vocab = sorted(Counter(vocab).most_common(), key=lambda pair:(-pair[1], pair[0]))
+		vocab = sorted(Counter(vocab).most_common(), key=lambda pair: (-pair[1], pair[0]))
 		left_vocab = list(filter(lambda x: x[1] >= self._min_vocab_times, vocab))
 		vocab_list = self.ext_vocab + list(map(lambda x: x[0], left_vocab))
 		word2id = {w: i for i, w in enumerate(vocab_list)}

@@ -28,7 +28,7 @@ Please refer to [document](https://thu-coai.github.io/contk_docs/)
   In this project, you should follow the default pylint configuration that we provide and check `contk` after you update it:
 
   ```
-  pylint --rcfile=contk_pylint.conf contk
+  pylint contk
   ```
 
 * Class and function docstring are always required.  
