@@ -27,8 +27,8 @@ class PerlplexityMetric(MetricBase):
 	def __init__(self, dataloader, data_key="resp", \
 					   data_len_key="resp_length", \
 					   gen_prob_key="gen_prob", \
-             full_check=False
-              ):
+			 full_check=False
+			  ):
 		super().__init__()
 		self.dataloader = dataloader
 		self.data_key = data_key
