@@ -23,7 +23,7 @@ class TestLanguageGeneration():
 			assert isinstance(word, str)
 			assert dl.word2id[word] == i
 		assert dl.vocab_size == len(dl.vocab_list)
-		sentence = dl.data["train"]
+		sentence = dl.data["train"]['sen']
 		assert isinstance(sentence, list)
 		assert isinstance(sentence[0], list)
 		assert sentence[0][0] == dl.go_id
@@ -66,7 +66,7 @@ class TestLanguageGeneration():
 				break
 			assert batch["sentence"].shape[0] == 7
 			sample_num += batch["sentence"].shape[0]
-		assert sample_num + 7 >= len(dl.data["train"])
+		assert sample_num + 7 >= len(dl.data["train"]['sen'])
 
 		dl.restart("train", 7)
 		sample_num = 0
@@ -75,7 +75,7 @@ class TestLanguageGeneration():
 			if not batch:
 				break
 			sample_num += batch["sentence"].shape[0]
-		assert sample_num == len(dl.data["train"])
+		assert sample_num == len(dl.data["train"]['sen'])
 
 	def base_test_convert(self, dl):
 		sent_id = [0, 1, 2]

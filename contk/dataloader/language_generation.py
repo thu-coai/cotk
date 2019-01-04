@@ -6,7 +6,7 @@ import random
 import numpy as np
 
 from .dataloader import Dataloader
-from ..metric import MetricChain, PerlplexityMetric, BleuCorpusMetric, LanguageGenerationRecorder
+from ..metric import MetricChain, PerlplexityMetric, LanguageGenerationRecorder
 
 from .._utils import trim_before_target
 
@@ -56,7 +56,7 @@ class LanguageGeneration(Dataloader):
 		for key in self.key_name:
 			self.batch_id[key] = 0
 			self.batch_size[key] = None
-			self.index[key] = list(range(len(self.data[key])))
+			self.index[key] = list(range(len(self.data[key]['sen'])))
 
 	def _load_data(self):
 		r'''This function is called during the initialization.
@@ -74,12 +74,14 @@ class LanguageGeneration(Dataloader):
 										  "are", "you", "hello", "i", "am", \
 										  "fine"]
 				data = {
-						"train": [
+						"train": {
+								"sen": [
 								[2, 5, 6, 7, 3],  # first sentence: <go> how are you <eos>
 								[2, 9, 10, 11, 3], # second response: <go> i am fine <eos>
-						],
-						"dev": [...],   # similar to train
-						"test": [...],  # similar to train
+								]
+						}
+						"dev": {"sen":[...]},   # similar to train
+						"test": {"sen":[...]},  # similar to train
 				}
 
 		Notes:
@@ -141,11 +143,11 @@ class LanguageGeneration(Dataloader):
 		res = {}
 		batch_size = len(index)
 		res["sentence_length"] = np.array(
-			list(map(lambda i: len(self.data[key][i]), index)))
+			list(map(lambda i: len(self.data[key]['sen'][i]), index)))
 		res["sentence"] = np.zeros(
 			(batch_size, np.max(res["sentence_length"])), dtype=int)
 		for i, j in enumerate(index):
-			sentence = self.data[key][j]
+			sentence = self.data[key]['sen'][j]
 			res["sentence"][i, :len(sentence)] = sentence
 		return res
 
@@ -256,17 +258,13 @@ class LanguageGeneration(Dataloader):
 
 		It contains:
 
-		* :class:`.metric.BleuCorpusMetric`
-		# * :class:`.metric.SingleDialogRecorder`
+		* :class:`.metric.LanguageGenerationRecorder`
 
 		Arguments:
-				gen_key (str): default: "gen". Refer to :class:`.metric.BleuCorpusMetric` or
-							   :class:`.metric.SingleDialogRecorder`
+				gen_key (str): default: "gen". Refer to :class:`.metric.LanguageGenerationRecorder`
 		'''
 		metric = MetricChain()
-		metric.add_metric(BleuCorpusMetric(self, data_key='sentence', gen_key=gen_key))
 		metric.add_metric(LanguageGenerationRecorder(self,
-													 sentence_key="sentence",
 													 gen_key=gen_key))
 		return metric
 
@@ -300,10 +298,11 @@ class MSCOCO(LanguageGeneration):
 		origin_data = {}
 		for key in self.key_name:
 			f_file = open("%s/mscoco_%s.txt" % (self._file_path, key))
-			origin_data[key] = list(
+			origin_data[key] = {}
+			origin_data[key]['sen'] = list(
 				map(lambda line: line.split(), f_file.readlines()))
 
-		vocab = list(chain(*(origin_data['train'])))
+		vocab = list(chain(*(origin_data['train']['sen'])))
 		# Important: Sort the words preventing the index changes between
 		# different runs
 		vocab = sorted(Counter(vocab).most_common(),
@@ -323,9 +322,10 @@ class MSCOCO(LanguageGeneration):
 
 		data = {}
 		for key in self.key_name:
-			data[key] = list(map(line2id, origin_data[key]))
+			data[key] = {}
+			data[key]['sen'] = list(map(line2id, origin_data[key]['sen']))
 
-			vocab = list(chain(*(origin_data[key])))
+			vocab = list(chain(*(origin_data[key]['sen'])))
 			vocab_num = len(vocab)
 			oov_num = len(
 				list(
@@ -333,7 +333,7 @@ class MSCOCO(LanguageGeneration):
 						lambda word: word not in word2id,
 						vocab)))
 			length = list(
-				map(len, origin_data[key]))
+				map(len, origin_data[key]['sen']))
 			cut_num = np.sum(
 				np.maximum(
 					np.array(length) -

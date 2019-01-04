@@ -317,8 +317,7 @@ class VAEModel(object):
 				results.append(result_token)
 				batch_results.append(result_id)
 
-			metric2_data = {'sentence': np.array(batched_data['sentence']),
-							'gen': np.array(batch_results)}
+			metric2_data = {'gen': np.array(batch_results)}
 			metric2.forward(metric2_data)
 			batched_data = data.get_next_batch("test")
 
@@ -332,8 +331,7 @@ class VAEModel(object):
 				if isinstance(value, float):
 					print("\t%s:\t%f", key, value)
 					f.write("%s:\t%f\n" % (key, value))
-			for i in range(len(res['sentence'])):
-				f.write("sentence:\t%s\n" % " ".join(res['sentence'][i]))
-				f.write("gen:\t%s\n" % " ".join(res['gen'][i]))
+			for i in range(len(res['gen'])):
+				f.write("%s\n" % " ".join(res['gen'][i]))
 
 		print("result output to %s.", test_file)
