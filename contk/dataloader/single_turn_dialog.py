@@ -74,18 +74,18 @@ class SingleTurnDialog(Dataloader):
 						  "are", "you", "hello", "i", "am", \
 						  "fine"]
 			data = {
-				"train": [
+				"train": {
 					"post": [
-						[2, 5, 6, 7, 3],  # first post: <go> how are you <eos>
-						[2, 8, 3],        # second post: <go> hello <eos>
+						[2, 4, 5, 6, 3],  # first post: <go> how are you <eos>
+						[2, 7, 3],        # second post: <go> hello <eos>
 					],
 					"resp": [
-						[2, 9, 10, 11, 3], # first response: <go> i am fine <eos>
-						[2, 8, 3], # first response: <go> hello <eos>
+						[2, 8, 9, 10, 3], # first response: <go> i am fine <eos>
+						[2, 7, 3],         # second response: <go> hello <eos>
 					]
-				],
-				"dev": [...],   # similar to train
-				"test": [...],  # similar to train
+				},
+				"dev": {...},   # similar to train
+				"test": {...},  # similar to train
 			}
 
 		Notes:
@@ -129,18 +129,42 @@ class SingleTurnDialog(Dataloader):
 		Arguments:
 			key (str): must be contained in `key_name`
 			index (list): a list of specified index
-
 		Returns:
 			A dict at least contains ``post``, ``post_length``, ``resp``,
 			``resp_length``. See the example belows.
 
-		Examples:
-			>>> dataloader.get_batch('train', 1)
-			>>>
-
-		Todo:
-			* fix the missing example
-		'''
+        Examples:
+            vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", \
+							"are", "you", "hello", "i", "am", \
+							"fine"]
+			data = { \
+				"train":{ \
+					"post": [ \
+						[2, 4, 5, 6, 3],   # first post: <go> how are you <eos> \
+						[2, 7, 3],		   # second post: <go> hello <eos> \
+					], \
+					"resp": [ \
+						[2, 8, 9, 10, 3], # first response: <go> i am fine <eos> \
+						[2, 7, 3],         # second response: <go> hello <eos> \
+					], \
+				}, \
+				"dev": {...},   # similar to train \
+				"test": {...},  # similar to train \
+			}
+			>>> dataloader.get_batch('train', [0, 1])
+			>>> { \
+					"post": [ \
+						[2, 4, 5, 6, 3],   # first post \
+						[2, 7, 3, 0, 0],   # second post with <pad> \
+					], \
+					"resp": [ \
+						[2, 8, 9, 10, 3],  # first response \
+						[2, 7, 3, 0, 0],   # second response with <pad> \
+					], \
+					"post_length": [5, 3], # length of posts \
+					"resp_length": [5, 3], # length of responses \
+				}
+        '''
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
 		res = {}
@@ -189,12 +213,12 @@ class SingleTurnDialog(Dataloader):
 			sen (list): a list of str, representing each token of the sentences.
 
 		Examples:
+			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",\
+							"been", "to", "Sichuan"]
 			>>> dataloader.sen_to_index(
-			...		["<go>", "I", "have", "been", "to", "Sichuan", "province", "eos"])
-			>>>
+			...		["<go>", "I", "have", "been", "to", "Sichuan", "<eos>"])
+			>>> [2, 4, 5, 6, 7 ,8 ,3]
 
-		Todo:
-			* fix the missing example
 		'''
 		return list(map(lambda word: self.word2id.get(word, self.unk_id), sen))
 
@@ -207,12 +231,11 @@ class SingleTurnDialog(Dataloader):
 			index (list): a list of int
 
 		Examples:
-			>>> dataloader.index_to_sen(
-			...		[])
-			>>>
-
-		Todo:
-			* fix the missing example
+			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",\
+							"been", "to", "Sichuan"]
+			>>> dataloader.trim_index(
+			...		[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0]) # <go> I have been to Sichuan <pad> <pad> <eos> I <eos> <pad>
+			>>> [2, 4, 5, 6, 7, 8] # <go> I have been to Sichuan
 		'''
 
 		index = trim_before_target(list(index), self.eos_id)
@@ -230,12 +253,15 @@ class SingleTurnDialog(Dataloader):
 			trim (bool): if True, call :func:`trim_index` before convertion.
 
 		Examples:
+			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",\
+							"been", "to", "Sichuan"]
 			>>> dataloader.index_to_sen(
-			...		[])
-			>>>
+			...		[2, 4, 5, 6, 7, 8, 3, 0, 0], trim = True)
+			>>> ["<go>", "I", "have", "been", "to", "Sichuan"]
+			>>> dataloader.index_to_sen(
+			...		[2, 4, 5, 6, 7, 8, 3, 0, 0], trim = False)
+			>>> ["<go>", "I", "have", "been", "to", "Sichuan", "<eos>", "<pad>", "<pad>"]
 
-		Todo:
-			* fix the missing example
 		'''
 		if trim:
 			index = self.trim_index(index)
@@ -282,8 +308,10 @@ class OpenSubtitles(SingleTurnDialog):
 
 	Refer to :class:`.SingleTurnDialog` for attributes.
 
-	Todo:
-		* add references
+	Reference:
+		[1] http://opus.nlpl.eu/OpenSubtitles.php
+		[2] P. Lison and J. Tiedemann, OpenSubtitles2016: Extracting Large Parallel Corpora
+		from Movie and TV Subtitles.(LREC 2016)
 	'''
 	def __init__(self, file_path, min_vocab_times=10, max_sen_length=50):
 		self._file_path = file_path

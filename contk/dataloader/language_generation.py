@@ -71,13 +71,12 @@ class LanguageGeneration(Dataloader):
 		.. highlight:: python
 		.. code-block:: python
 				vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", \
-										  "are", "you", "hello", "i", "am", \
-										  "fine"]
+								"are", "you", "hello", "i", "am", "fine"]
 				data = {
 						"train": {
 								"sen": [
-								[2, 5, 6, 7, 3],  # first sentence: <go> how are you <eos>
-								[2, 9, 10, 11, 3], # second response: <go> i am fine <eos>
+								[2, 4, 5, 6, 3],  # first sentence: <go> how are you <eos>
+								[2, 8, 9, 10, 3], # second sentence: <go> i am fine <eos>
 								]
 						}
 						"dev": {"sen":[...]},   # similar to train
@@ -131,12 +130,29 @@ class LanguageGeneration(Dataloader):
 		Returns:
 				A dict at least contains ``sentence``, ``sentence_length``. See the example belows.
 
-		Examples:
-				>>> dataloader.get_batch('train', 1)
-				>>>
+        Examples:
+            vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", \
+                            "are", "you", "hello", "i", "am", \
+                            "fine"]
+            data = { \
+                "train":{ \
+                    "sen": [ \
+                        [2, 4, 5, 6, 3],   # first sentence: <go> how are you <eos> \
+                        [2, 7, 3],		   # second sentence: <go> hello <eos> \
+                    ], \
+                }, \
+                "dev": {...},   # similar to train \
+                "test": {...},  # similar to train \
+            }
+            >>> dataloader.get_batch('train', [0, 1])
+            >>> { \
+                    "sentence": [ \
+                        [2, 4, 5, 6, 3],   # first sentence \
+                        [2, 7, 3, 0, 0],   # second sentence with <pad> \
+                    ], \
+                    "sentence_length": [5, 3], # length of sentences \
+                }
 
-		Todo:
-				* fix the missing example
 		'''
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
@@ -183,15 +199,15 @@ class LanguageGeneration(Dataloader):
 		'''Convert a sentences from string to index representation.
 
 		Arguments:
-				sen (list): a list of str, representing each token of the sentences.
+			sen (list): a list of str, representing each token of the sentences.
 
 		Examples:
-				>>> dataloader.sen_to_index(
-				...		["<go>", "I", "have", "been", "to", "Sichuan", "province", "eos"])
-				>>>
+			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",\
+							"been", "to", "Sichuan"]
+			>>> dataloader.sen_to_index(
+			...		["<go>", "I", "have", "been", "to", "Sichuan", "<eos>"])
+			>>> [2, 4, 5, 6, 7 ,8 ,3]
 
-		Todo:
-				* fix the missing example
 		'''
 		return list(map(lambda word: self.word2id.get(word, self.unk_id), sen))
 
@@ -201,15 +217,14 @@ class LanguageGeneration(Dataloader):
 				* ignore `<pad>` s at the end of the sentence.
 
 		Arguments:
-				index (list): a list of int
+			index (list): a list of int
 
 		Examples:
-				>>> dataloader.index_to_sen(
-				...		[])
-				>>>
-
-		Todo:
-				* fix the missing example
+			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",\
+							"been", "to", "Sichuan"]
+			>>> dataloader.trim_index(
+			...		[2, 4, 5, 6, 7, 8, 3, 0, 0]) # <go> I have been to Sichuan <pad> <pad> <eos> I <eos> <pad>
+			>>> [2, 4, 5, 6, 7, 8] # <go> I have been to Sichuan
 		'''
 
 		index = trim_before_target(list(index), self.eos_id)
@@ -227,12 +242,15 @@ class LanguageGeneration(Dataloader):
 				trim (bool): if True, call :func:`trim_index` before convertion.
 
 		Examples:
-				>>> dataloader.index_to_sen(
-				...		[])
-				>>>
+			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",\
+							"been", "to", "Sichuan"]
+			>>> dataloader.index_to_sen(
+			...		[2, 4, 5, 6, 7, 8, 3, 0, 0], trim = True)
+			>>> ["<go>", "I", "have", "been", "to", "Sichuan"]
+			>>> dataloader.index_to_sen(
+			...		[2, 4, 5, 6, 7, 8, 3, 0, 0], trim = False)
+			>>> ["<go>", "I", "have", "been", "to", "Sichuan", "<eos>", "<pad>", "<pad>"]
 
-		Todo:
-				* fix the missing example
 		'''
 		if trim:
 			index = self.trim_index(index)
@@ -271,7 +289,6 @@ class LanguageGeneration(Dataloader):
 
 class MSCOCO(LanguageGeneration):
 	'''A dataloder for preprocessed MSCOCO dataset.
-	source: http://images.cocodataset.org/annotations/annotations_trainval2017.zip)
 
 	Arguments:
 			file_path (str): a str indicates the dir of MSCOCO dataset.
@@ -282,8 +299,9 @@ class MSCOCO(LanguageGeneration):
 
 	Refer to :class:`.LanguageGeneration` for attributes.
 
-	Todo:
-			* add references
+	Reference:
+		[1] http://images.cocodataset.org/annotations/annotations_trainval2017.zip
+		[2] Lin T Y, Maire M, Belongie S, et al. Microsoft COCO: Common Objects in Context.ECCV 2014.
 	'''
 
 	def __init__(self, file_path, min_vocab_times=10, max_sen_length=50):
