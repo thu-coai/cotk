@@ -8,7 +8,7 @@ import random
 import numpy as np
 
 from .dataloader import Dataloader
-from ..metric import MetricChain, PerlplexityMetric, BleuCorpusMetric, SingleDialogRecorder
+from ..metric import MetricChain, PerlplexityMetric, BleuCorpusMetric, SingleTurnDialogRecorder
 
 from .._utils import trim_before_target
 
@@ -293,7 +293,7 @@ class SingleTurnDialog(Dataloader):
 		'''
 		metric = MetricChain()
 		metric.add_metric(BleuCorpusMetric(self, gen_key=gen_key))
-		metric.add_metric(SingleDialogRecorder(self, gen_key=gen_key))
+		metric.add_metric(SingleTurnDialogRecorder(self, gen_key=gen_key))
 		return metric
 
 class OpenSubtitles(SingleTurnDialog):
