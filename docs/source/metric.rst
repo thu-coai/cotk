@@ -10,7 +10,7 @@ Metric class
 .. autoclass:: PerlplexityMetric
     :members:
 
-.. autoclass:: MultiTurnDialogRecorder
+.. autoclass:: MultiTurnPerplexityMetric
     :members:
 
 .. autoclass:: BleuCorpusMetric
