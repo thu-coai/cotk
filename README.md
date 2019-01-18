@@ -3,6 +3,7 @@
 [![CodeFactor](https://www.codefactor.io/repository/github/thu-coai/contk/badge)](https://www.codefactor.io/repository/github/thu-coai/contk)
 [![Coverage Status](https://coveralls.io/repos/github/thu-coai/contk/badge.svg?branch=master)](https://coveralls.io/github/thu-coai/contk?branch=master)
 [![Build Status](https://travis-ci.com/thu-coai/contk.svg?branch=master)](https://travis-ci.com/thu-coai/contk)
+[![codebeat badge](https://codebeat.co/badges/2b2107ed-1145-4ce1-bfcf-8b134a0c6e0a)](https://codebeat.co/projects/github-com-thu-coai-contk-master)
 
 ## Environment
 
