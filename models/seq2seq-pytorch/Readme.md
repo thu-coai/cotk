@@ -1,16 +1,16 @@
-## Seq2Seq -- a pytorch implementation
+# Seq2Seq -- a pytorch implementation
 
 Seq2seq is a basic model for single turn dialog. You can refer to the following paper for details:
 
 Sutskever, I., Vinyals, O., & Le, Q. V. (2014). Sequence to sequence learning with neural networks. In *Advances in neural information processing systems* (pp. 3104-3112).
 
-### Require Packages
+## Require Packages
 
 * contk
-* pytorch == 0.4.1
+* pytorch == 1.0.0
 * tensorboardX >= 1.4
 
-### Quick Start
+## Quick Start
 
 * Downloading dataset and save it to ``./data``. (Dataset will be released soon.)
 * Execute ``python run.py`` to train the model.
@@ -22,28 +22,33 @@ Sutskever, I., Vinyals, O., & Le, Q. V. (2014). Sequence to sequence learning wi
 * After training, execute  ``python run.py --mode test --restore best`` for test.
   * You can use ``--restore filename`` to specify checkpoints files, which are in ``./model``.
   * ``--restore last`` means last checkpoint, ``--restore best`` means best checkpoints on dev.
+  * ``--restore NAME_last`` means last checkpoint with model named NAME. The same as``--restore NAME_best``.
 * Find results at ``./output``.
 
-### Arguments
+## Arguments
 
     usage: run.py [-h] [--name NAME] [--restore RESTORE] [--mode MODE]
                   [--dataset DATASET] [--datapath DATAPATH] [--epoch EPOCH]
                   [--wvclass WVCLASS] [--wvpath WVPATH] [--out_dir OUT_DIR]
                   [--log_dir LOG_DIR] [--model_dir MODEL_DIR]
                   [--cache_dir CACHE_DIR] [--cpu] [--debug] [--cache]
-    
+
+    A seq2seq model
+
     optional arguments:
       -h, --help            show this help message and exit
-      
-    useful arguments:
       --name NAME           The name of your model, used for tensorboard, etc.
                             Default: runXXXXXX_XXXXXX (initialized by current
                             time)
-      --restore RESTORE     Checkpoints name to load. "last" for last checkpoints,
-                            "best" for best checkpoints on dev. Attention: "last"
-                            and "best" wiil cause unexpected behaviour when run 2
-                            models in the same dir at the same time. Default: None
-                            (don't load anything)
+      --restore RESTORE     Checkpoints name to load. "NAME_last" for the last
+                            checkpoint of model named NAME. "NAME_best" means the
+                            best checkpoint. You can also use "last" and "best",
+                            defaultly use last model you run. Attention:
+                            "NAME_last" and "NAME_best" are not guaranteed to work
+                            when 2 models with same name run in the same time.
+                            "last" and "best" are not guaranteed to work when 2
+                            models run in the same time. Default: None (don't load
+                            anything)
       --mode MODE           "train" or "test". Default: train
       --dataset DATASET     Dataloader class. Default: OpenSubtitles
       --datapath DATAPATH   Directory for data set. Default: ./data
@@ -52,8 +57,6 @@ Sutskever, I., Vinyals, O., & Le, Q. V. (2014). Sequence to sequence learning wi
                             wordvec. Default: None
       --wvpath WVPATH       Directory for pretrained wordvector. Default:
                             ./wordvec
-    
-    advanced arguments:
       --out_dir OUT_DIR     Output directory for test output. Default: ./output
       --log_dir LOG_DIR     Log directory for tensorboard. Default: ./tensorboard
       --model_dir MODEL_DIR
@@ -63,14 +66,15 @@ Sutskever, I., Vinyals, O., & Le, Q. V. (2014). Sequence to sequence learning wi
       --cpu                 Use cpu.
       --debug               Enter debug mode (using ptvsd).
       --cache               Use cache for speeding up load data and wordvec. (It
-                       	    may cause problems when you switch dataset.)
-#### For developer
+                            may cause problems when you switch dataset.)
+
+### For developer
 
 * Arguments above (except ``cache``\\``debug``) are required. You should remain the same behavior (not for implementation).
 
 * You can add more arguments if you want.
 
-### An example of tensorboard
+## An example of tensorboard
 
 Execute ``tensorboard --logdir=./``, you will see the plot in tensorboard pages:
 
@@ -85,9 +89,9 @@ Following plot are shown in this model:
 * gen/word_loss (``=gen/loss`` in this model)
 
 * dev/loss
-* dev/perplexity
+* dev/perplexity_avg_on_batch
 * test/loss
-* test/perplexity
+* test/perplexity_avg_on_batch
 
 And text output:
 
@@ -98,7 +102,7 @@ Following text are shown in this model:
 * args
 * dev/show_str%d (``%d`` is according to ``args.show_sample`` in ``run.py``)
 
-### An example of test output
+## An example of test output
 
 Execute ``python run.py --mode test --restore best``
 
@@ -122,16 +126,16 @@ gen:    i don' t know .
 ......
 ```
 
-#### For developer
+### For developer
 
 - You should remain similar output in this task.
 
-### Performance
+## Performance
 
 |               | Perplexity | BLEU  |
 | ------------- | ---------- | ----- |
 | OpenSubtitles | 51.45      | 0.165 |
 
-### Author
+## Author
 
 [HUANG Fei](https://github.com/hzhwcmhf)

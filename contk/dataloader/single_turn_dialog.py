@@ -224,7 +224,8 @@ class SingleTurnDialog(Dataloader):
 
 	def trim_index(self, index):
 		'''Trim index. There will be two steps:
-			* find first `<eos>` and abondon words after it (included the `<eos>`).
+			* If there is an `<eos>` in sentences, \
+				find first `<eos>` and abondon words after it (included the `<eos>`).
 			* ignore `<pad>` s at the end of the sentence.
 
 		Arguments:
@@ -240,7 +241,7 @@ class SingleTurnDialog(Dataloader):
 
 		index = trim_before_target(list(index), self.eos_id)
 		idx = len(index)
-		while index[idx-1] == self.pad_id:
+		while idx > 0 and index[idx-1] == self.pad_id:
 			idx -= 1
 		index = index[:idx]
 		return index

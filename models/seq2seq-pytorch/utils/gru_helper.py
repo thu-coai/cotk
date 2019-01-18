@@ -4,11 +4,12 @@ import numpy as np
 import torch
 from torch import nn
 from torch.nn import Parameter
-from torch.nn._functions.rnn import GRUCell as F_GRUCell
 from torch.nn.modules.rnn import GRU
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
 
 from .cuda_helper import zeros
+
+F_GRUCell = torch._C._VariableFunctions.gru_cell
 
 def sortSequence(data, length):
 	shape = data.shape

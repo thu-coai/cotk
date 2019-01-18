@@ -7,7 +7,8 @@ import torch
 from torch import nn, optim
 import numpy as np
 
-from utils import Storage, cuda, BaseModel, SummaryHelper, get_mean, storage_to_list
+from utils import Storage, cuda, BaseModel, SummaryHelper, get_mean, storage_to_list, \
+	CheckpointManager
 from network import Network
 
 class Seq2seq(BaseModel):
@@ -16,8 +17,9 @@ class Seq2seq(BaseModel):
 		net = Network(param)
 		self.optimizer = optim.Adam(net.get_parameters_by_name(), lr=args.lr)
 		optimizerList = {"optimizer": self.optimizer}
-
-		super().__init__(param, net, optimizerList)
+		checkpoint_manager = CheckpointManager(args.name, args.model_dir, \
+						args.checkpoint_steps, args.checkpoint_max_to_keep, "min")
+		super().__init__(param, net, optimizerList, checkpoint_manager)
 
 		self.create_summary()
 
@@ -145,11 +147,7 @@ class Seq2seq(BaseModel):
 			self.testSummary(self.now_batch, testloss_detail)
 			logging.info("epoch %d, evaluate test", self.now_epoch)
 
-			if devloss_detail.loss.tolist() < self.best_loss:
-				self.best_loss = devloss_detail.loss.tolist()
-				self.save_checkpoint(True)
-			else:
-				self.save_checkpoint()
+			self.save_checkpoint(value=devloss_detail.loss.tolist())
 
 	def test(self, key):
 		args = self.param.args
@@ -170,7 +168,7 @@ class Seq2seq(BaseModel):
 			data.resp = incoming.data.resp.detach().cpu().numpy().transpose(1, 0)
 			data.resp_length = incoming.data.resp_length
 			data.gen_prob = gen_prob.detach().cpu().numpy().transpose(1, 0, 2)
-			#metric1.forward(data)
+			metric1.forward(data)
 		res = metric1.close()
 
 		dm.restart(key, args.batch_size, shuffle=False)

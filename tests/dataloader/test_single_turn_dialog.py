@@ -114,6 +114,21 @@ class TestSingleTurnDialog():
 		sent = ["<pad>", "<unk>", "<go>"]
 		assert sent == dl.index_to_sen(sent_id)
 
+		sent_id = [0, 0, 3]
+		sent = ["<pad>", "<pad>", "<eos>"]
+		assert sent == dl.index_to_sen(sent_id, trim=False)
+		assert not dl.index_to_sen(sent_id)
+
+		sent_id = [3, 3, 3]
+		sent = ["<eos>", "<eos>", "<eos>"]
+		assert sent == dl.index_to_sen(sent_id, trim=False)
+		assert not dl.index_to_sen(sent_id)
+
+		sent_id = [0, 0, 0]
+		sent = ["<pad>", "<pad>", "<pad>"]
+		assert sent == dl.index_to_sen(sent_id, trim=False)
+		assert not dl.index_to_sen(sent_id)
+
 	def base_test_teacher_forcing_metric(self, dl):
 		assert isinstance(dl.get_teacher_forcing_metric(), MetricBase)
 
@@ -144,6 +159,12 @@ class TestOpenSubtitles(TestSingleTurnDialog):
 
 	def test_convert(self, load_opensubtitles):
 		super().base_test_convert(load_opensubtitles())
+
+	def test_teacher_forcing_metric(self, load_opensubtitles):
+		super().base_test_teacher_forcing_metric(load_opensubtitles())
+
+	def test_teacher_inference_metric(self, load_opensubtitles):
+		super().base_test_teacher_inference_metric(load_opensubtitles())
 
 	def test_init_multi_runs(self, load_opensubtitles):
 		super().base_test_multi_runs([load_opensubtitles() for i in range(3)])

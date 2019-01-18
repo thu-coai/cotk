@@ -12,7 +12,12 @@ if __name__ == '__main__':
 	parser.add_argument('--name', type=str, default=None, 
 		help='The name of your model, used for tensorboard, etc. Default: runXXXXXX_XXXXXX (initialized by current time)')
 	parser.add_argument('--restore', type=str, default=None, 
-		help='Checkpoints name to load. "last" for last checkpoints, "best" for best checkpoints on dev. Attention: "last" and "best" wiil cause unexpected behaviour when run 2 models in the same dir at the same time. Default: None (don\'t load anything)')
+		help='Checkpoints name to load. \
+			"NAME_last" for the last checkpoint of model named NAME. "NAME_best" means the best checkpoint. \
+			You can also use "last" and "best", defaultly use last model you run. \
+			Attention: "NAME_last" and "NAME_best" are not guaranteed to work when 2 models with same name run in the same time. \
+			"last" and "best" are not guaranteed to work when 2 models run in the same time.\
+			Default: None (don\'t load anything)')
 	parser.add_argument('--mode', type=str, default="train", 
 		help='"train" or "test". Default: train')
 	parser.add_argument('--dataset', type=str, default='OpenSubtitles', 

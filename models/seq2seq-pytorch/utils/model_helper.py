@@ -11,7 +11,7 @@ from .cuda_helper import cuda, Tensor
 from .anneal_helper import AnnealHelper, AnnealParameter
 
 class BaseModel():
-	def __init__(self, param, net, optimizerList):
+	def __init__(self, param, net, optimizerList, checkpoint_manager, helperList=None):
 		self.param = param
 		self.args = args = param.args
 		self.param.other_weights = {}
@@ -23,8 +23,10 @@ class BaseModel():
 
 		self.now_batch = 0
 		self.now_epoch = 0
-		self.best_loss = 1e100
-		self.checkpoint_list = []
+		
+		self.checkpoint_manager = checkpoint_manager
+		self.helperList = helperList or {}
+		self.helperList["checkpoint_manager"] = self.checkpoint_manager
 
 		self.anneal_list = []
 		for key, v in args.items():
@@ -41,35 +43,21 @@ class BaseModel():
 			logging.info("cuda initialized")
 
 		if args.restore is not None:
-			if args.restore == "last":
-				if not os.path.isfile("%s/checkpoint_list" % args.model_dir):
-					raise ValueError("No Last checkpoint found")
-				args.restore = open("%s/checkpoint_list" % args.model_dir).readlines()[0]
-			elif args.restore == "best":
-				if not os.path.isfile("%s/checkpoint_list" % args.model_dir):
-					raise ValueError("No best checkpoint found")
-				name = open("%s/checkpoint_list" % args.model_dir).readlines()[1]
-				args.restore = name + "_best"
-			if os.path.isfile("%s/%s.model" % (args.model_dir, args.restore)):
-				logging.info("loading checkpoint %s", args.restore)
-				checkpoint = torch.load("%s/%s.model" % (args.model_dir, args.restore), \
-						map_location=lambda storage, loc: storage)
-				diff = args - checkpoint["args"]
-				if diff:
-					logging.info("Args differences\n%s", json.dumps(diff, indent=2))
-				self.now_batch = checkpoint['now_batch']
-				self.now_epoch = checkpoint['now_epoch']
-				self.best_loss = checkpoint['best_loss']
-				self.net.load_state_dict(checkpoint['weights'], args.load_exclude_set)
-				self.param.other_weights = checkpoint['other_weights']
-				for name, optimizer in self.optimizerList.items():
-					if checkpoint[name]['state'] and self.param.args.restore_optimizer:
-						optimizer.load_state_dict(checkpoint[name])
-						self.optimizerCuda(optimizer)
-				logging.info("loaded checkpoint at %d epochs, %d batchs", self.now_epoch, self.now_batch)
-			else:
-				logging.info("no checkpoint found at %s", args.restore)
-				raise AssertionError("no checkpoint found")
+			checkpoint = self.checkpoint_manager.restore(args.restore)
+			diff = args - checkpoint["args"]
+			if diff:
+				logging.info("Args differences\n%s", json.dumps(diff, indent=2))
+			self.now_batch = checkpoint['now_batch']
+			self.now_epoch = checkpoint['now_epoch']
+			self.net.load_state_dict(checkpoint['weights'], args.load_exclude_set)
+			self.param.other_weights = checkpoint['other_weights']
+			for name, optimizer in self.optimizerList.items():
+				if checkpoint[name]['state'] and self.param.args.restore_optimizer:
+					optimizer.load_state_dict(checkpoint[name])
+					self.optimizerCuda(optimizer)
+			for name, helper in self.helperList.items():
+				helper.load_state_dict(checkpoint[name])
+			logging.info("loaded checkpoint at %d epochs, %d batchs", self.now_epoch, self.now_batch)
 
 		for key, v in args.items():
 			if isinstance(v, AnnealParameter):
@@ -103,7 +91,7 @@ class BaseModel():
 				return False
 		return True
 
-	def save_checkpoint(self, is_best=False, filename=None):
+	def save_checkpoint(self, value=None, filename=None):
 		args = self.args
 		if filename is None:
 			filename = "%s_%s" % (self.param.args.name, \
@@ -111,44 +99,20 @@ class BaseModel():
 		state = {\
 			'now_epoch': self.now_epoch,\
 			'now_batch': self.now_batch,\
-			'best_loss': self.best_loss,\
 			'args': self.param.args,\
 			'weights': self.net.state_dict(),\
 			'other_weights': self.param.other_weights,\
 		}
 		for name, optimizer in self.optimizerList.items():
 			state[name] = optimizer.state_dict()
-		if not os.path.exists(args.model_dir):
-			os.makedirs(args.model_dir)
-		torch.save(state, "%s/%s.model" % (args.model_dir, filename))
-
-		open("%s/checkpoint_list" % args.model_dir, "w").write(filename + "\n" + self.args.name)
-
-		if self.now_epoch % self.param.args.checkpoint_steps == 0:
-			self.checkpoint_list.append(filename)
-			if len(self.checkpoint_list) > self.param.args.checkpoint_max_to_keep:
-				try:
-					os.remove("%s/%s.model" % (args.model_dir, self.checkpoint_list[0]))
-				except OSError:
-					pass
-				self.checkpoint_list.pop(0)
-		else:
-			if len(self.checkpoint_list) > 1:
-				try:
-					os.remove("%s/%s.model" % (args.model_dir, self.checkpoint_list[-1]))
-				except OSError:
-					pass
-				self.checkpoint_list.pop()
-			self.checkpoint_list.append(filename)
-
-		if is_best:
-			shutil.copyfile("%s/%s.model" % (args.model_dir, filename), \
-				'%s/%s_best.model' % (args.model_dir, self.param.args.name))
+		for name, helper in self.helperList.items():
+			state[name] = helper.state_dict()
+		self.checkpoint_manager.save(state, filename, value)
 
 	def checkgrad(self):
 		logging.info("checkgrad:")
 		for name, p in self.net.named_parameters():
-			if p.grad is not None:
+			if p.grad is not None and p.abs().sum().tolist() > 0:
 				logging.info("\t%s", name)
 
 def get_mean(loss_arr, key):
@@ -162,3 +126,5 @@ def storage_to_list(incoming):
 		if "tolist" in dir(j):
 			incoming[i] = j.tolist()
 	return incoming
+
+

@@ -1,5 +1,6 @@
 #coding:utf-8
 
+#TODO: make it to a hook, not hardcode in model_helper
 class AnnealHelper:
 	def __init__(self, instance, name, beginValue, startBatch, startValue, endValue, multi):
 		self.instance = instance

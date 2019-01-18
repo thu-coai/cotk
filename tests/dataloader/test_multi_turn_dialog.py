@@ -122,9 +122,24 @@ class TestMultiTurnDialog():
 		sent = ["<pad>", "<unk>", "<go>", "<eos>"]
 		assert sent == dl.index_to_sen(sent_id)
 
+		sent_id = [0, 0, 4]
+		sent = ["<pad>", "<pad>", "<eot>"]
+		assert sent == dl.index_to_sen(sent_id, trim=False)
+		assert not dl.index_to_sen(sent_id)
+
+		sent_id = [4, 4, 4]
+		sent = ["<eot>", "<eot>", "<eot>"]
+		assert sent == dl.index_to_sen(sent_id, trim=False)
+		assert not dl.index_to_sen(sent_id)
+
+		sent_id = [0, 0, 0]
+		sent = ["<pad>", "<pad>", "<pad>"]
+		assert sent == dl.index_to_sen(sent_id, trim=False)
+		assert not dl.index_to_sen(sent_id)
+
 	def base_test_multi_turn_convert(self, dl):
-		sent_id = [[0, 1, 2], [2, 1, 0]]
-		sent = [["<pad>", "<unk>", "<go>"], ["<go>", "<unk>", "<pad>"]]
+		sent_id = [[0, 1, 2], [2, 1, 1]]
+		sent = [["<pad>", "<unk>", "<go>"], ["<go>", "<unk>", "<unk>"]]
 		assert sent == dl.multi_turn_index_to_sen(sent_id)
 		assert sent_id == dl.multi_turn_sen_to_index(sent)
 
@@ -132,15 +147,16 @@ class TestMultiTurnDialog():
 		sent_id = [[1, 2, 0, 1, 0, 2], [3, 4]]
 		assert sent_id == dl.multi_turn_sen_to_index(sent)
 
-		sent_id = [[0, 1, 2, 3, 0, 4, 1, 0, 0], [0, 4], [1, 2, 3, 0], [1, 2, 3, 4]]
+		sent_id = [[0, 1, 2, 3, 0, 4, 1, 0, 0], [0, 4, 2], [1, 2, 3, 0], [1, 2, 3, 4]]
 		sent = [["<pad>", "<unk>", "<go>", "<eos>", "<pad>", "<eot>", "<unk>", "<pad>", "<pad>"], \
-				["<pad>", "<eot>"], \
+				["<pad>", "<eot>", "<go>"], \
 				["<unk>", "<go>", "<eos>", "<pad>"], \
 				["<unk>", "<go>", "<eos>", "<eot>"]]
 		assert sent == dl.multi_turn_index_to_sen(sent_id, trim=False)
-		sent = [["<pad>", "<unk>", "<go>", "<eos>"], \
-				["<pad>"]]
+		sent = [["<pad>", "<unk>", "<go>", "<eos>"]]
 		assert sent == dl.multi_turn_index_to_sen(sent_id)
+
+
 
 	def base_test_teacher_forcing_metric(self, dl):
 		assert isinstance(dl.get_teacher_forcing_metric(), MetricBase)
@@ -172,6 +188,15 @@ class TestUbuntuCorpus(TestMultiTurnDialog):
 
 	def test_convert(self, load_ubuntucorpus):
 		super().base_test_convert(load_ubuntucorpus())
+
+	def test_multi_turn_convert(self, load_ubuntucorpus):
+		super().base_test_multi_turn_convert(load_ubuntucorpus())
+
+	def test_teacher_forcing_metric(self, load_ubuntucorpus):
+		super().base_test_teacher_forcing_metric(load_ubuntucorpus())
+
+	def test_teacher_inference_metric(self, load_ubuntucorpus):
+		super().base_test_teacher_inference_metric(load_ubuntucorpus())
 
 	def test_init_multi_runs(self, load_ubuntucorpus):
 		super().base_test_multi_runs([load_ubuntucorpus() for i in range(3)])

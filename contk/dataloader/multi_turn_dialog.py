@@ -228,7 +228,8 @@ class MultiTurnDialog(Dataloader):
 
 	def trim_index(self, index):
 		'''Trim indexes. There will be two steps:
-			* Find first `<eot>` and abondon words after it (included the `<eot>`).
+			* If there is an `<eot>` in sentences, \
+				find first `<eot>` and abondon words after it (included the `<eot>`).
 			* Ignore `<pad>` s at the end of the sentence.
 
 		Arguments:
@@ -245,15 +246,16 @@ class MultiTurnDialog(Dataloader):
 
 		index = trim_before_target(list(index), self.eot_id)
 		idx = len(index)
-		while index[idx-1] == self.pad_id:
+		while idx > 0 and index[idx-1] == self.pad_id:
 			idx -= 1
 		index = index[:idx]
 		return index
 
 	def multi_turn_trim_index(self, index):
 		'''Trim indexes for multi turn dialog. There will be 3 steps:
-			* Find first turn without "<eot>", the turn after it (included) will be discarded.
-			* For every turn, find first `<eot>` and abondon words after it (included the `<eot>`).
+			* For every turn, if there is an `<eot>`, \
+				find first `<eot>` and abondon words after it (included the `<eot>`).
+			* If the sentence after triming is empty, discard this turn and the turn after it.
 			* Ignore `<pad>` s at the end of every turn.
 
 		Arguments:
@@ -268,11 +270,12 @@ class MultiTurnDialog(Dataloader):
 
 		res = []
 		for turn_index in index:
-			if self.eot_id not in turn_index:
+			turn_trim = self.trim_index(turn_index)
+			if turn_trim:
+				res.append(turn_trim)
+			else:
 				break
-			res.append(self.trim_index(turn_index))
 		return res
-
 
 	def index_to_sen(self, index, trim=True):
 		'''Convert a sentences from index to string representation
@@ -307,7 +310,7 @@ class MultiTurnDialog(Dataloader):
 			* fix the missing example
 		'''
 		if trim:
-			index = self.trim_index(index)
+			index = self.multi_turn_trim_index(index)
 		return list(map(lambda sent: \
 			list(map(lambda word: self.vocab_list[word], sent)), \
 			index))

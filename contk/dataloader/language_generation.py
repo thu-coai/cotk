@@ -213,8 +213,9 @@ class LanguageGeneration(Dataloader):
 
 	def trim_index(self, index):
 		'''Trim index. There will be two steps:
-				* find first `<eos>` and abondon words after it (included the `<eos>`).
-				* ignore `<pad>` s at the end of the sentence.
+			* If there is an `<eos>` in sentences, \
+				find first `<eos>` and abondon words after it (included the `<eos>`).
+			* ignore `<pad>` s at the end of the sentence.
 
 		Arguments:
 			index (list): a list of int
@@ -223,13 +224,13 @@ class LanguageGeneration(Dataloader):
 			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",\
 							"been", "to", "Sichuan"]
 			>>> dataloader.trim_index(
-			...		[2, 4, 5, 6, 7, 8, 3, 0, 0]) # <go> I have been to Sichuan <pad> <pad> <eos> I <eos> <pad>
+			...		[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0]) # <go> I have been to Sichuan <pad> <pad> <eos> I <eos> <pad>
 			>>> [2, 4, 5, 6, 7, 8] # <go> I have been to Sichuan
 		'''
 
 		index = trim_before_target(list(index), self.eos_id)
 		idx = len(index)
-		while index[idx - 1] == self.pad_id:
+		while idx > 0 and index[idx-1] == self.pad_id:
 			idx -= 1
 		index = index[:idx]
 		return index
@@ -267,8 +268,8 @@ class LanguageGeneration(Dataloader):
 				gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerlplexityMetric`
 		'''
 		return PerlplexityMetric(self,
-								 data_key='sentence',
-								 data_len_key='sentence_length',
+								 reference_key='sentence',
+								 reference_len_key='sentence_length',
 								 gen_prob_key=gen_prob_key)
 
 	def get_inference_metric(self, gen_key="gen"):

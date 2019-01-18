@@ -1,5 +1,6 @@
 import pickle
 import os
+import json
 
 def try_cache(module, args, cache_dir, name=None):
 	'''Cache a function return value in cache.
@@ -17,9 +18,9 @@ def try_cache(module, args, cache_dir, name=None):
 	else:
 		info = None
 		obj = None
-	if info != repr(args):
+	if info != args:
 		obj = module(*args)
 		f = open(fname, "wb")
-		pickle.dump((repr(args), obj), f, -1)
+		pickle.dump((args, obj), f, -1)
 		f.close()
 	return obj
