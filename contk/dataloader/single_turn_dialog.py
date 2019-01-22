@@ -64,33 +64,16 @@ class SingleTurnDialog(Dataloader):
 		Returns:
 			(tuple): tuple containing (refer to the following example):
 
-				vocab_list (list): vocabulary list of the datasets.
-				data (dict): a dict contains data.
-
-		Examples:
-		.. highlight:: python
-    	.. code-block:: python
-			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", \
-						  "are", "you", "hello", "i", "am", \
-						  "fine"]
-			data = {
-				"train": {
-					"post": [
-						[2, 4, 5, 6, 3],  # first post: <go> how are you <eos>
-						[2, 7, 3],        # second post: <go> hello <eos>
-					],
-					"resp": [
-						[2, 8, 9, 10, 3], # first response: <go> i am fine <eos>
-						[2, 7, 3],         # second response: <go> hello <eos>
-					]
-				},
-				"dev": {...},   # similar to train
-				"test": {...},  # similar to train
-			}
+				* vocab_list (list): vocabulary list of the datasets.
+				* data (dict): a dict contains data.
 
 		Notes:
 			You can use ``ext_vocab``, ``key_name``, ``pad_id``, ``unk_id``, ``go_id``,
 			``eos_id``, but other attributes are not initialized.
+
+		TODO:
+			Complete missing examples.
+
 		'''
 		raise NotImplementedError("This function should be implemented by subclasses.")
 
@@ -129,42 +112,29 @@ class SingleTurnDialog(Dataloader):
 		Arguments:
 			key (str): must be contained in `key_name`
 			index (list): a list of specified index
+
 		Returns:
 			A dict at least contains ``post``, ``post_length``, ``resp``,
 			``resp_length``. See the example belows.
 
-        Examples:
-            vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", \
-							"are", "you", "hello", "i", "am", \
-							"fine"]
-			data = { \
-				"train":{ \
-					"post": [ \
-						[2, 4, 5, 6, 3],   # first post: <go> how are you <eos> \
-						[2, 7, 3],		   # second post: <go> hello <eos> \
-					], \
-					"resp": [ \
-						[2, 8, 9, 10, 3], # first response: <go> i am fine <eos> \
-						[2, 7, 3],         # second response: <go> hello <eos> \
-					], \
-				}, \
-				"dev": {...},   # similar to train \
-				"test": {...},  # similar to train \
-			}
+		Examples:
+			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you",
+			"hello", "i", "am", "fine"]
+
 			>>> dataloader.get_batch('train', [0, 1])
-			>>> { \
-					"post": [ \
-						[2, 4, 5, 6, 3],   # first post \
-						[2, 7, 3, 0, 0],   # second post with <pad> \
-					], \
-					"resp": [ \
-						[2, 8, 9, 10, 3],  # first response \
-						[2, 7, 3, 0, 0],   # second response with <pad> \
-					], \
-					"post_length": [5, 3], # length of posts \
-					"resp_length": [5, 3], # length of responses \
-				}
-        '''
+			{
+				"post": [
+					[2, 4, 5, 6, 3],   # first post: <go> how are you <eos>
+					[2, 7, 3, 0, 0],   # second post: <go> hello <eos> <pad> <pad>
+				],
+				"resp": [
+					[2, 8, 9, 10, 3],  # first response: <go> i am fine <eos>
+					[2, 7, 3, 0, 0],   # second response: <go> hello <eos> <pad> <pad>
+				],
+				"post_length": [5, 3], # length of posts
+				"resp_length": [5, 3], # length of responses
+			}
+		'''
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
 		res = {}
@@ -213,17 +183,18 @@ class SingleTurnDialog(Dataloader):
 			sen (list): a list of str, representing each token of the sentences.
 
 		Examples:
-			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",\
-							"been", "to", "Sichuan"]
+			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have", "been", "to", "Sichuan"]
+
 			>>> dataloader.sen_to_index(
 			...		["<go>", "I", "have", "been", "to", "Sichuan", "<eos>"])
-			>>> [2, 4, 5, 6, 7 ,8 ,3]
+			[2, 4, 5, 6, 7 ,8 ,3]
 
 		'''
 		return list(map(lambda word: self.word2id.get(word, self.unk_id), sen))
 
 	def trim_index(self, index):
 		'''Trim index. There will be two steps:
+
 			* If there is an `<eos>` in sentences, \
 				find first `<eos>` and abondon words after it (included the `<eos>`).
 			* ignore `<pad>` s at the end of the sentence.
@@ -232,11 +203,12 @@ class SingleTurnDialog(Dataloader):
 			index (list): a list of int
 
 		Examples:
-			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",\
-							"been", "to", "Sichuan"]
+			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have", "been", "to", "Sichuan"]
+
 			>>> dataloader.trim_index(
-			...		[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0]) # <go> I have been to Sichuan <pad> <pad> <eos> I <eos> <pad>
-			>>> [2, 4, 5, 6, 7, 8] # <go> I have been to Sichuan
+			... [2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0])
+			... # <go> I have been to Sichuan <pad> <pad> <eos> I <eos> <pad>
+			[2, 4, 5, 6, 7, 8] # <go> I have been to Sichuan
 		'''
 
 		index = trim_before_target(list(index), self.eos_id)
@@ -254,14 +226,14 @@ class SingleTurnDialog(Dataloader):
 			trim (bool): if True, call :func:`trim_index` before convertion.
 
 		Examples:
-			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",\
-							"been", "to", "Sichuan"]
+			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have", "been", "to", "Sichuan"]
+
 			>>> dataloader.index_to_sen(
 			...		[2, 4, 5, 6, 7, 8, 3, 0, 0], trim = True)
-			>>> ["<go>", "I", "have", "been", "to", "Sichuan"]
+			["<go>", "I", "have", "been", "to", "Sichuan"]
 			>>> dataloader.index_to_sen(
 			...		[2, 4, 5, 6, 7, 8, 3, 0, 0], trim = False)
-			>>> ["<go>", "I", "have", "been", "to", "Sichuan", "<eos>", "<pad>", "<pad>"]
+			["<go>", "I", "have", "been", "to", "Sichuan", "<eos>", "<pad>", "<pad>"]
 
 		'''
 		if trim:
@@ -309,10 +281,12 @@ class OpenSubtitles(SingleTurnDialog):
 
 	Refer to :class:`.SingleTurnDialog` for attributes.
 
-	Reference:
-		[1] http://opus.nlpl.eu/OpenSubtitles.php
-		[2] P. Lison and J. Tiedemann, OpenSubtitles2016: Extracting Large Parallel Corpora
-		from Movie and TV Subtitles.(LREC 2016)
+	Refer to the following link and paper for more detail.
+
+	[1] http://opus.nlpl.eu/OpenSubtitles.php
+
+	[2] P. Lison and J. Tiedemann, OpenSubtitles2016: Extracting Large Parallel Corpora from
+	Movie and TV Subtitles.(LREC 2016)
 	'''
 	def __init__(self, file_path, min_vocab_times=10, max_sen_length=50):
 		self._file_path = file_path

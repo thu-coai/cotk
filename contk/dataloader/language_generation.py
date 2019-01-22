@@ -31,9 +31,9 @@ class LanguageGeneration(Dataloader):
 					Maybe you want to use :meth:`sen_to_index` instead.
 	"""
 
-	def __init__(self,
-				 ext_vocab=None,
-				 key_name=None,
+	def __init__(self, \
+				 ext_vocab=None, \
+				 key_name=None, \
 				 ):
 		super().__init__()
 
@@ -64,30 +64,18 @@ class LanguageGeneration(Dataloader):
 		Returns:
 				(tuple): tuple containing (refer to the following example):
 
-						vocab_list (list): vocabulary list of the datasets.
-						data (dict): a dict contains data.
-
-		Examples:
-		.. highlight:: python
-		.. code-block:: python
-				vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", \
-								"are", "you", "hello", "i", "am", "fine"]
-				data = {
-						"train": {
-								"sen": [
-								[2, 4, 5, 6, 3],  # first sentence: <go> how are you <eos>
-								[2, 8, 9, 10, 3], # second sentence: <go> i am fine <eos>
-								]
-						}
-						"dev": {"sen":[...]},   # similar to train
-						"test": {"sen":[...]},  # similar to train
-				}
+					* vocab_list (list): vocabulary list of the datasets.
+					* data (dict): a dict contains data.
 
 		Notes:
 				You can use ``ext_vocab``, ``key_name``, ``pad_id``, ``unk_id``, ``go_id``,
 				``eos_id``, but other attributes are not initialized.
+
+		TODO:
+				Complete missing examples.
+
 		'''
-		raise NotImplementedError(
+		raise NotImplementedError( \
 			"This function should be implemented by subclasses.")
 
 	@property
@@ -115,9 +103,9 @@ class LanguageGeneration(Dataloader):
 		self.batch_id[key] = 0
 		if batch_size is not None:
 			self.batch_size[key] = batch_size
-		print("%s set restart, %d batches and %d left" %
-			  (key, len(self.index[key]) //
-			   self.batch_size[key], len(self.index[key]) %
+		print("%s set restart, %d batches and %d left" % \
+			  (key, len(self.index[key]) // \
+			   self.batch_size[key], len(self.index[key]) % \
 			   self.batch_size[key]))
 
 	def get_batch(self, key, index):
@@ -130,37 +118,27 @@ class LanguageGeneration(Dataloader):
 		Returns:
 				A dict at least contains ``sentence``, ``sentence_length``. See the example belows.
 
-        Examples:
-            vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", \
-                            "are", "you", "hello", "i", "am", \
-                            "fine"]
-            data = { \
-                "train":{ \
-                    "sen": [ \
-                        [2, 4, 5, 6, 3],   # first sentence: <go> how are you <eos> \
-                        [2, 7, 3],		   # second sentence: <go> hello <eos> \
-                    ], \
-                }, \
-                "dev": {...},   # similar to train \
-                "test": {...},  # similar to train \
-            }
-            >>> dataloader.get_batch('train', [0, 1])
-            >>> { \
-                    "sentence": [ \
-                        [2, 4, 5, 6, 3],   # first sentence \
-                        [2, 7, 3, 0, 0],   # second sentence with <pad> \
-                    ], \
-                    "sentence_length": [5, 3], # length of sentences \
-                }
+		Examples:
+			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you",
+			"hello", "i", "am", "fine"]
+
+			>>> dataloader.get_batch('train', [0, 1])
+			{
+				"sentence": [
+					[2, 4, 5, 6, 3],   # first sentence: <go> how are you <eos>
+					[2, 7, 3, 0, 0],   # second sentence:  <go> hello <eos> <pad> <pad>
+				],
+				"sentence_length": [5, 3], # length of sentences
+			}
 
 		'''
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
 		res = {}
 		batch_size = len(index)
-		res["sentence_length"] = np.array(
+		res["sentence_length"] = np.array( \
 			list(map(lambda i: len(self.data[key]['sen'][i]), index)))
-		res["sentence"] = np.zeros(
+		res["sentence"] = np.zeros( \
 			(batch_size, np.max(res["sentence_length"])), dtype=int)
 		for i, j in enumerate(index):
 			sentence = self.data[key]['sen'][j]
@@ -181,7 +159,7 @@ class LanguageGeneration(Dataloader):
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
 		if self.batch_size[key] is None:
-			raise RuntimeError(
+			raise RuntimeError( \
 				"Please run restart before calling this function.")
 		batch_id = self.batch_id[key]
 		start, end = batch_id * \
@@ -202,17 +180,18 @@ class LanguageGeneration(Dataloader):
 			sen (list): a list of str, representing each token of the sentences.
 
 		Examples:
-			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",\
-							"been", "to", "Sichuan"]
+			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have", "been", "to", "Sichuan"]
+
 			>>> dataloader.sen_to_index(
 			...		["<go>", "I", "have", "been", "to", "Sichuan", "<eos>"])
-			>>> [2, 4, 5, 6, 7 ,8 ,3]
+			[2, 4, 5, 6, 7 ,8 ,3]
 
 		'''
 		return list(map(lambda word: self.word2id.get(word, self.unk_id), sen))
 
 	def trim_index(self, index):
 		'''Trim index. There will be two steps:
+
 			* If there is an `<eos>` in sentences, \
 				find first `<eos>` and abondon words after it (included the `<eos>`).
 			* ignore `<pad>` s at the end of the sentence.
@@ -223,8 +202,10 @@ class LanguageGeneration(Dataloader):
 		Examples:
 			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",\
 							"been", "to", "Sichuan"]
+
 			>>> dataloader.trim_index(
-			...		[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0]) # <go> I have been to Sichuan <pad> <pad> <eos> I <eos> <pad>
+			...		[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0])
+			...     # <go> I have been to Sichuan <pad> <pad> <eos> I <eos> <pad>
 			>>> [2, 4, 5, 6, 7, 8] # <go> I have been to Sichuan
 		'''
 
@@ -245,12 +226,13 @@ class LanguageGeneration(Dataloader):
 		Examples:
 			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",\
 							"been", "to", "Sichuan"]
+
 			>>> dataloader.index_to_sen(
 			...		[2, 4, 5, 6, 7, 8, 3, 0, 0], trim = True)
-			>>> ["<go>", "I", "have", "been", "to", "Sichuan"]
+			["<go>", "I", "have", "been", "to", "Sichuan"]
 			>>> dataloader.index_to_sen(
 			...		[2, 4, 5, 6, 7, 8, 3, 0, 0], trim = False)
-			>>> ["<go>", "I", "have", "been", "to", "Sichuan", "<eos>", "<pad>", "<pad>"]
+			["<go>", "I", "have", "been", "to", "Sichuan", "<eos>", "<pad>", "<pad>"]
 
 		'''
 		if trim:
@@ -267,9 +249,9 @@ class LanguageGeneration(Dataloader):
 		Arguments:
 				gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerlplexityMetric`
 		'''
-		return PerlplexityMetric(self,
-								 reference_key='sentence',
-								 reference_len_key='sentence_length',
+		return PerlplexityMetric(self, \
+								 reference_key='sentence', \
+								 reference_len_key='sentence_length', \
 								 gen_prob_key=gen_prob_key)
 
 	def get_inference_metric(self, gen_key="gen"):
@@ -283,7 +265,7 @@ class LanguageGeneration(Dataloader):
 				gen_key (str): default: "gen". Refer to :class:`.metric.LanguageGenerationRecorder`
 		'''
 		metric = MetricChain()
-		metric.add_metric(LanguageGenerationRecorder(self,
+		metric.add_metric(LanguageGenerationRecorder(self, \
 													 gen_key=gen_key))
 		return metric
 
@@ -300,9 +282,11 @@ class MSCOCO(LanguageGeneration):
 
 	Refer to :class:`.LanguageGeneration` for attributes.
 
-	Reference:
-		[1] http://images.cocodataset.org/annotations/annotations_trainval2017.zip
-		[2] Lin T Y, Maire M, Belongie S, et al. Microsoft COCO: Common Objects in Context.ECCV 2014.
+	Refer to the following link and paper for more detail:
+
+	[1] http://images.cocodataset.org/annotations/annotations_trainval2017.zip
+
+	[2] Lin T Y, Maire M, Belongie S, et al. Microsoft COCO: Common Objects in Context. ECCV 2014.
 	'''
 
 	def __init__(self, file_path, min_vocab_times=10, max_sen_length=50):
@@ -318,25 +302,25 @@ class MSCOCO(LanguageGeneration):
 		for key in self.key_name:
 			f_file = open("%s/mscoco_%s.txt" % (self._file_path, key))
 			origin_data[key] = {}
-			origin_data[key]['sen'] = list(
+			origin_data[key]['sen'] = list( \
 				map(lambda line: line.split(), f_file.readlines()))
 
 		vocab = list(chain(*(origin_data['train']['sen'])))
 		# Important: Sort the words preventing the index changes between
 		# different runs
-		vocab = sorted(Counter(vocab).most_common(),
+		vocab = sorted(Counter(vocab).most_common(), \
 					   key=lambda pair: (-pair[1], pair[0]))
-		left_vocab = list(
-			filter(
-				lambda x: x[1] >= self._min_vocab_times,
+		left_vocab = list( \
+			filter( \
+				lambda x: x[1] >= self._min_vocab_times, \
 				vocab))
 		vocab_list = self.ext_vocab + list(map(lambda x: x[0], left_vocab))
 		word2id = {w: i for i, w in enumerate(vocab_list)}
 		print("vocab list length = %d" % len(vocab_list))
 
 		def line2id(line):
-			return ([self.go_id] +
-					list(map(lambda word: word2id[word] if word in word2id else self.unk_id, line))
+			return ([self.go_id] + \
+					list(map(lambda word: word2id[word] if word in word2id else self.unk_id, line)) \
 					+ [self.eos_id])[:self._max_sen_length]
 
 		data = {}
@@ -346,20 +330,20 @@ class MSCOCO(LanguageGeneration):
 
 			vocab = list(chain(*(origin_data[key]['sen'])))
 			vocab_num = len(vocab)
-			oov_num = len(
-				list(
-					filter(
-						lambda word: word not in word2id,
+			oov_num = len( \
+				list( \
+					filter( \
+						lambda word: word not in word2id, \
 						vocab)))
-			length = list(
+			length = list( \
 				map(len, origin_data[key]['sen']))
-			cut_num = np.sum(
-				np.maximum(
-					np.array(length) -
-					self._max_sen_length +
-					1,
+			cut_num = np.sum( \
+				np.maximum( \
+					np.array(length) - \
+					self._max_sen_length + \
+					1, \
 					0))
-			print(
-				"%s set. OOV rate: %f, max length before cut: %d, cut word rate: %f" %
+			print( \
+				"%s set. OOV rate: %f, max length before cut: %d, cut word rate: %f" % \
 				(key, oov_num / vocab_num, max(length), cut_num / vocab_num))
 		return vocab_list, data

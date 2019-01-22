@@ -64,37 +64,17 @@ class MultiTurnDialog(Dataloader):
 		r'''This function is called during the initialization.
 
 		Returns:
-			(tuple): tuple containing (refer to the following example):
+				(tuple): tuple containing (refer to the following example):
 
-				vocab_list (list): vocabulary list of the datasets.
-				data (dict): a dict contains data.
-
-		Examples:
-		.. highlight:: python
-	.. code-block:: python
-			vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "<eot>", "how", \
-						  "are", "you", "hello", "i", "am", \
-						  "fine", "hi"]
-			data = {
-				"train": {
-					"session": [
-						[
-							[2, 12, 3, 5, 6, 7, 3, 4],  # session_0, turn_0: <go> hi <eos> how are you <eos> <eot>
-							[2, 9, 10, 11, 3, 4],	  # session_0, turn_1: <go> i am fine <eos> <eot>
-						],
-						[
-							...  # session_1, similar to session_0
-						],
-						...
-					]
-				},
-				"dev": {...},	# similar to train
-				"test": {...},	# similar to train
-			}
+					* vocab_list (list): vocabulary list of the datasets.
+					* data (dict): a dict contains data.
 
 		Notes:
-			You can use ``ext_vocab``, ``key_name``, ``pad_id``, ``unk_id``, ``go_id``,
-			``eos_id``, ``eot_id``, but other attributes are not initialized.
+				You can use ``ext_vocab``, ``key_name``, ``pad_id``, ``unk_id``, ``go_id``,
+				``eos_id``, ``eot_id``, but other attributes are not initialized.
+
+		TODO:
+				Complete missing examples.
 		'''
 		raise NotImplementedError("This function should be implemented by subclasses.")
 
