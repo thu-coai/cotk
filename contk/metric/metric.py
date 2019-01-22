@@ -46,7 +46,7 @@ class PerlplexityMetric(MetricBase):
 			data[reference_key] (list or :class:`numpy.array`): Reference sentences.
 				Contains start token (eg: ``<go>``) and end token (eg: ``<eos>``).
 				Size: `[batch_size, max_sentence_length]`
-			data[reference_key] (list): Length of Reference sentences. Contains start token (eg:``<go>``)
+			data[reference_len_key] (list): Length of Reference sentences. Contains start token (eg:``<go>``)
 				and end token (eg:``<eos>``). Size: `[batch_size]`
 			data[gen_prob_key] (list or :class:`numpy.array`): Setence generations model outputs of
 				**log softmax** probability. Contains end token (eg:``<eos>``), but without start token
@@ -78,6 +78,10 @@ class PerlplexityMetric(MetricBase):
 				if not np.allclose(expsum, [1] * single_length):
 					raise ValueError("data[gen_prob_key] must be processed after log_softmax.")
 
+			if not isinstance(resp, np.ndarray):
+				resp = np.array(resp)
+			if not isinstance(gen_prob, np.ndarray):
+				gen_prob = np.array(gen_prob)
 			self.word_loss += -np.sum(gen_prob[i][\
 				list(range(single_length-1)), resp[i][1:single_length]])
 			self.length_sum += single_length - 1
@@ -183,19 +187,19 @@ class BleuCorpusMetric(MetricBase):
 		'''
 		gen = data[self.gen_key]
 		resp = data[self.reference_key]
-		if resp.shape[0] != gen.shape[0]:
+		if len(resp) != len(gen):
 			raise ValueError("Batch num is not matched.")
 
 		for gen_sen, resp_sen in zip(gen, resp):
 			self.hyps.append(self.dataloader.trim_index(gen_sen))
-			self.refs.append([self.dataloader.trim_index(resp_sen)])
+			self.refs.append([self.dataloader.trim_index(resp_sen[1:])])
 
 	def close(self):
 		'''Return a dict which contains:
 
 			* **bleu**: bleu value.
 		'''
-		return corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction.method7)
+		return {"bleu": corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction().method7)}
 
 class MultiTurnBleuCorpusMetric(MetricBase):
 	'''Metric for calcualting multi-turn BLEU.
@@ -244,14 +248,14 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 				raise ValueError("Turn num is not matched.")
 			for gen_sent, ref_sent in zip(gen_processed, ref_processed):
 				self.hyps.append(self.dataloader.trim_index(gen_sent))
-				self.refs.append([self.dataloader.trim_index(ref_sent)])
+				self.refs.append([self.dataloader.trim_index(ref_sent)[1:]])
 
 	def close(self):
 		'''Return a dict which contains:
 
 			* **bleu**: bleu value.
 		'''
-		return corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction.method7)
+		return {"bleu": corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction().method7)}
 
 class SingleTurnDialogRecorder(MetricBase):
 	'''A metric-like class for recording generated sentences and references.
@@ -293,11 +297,11 @@ class SingleTurnDialogRecorder(MetricBase):
 		post = data[self.post_key]
 		resp = data[self.resp_key]
 		gen = data[self.gen_key]
-		if post.shape[0] != resp.shape[0] or resp.shape[0] != gen.shape[0]:
+		if len(post) != len(resp) or len(resp) != len(gen):
 			raise ValueError("Batch num is not matched.")
-		for i in range(post.shape[0]):
-			self.post_list.append(self.dataloader.index_to_sen(post[i, 1:]))
-			self.resp_list.append(self.dataloader.index_to_sen(resp[i, 1:]))
+		for i, post_sen in enumerate(post):
+			self.post_list.append(self.dataloader.index_to_sen(post_sen[1:]))
+			self.resp_list.append(self.dataloader.index_to_sen(resp[i][1:]))
 			self.gen_list.append(self.dataloader.index_to_sen(gen[i]))
 
 	def close(self):
@@ -352,10 +356,16 @@ class MultiTurnDialogRecorder(MetricBase):
 		context = data[self.context_key]
 		reference = data[self.reference_key]
 		gen = data[self.gen_key]
-		if context.shape[0] != reference.shape[0] or context.shape[0] != gen.shape[0]:
+		if len(context) != len(reference) or len(context) != len(gen):
 			raise ValueError("Batch num is not matched.")
-		for i in range(context.shape[0]):
-			self.context_list.append(self.dataloader.multi_turn_index_to_sen(context[i, :, 1:]))
+		if not isinstance(context, np.ndarray):
+			context = np.array(context)
+		if not isinstance(reference, np.ndarray):
+			reference = np.array(reference)
+		if not isinstance(gen, np.ndarray):
+			gen = np.array(gen)
+		for i, context_sen in enumerate(context):
+			self.context_list.append(self.dataloader.multi_turn_index_to_sen(context_sen[ :, 1:]))
 			self.reference_list.append(self.dataloader.multi_turn_index_to_sen(reference[i, :, 1:]))
 			self.gen_list.append(self.dataloader.multi_turn_index_to_sen(gen[i, :]))
 
@@ -392,8 +402,8 @@ class LanguageGenerationRecorder(MetricBase):
 				Size: `[batch_size, gen_sentence_length]`.
 		'''
 		gen = data[self.gen_key]
-		for i in range(gen.shape[0]):
-			self.gen_list.append(self.dataloader.index_to_sen(gen[i]))
+		for sen in gen:
+			self.gen_list.append(self.dataloader.index_to_sen(sen))
 
 	def close(self):
 		'''Return a dict which contains:
