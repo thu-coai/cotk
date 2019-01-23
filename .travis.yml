@@ -3,6 +3,8 @@ language: python
 python:
   - 3.6
 
+cache: pip
+
 install:
   - pip install sphinx
   - pip install pytest-cov==2.4.0
@@ -11,6 +13,7 @@ install:
 script:
   - pip install -e .
   - py.test --cov=contk tests/ --cov-report term-missing
+  - python ./models/run_tests.py
   - cd docs
   - make html
   - mv ./build/html ./build/docs

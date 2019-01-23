@@ -157,13 +157,12 @@ class VAEModel(object):
 		scalarlist = ["loss", "perplexity", "kl_loss", "kld", "kl_weight"]
 		tensorlist = []
 		textlist = []
-		emblist = []
 		for i in args.show_sample:
 			textlist.append("show_str%d" % i)
 		self.devSummary = self.summaryHelper.addGroup(scalar=scalarlist, tensor=tensorlist, text=textlist,
-													  embedding=emblist, prefix="dev")
+													   prefix="dev")
 		self.testSummary = self.summaryHelper.addGroup(scalar=scalarlist, tensor=tensorlist, text=textlist,
-													   embedding=emblist, prefix="test")
+													   prefix="test")
 
 	def print_parameters(self):
 		for item in self.params:
