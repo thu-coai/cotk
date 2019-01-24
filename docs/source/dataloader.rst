@@ -7,9 +7,20 @@ Data Loader
 LanguageGeneration
 -----------------------------------
 .. autoclass:: LanguageGeneration
-    :members:
-    :private-members:
 
+    .. autoattribute:: vocab_size
+    .. automethod:: _load_data
+    .. automethod:: restart
+    .. automethod:: get_batch
+    .. automethod:: get_next_batch
+    .. automethod:: trim_index
+    .. automethod:: sen_to_index
+    .. automethod:: index_to_sen
+    .. automethod:: get_teacher_forcing_metric
+    .. automethod:: get_inference_metric
+
+MSCOCO
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: MSCOCO
     :members:
     :private-members:
@@ -17,9 +28,20 @@ LanguageGeneration
 SingleTurnDialog
 -----------------------------------
 .. autoclass:: SingleTurnDialog
-    :members:
-    :private-members:
 
+    .. autoattribute:: vocab_size
+    .. automethod:: _load_data
+    .. automethod:: restart
+    .. automethod:: get_batch
+    .. automethod:: get_next_batch
+    .. automethod:: trim_index
+    .. automethod:: sen_to_index
+    .. automethod:: index_to_sen
+    .. automethod:: get_teacher_forcing_metric
+    .. automethod:: get_inference_metric
+
+OpenSubtitles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: OpenSubtitles
     :members:
     :private-members:
@@ -27,9 +49,23 @@ SingleTurnDialog
 MultiTurnDialog
 -----------------------------------
 .. autoclass:: MultiTurnDialog
-    :members:
-    :private-members:
 
+    .. autoattribute:: vocab_size
+    .. automethod:: _load_data
+    .. automethod:: restart
+    .. automethod:: get_batch
+    .. automethod:: get_next_batch
+    .. automethod:: trim_index
+    .. automethod:: multi_turn_trim_index
+    .. automethod:: sen_to_index
+    .. automethod:: multi_turn_sen_to_index
+    .. automethod:: index_to_sen
+    .. automethod:: multi_turn_index_to_sen
+    .. automethod:: get_teacher_forcing_metric
+    .. automethod:: get_inference_metric
+
+UbuntuCorpus
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: UbuntuCorpus
     :members:
     :private-members:

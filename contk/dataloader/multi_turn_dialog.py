@@ -1,111 +1,46 @@
 """
 A module for multi turn dialog.
 """
-import random
 import csv
 from collections import Counter
 from itertools import chain
 
 import numpy as np
-from .dataloader import Dataloader
+from .dataloader import BasicLanguageGeneration
 from ..metric import MetricChain, MultiTurnPerplexityMetric, MultiTurnBleuCorpusMetric, \
 	MultiTurnDialogRecorder
-from .._utils import trim_before_target
 
-class MultiTurnDialog(Dataloader):
+# pylint: disable=W0223
+class MultiTurnDialog(BasicLanguageGeneration):
 	r"""Base class for multi-turn dialog datasets. This is an abstract class.
 
 	Arguments:
-		ext_vocab (list): special tokens. default: `["<pad>", "<unk>", "<go>", "<eos>", "<eot>"]`
-		key_name (list): name of subsets of the data. default: `["train", "dev", "test"]`
+			end_token (int): the special token that stands for end. default: `4("<eot>")`
+			ext_vocab (list): special tokens. default: `["<pad>", "<unk>", "<go>", "<eos>", "<eot>"]`
+			key_name (list): name of subsets of the data. default: `["train", "dev", "test"]`
 
 	Attributes:
-		ext_vocab (list): special tokens, be placed at beginning of `vocab_list`.
-			For example: `["<pad>", "<unk>", "<go>", "<eos>", "<eot>"]`
-		pad_id (int): token for padding, always equal to `0`
-		unk_id (int): token for unkown words, always equal to `1`
-		go_id (int): token at the beginning of sentences, always equal to `2`
-		eos_id (int): token at the end of sentences, always equal to `3`
-		eot_id (int): token at the end of turns, always equal to `4`
-		key_name (list): name of subsets of the data. For example: `["train", "dev", "test"]`
-		vocab_list (list): vocabulary list of the datasets.
-		word2id (dict): a dict mapping tokens to index.
-			Maybe you want to use :meth:`sen_to_index` instead.
+			ext_vocab (list): special tokens, be placed at beginning of `vocab_list`.
+					For example: `["<pad>", "<unk>", "<go>", "<eos>", "<eot>"]`
+			pad_id (int): token for padding, always equal to `0`
+			unk_id (int): token for unknown words, always equal to `1`
+			go_id (int): token at the beginning of sentences, always equal to `2`
+			eos_id (int): token at the end of sentences, always equal to `3`
+			eot_id (int): token at the end of turns, always equal to `4`
+			key_name (list): name of subsets of the data. For example: `["train", "dev", "test"]`
+			vocab_list (list): vocabulary list of the datasets.
+			word2id (dict): a dict mapping tokens to index.
+					Maybe you want to use :meth:`sen_to_index` instead.
+			end_token (int): token for end. default: equals to `eot_id`
 	"""
-	def __init__(self,		\
-			ext_vocab=None, \
-			key_name=None,	\
+	def __init__(self, \
+				 end_token=None, \
+				 ext_vocab=None, \
+				 key_name=None,	\
 		):
-		super().__init__()
-
-		# initialize by default value. (can be overwritten by subclass)
-		self.ext_vocab = ext_vocab or ["<pad>", "<unk>", "<go>", "<eos>", "<eot>"]
-		self.pad_id = self.ext_vocab.index("<pad>")
-		self.unk_id = self.ext_vocab.index("<unk>")
-		self.go_id = self.ext_vocab.index("<go>")
-		self.eos_id = self.ext_vocab.index("<eos>")
-		self.eot_id = self.ext_vocab.index("<eot>")
-		self.key_name = key_name or ["train", "dev", "test"]
-
-		# initialize by subclass
-		self.vocab_list, self.data = self._load_data()
-		self.word2id = {w: i for i, w in enumerate(self.vocab_list)}
-
-		# postprocess initialization
-		self.index = {}
-		self.batch_id = {}
-		self.batch_size = {}
-		for key in self.key_name:
-			self.batch_id[key] = 0
-			self.batch_size[key] = None
-			self.index[key] = list(range(len(self.data[key]['session'])))
-
-	def _load_data(self):
-		r'''This function is called during the initialization.
-
-		Returns:
-				(tuple): tuple containing (refer to the following example):
-
-					* vocab_list (list): vocabulary list of the datasets.
-					* data (dict): a dict contains data.
-
-		Notes:
-				You can use ``ext_vocab``, ``key_name``, ``pad_id``, ``unk_id``, ``go_id``,
-				``eos_id``, ``eot_id``, but other attributes are not initialized.
-
-		TODO:
-				Complete missing examples.
-		'''
-		raise NotImplementedError("This function should be implemented by subclasses.")
-
-	@property
-	def vocab_size(self):
-		'''Equals to `len(self.vocab_list)`. Read only.
-		'''
-		return len(self.vocab_list)
-
-	def restart(self, key, batch_size=None, shuffle=True):
-		'''Initialize mini-batches. Must call this function before :func:`get_next_batch`
-		or an epoch is end.
-
-		Arguments:
-			key (str): must be contained in `key_name`
-			batch_size (None or int): default (None): use last batch_size.
-			shuffle (bool): whether to shuffle the data. default: `True`
-		'''
-		if key not in self.key_name:
-			raise ValueError("No set named %s." % key)
-		if batch_size is None and self.batch_size[key] is None:
-			raise ValueError("You need batch_size to intialize.")
-		if shuffle:
-			random.shuffle(self.index[key])
-
-		self.batch_id[key] = 0
-		if batch_size is not None:
-			self.batch_size[key] = batch_size
-		print("%s set restart, %d batches and %d left" % (key, \
-				len(self.index[key]) // self.batch_size[key], \
-				len(self.index[key]) % self.batch_size[key]))
+		ext_vocab = ext_vocab or ["<pad>", "<unk>", "<go>", "<eos>", "<eot>"]
+		self.eot_id = ext_vocab.index("<eot>")
+		super().__init__(end_token or self.eot_id, ext_vocab, key_name)
 
 	def get_batch(self, key, index):
 		'''Get a batch of specified `index`.
@@ -115,14 +50,14 @@ class MultiTurnDialog(Dataloader):
 			index (list): a list of specified index
 
 		Returns:
-			A dict at least contains:
+			(dict): A dict at least contains:
 
-				turn_length(list): A 1-d list, the number of turns in sessions.
-					Size: [batch_size]
-				sent_length(list): A 2-d non-padded list, the length of sentence in turns.
-					The second dimension is various in different session.
-					Length of outer list: `batch_size`
-				sent(:class:numpy.array): A 3-d padding array containing id of words.
+				* turn_length(list): A 1-d list, the number of turns in sessions. \
+					Size: `[batch_size]`
+				* sent_length(list): A 2-d non-padded list, the length of sentence in turns. \
+					The second dimension is various in different session. \
+					Length of outer list: `[batch_size]`
+				* sent(:class:numpy.array): A 3-d padding array containing id of words. \
 					Size: `[batch_size, max(turn_length[i]), max(sent_length)]`
 
 			See the example belows.
@@ -148,88 +83,6 @@ class MultiTurnDialog(Dataloader):
 			for j, sent in enumerate(self.data[key]['session'][index_i]):
 				res['sent'][i, j, :len(sent)] = sent
 		return res
-
-	def get_next_batch(self, key, ignore_left_samples=False):
-		'''Get next batch.
-
-		Arguments:
-			key (str): must be contained in `key_name`
-			ignore_left_samples (bool): Ignore the last batch, whose sample num
-				is not equal to `batch_size`. Default: `False`
-
-		Returns:
-			A dict like :func:`get_batch`, or None if the epoch is end.
-		'''
-		if key not in self.key_name:
-			raise ValueError("No set named %s." % key)
-		if self.batch_size[key] is None:
-			raise RuntimeError("Please run restart before calling this function.")
-		batch_id = self.batch_id[key]
-		start, end = batch_id * self.batch_size[key], (batch_id + 1) * self.batch_size[key]
-		if start >= len(self.index[key]):
-			return None
-		if ignore_left_samples and end > len(self.index[key]):
-			return None
-		index = self.index[key][start:end]
-		res = self.get_batch(key, index)
-		self.batch_id[key] += 1
-		return res
-
-	def sen_to_index(self, sen):
-		'''Convert a sentences from string to index representation.
-
-		Arguments:
-			sen (list): a list of str, representing each token of the sentences.
-
-		Examples:
-			>>> dataloader.sen_to_index(
-			...		["<go>", "I", "have", "been", "to", "Sichuan", "province", "eos"])
-			>>>
-
-		Todo:
-			* fix the missing example
-		'''
-		return list(map(lambda word: self.word2id.get(word, self.unk_id), sen))
-
-	def multi_turn_sen_to_index(self, session):
-		'''Convert a session from string to index representation.
-
-		Arguments:
-			sen (list): a 2-d list of str, representing each token of the session.
-
-		Examples:
-
-		Todo:
-			* fix the missing example
-		'''
-		return list(map(lambda sent: list(map( \
-			lambda word: self.word2id.get(word, self.unk_id), sent)), \
-		session))
-
-	def trim_index(self, index):
-		'''Trim indexes. There will be two steps:
-			* If there is an `<eot>` in sentences, \
-				find first `<eot>` and abondon words after it (included the `<eot>`).
-			* Ignore `<pad>` s at the end of the sentence.
-
-		Arguments:
-			index (list): a list of int
-
-		Examples:
-			>>> dataloader.index_to_sen(
-			...		[])
-			>>>
-
-		Todo:
-			* fix the missing example
-		'''
-
-		index = trim_before_target(list(index), self.eot_id)
-		idx = len(index)
-		while idx > 0 and index[idx-1] == self.pad_id:
-			idx -= 1
-		index = index[:idx]
-		return index
 
 	def multi_turn_trim_index(self, index):
 		'''Trim indexes for multi turn dialog. There will be 3 steps:
@@ -257,24 +110,20 @@ class MultiTurnDialog(Dataloader):
 				break
 		return res
 
-	def index_to_sen(self, index, trim=True):
-		'''Convert a sentences from index to string representation
+	def multi_turn_sen_to_index(self, session):
+		'''Convert a session from string to index representation.
 
 		Arguments:
-			index (list): a list of int
-			trim (bool): if True, call :func:`trim_index` before convertion.
+			sen (list): a 2-d list of str, representing each token of the session.
 
 		Examples:
-			>>> dataloader.index_to_sen(
-			...		[])
-			>>>
 
 		Todo:
 			* fix the missing example
 		'''
-		if trim:
-			index = self.trim_index(index)
-		return list(map(lambda word: self.vocab_list[word], index))
+		return list(map(lambda sent: list(map( \
+			lambda word: self.word2id.get(word, self.unk_id), sent)), \
+		session))
 
 	def multi_turn_index_to_sen(self, index, trim=True):
 		'''Convert a session from index to string representation
@@ -336,7 +185,7 @@ class UbuntuCorpus(MultiTurnDialog):
 		max_turn_length (int): All sessions longer than `max_turn_length` will be shortened
 			to first `max_turn_length` sentences. Default: 20.
 
-	Refer to :class:`.MultiTurnDialog` for attributes.
+	Refer to :class:`.MultiTurnDialog` for attributes and methods.
 
 	Todo:
 		* add references
@@ -349,7 +198,7 @@ class UbuntuCorpus(MultiTurnDialog):
 		super(UbuntuCorpus, self).__init__()
 
 	def _load_data(self):
-		r'''Loading dataset, invoked by MultiTurnDialog.__init__
+		r'''Loading dataset, invoked by `MultiTurnDialog.__init__`
 		'''
 		origin_data = {}
 		for key in self.key_name:
@@ -380,10 +229,12 @@ class UbuntuCorpus(MultiTurnDialog):
 					[self.eot_id])[:self._max_sen_length]
 
 		data = {}
+		data_size = {}
 		for key in self.key_name:
 			data[key] = {}
 			data[key]['session'] = [list(map(line2id, session[:self._max_turn_length])) \
 					for session in origin_data[key]['session']]
+			data_size[key] = len(data[key]['session'])
 			vocab = list(chain(*chain(*(origin_data[key]['session']))))
 			vocab_num = len(vocab)
 			oov_num = len(list(filter(lambda word: word not in word2id, vocab)))
@@ -396,4 +247,4 @@ class UbuntuCorpus(MultiTurnDialog):
 					"rate: %f\n\tmax turn length before cut: %d, cut sentence rate: %f") % \
 					(key, oov_num / vocab_num, max(sent_length), cut_word_num / vocab_num, \
 					max(turn_length), cut_sent_num / sent_num))
-		return vocab_list, data
+		return vocab_list, data, data_size
