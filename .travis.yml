@@ -9,6 +9,8 @@ install:
   - pip install sphinx
   - pip install pytest-cov==2.4.0
   - pip install python-coveralls
+  - pip install pytest-dependency
+  - pip install pytest-mock
 
 script:
   - pip install -e .

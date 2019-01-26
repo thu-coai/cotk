@@ -48,8 +48,8 @@ class BasicLanguageGeneration(Dataloader):
 			go_id (int): token at the beginning of sentences, always equal to `2`
 			eos_id (int): token at the end of sentences, always equal to `3`
 			key_name (list): name of subsets of the data. For example: `["train", "dev", "test"]`
-			vocab_list (list): vocabulary list of the datasets.
-			word2id (dict): a dict mapping tokens to index.
+			all_vocab_list (list): vocabulary list of the datasets, including valid words and invalid words.
+			word2id (dict): a dict mapping all vocab to index.
 					Maybe you want to use :meth:`sen_to_index` instead.
 			end_token (int): token for end. default: equals to `eos_id`
 	"""
@@ -70,8 +70,8 @@ class BasicLanguageGeneration(Dataloader):
 		self.key_name = key_name or ["train", "dev", "test"]
 
 		# initialize by subclass
-		self.vocab_list, self.data, self.data_size = self._load_data()
-		self.word2id = {w: i for i, w in enumerate(self.vocab_list)}
+		self.all_vocab_list, self.valid_vocab_len, self.data, self.data_size = self._load_data()
+		self.word2id = {w: i for i, w in enumerate(self.all_vocab_list)}
 
 		# postprocess initialization
 		self.index = {}
@@ -82,24 +82,51 @@ class BasicLanguageGeneration(Dataloader):
 			self.batch_size[key] = None
 			self.index[key] = list(range(self.data_size[key]))
 
+	def _valid_word2id(self, word):
+		'''This function return the id for a valid word (``id < valid_vocab_len``),
+		otherwise return `unk_id`.
+		'''
+		idx = self.word2id.get(word, self.unk_id)
+		if idx >= self.vocab_size:
+			idx = self.unk_id
+		return idx
+
 	def _load_data(self):
 		r'''This function is called during the initialization.
 
 		Returns:
-			(tuple): tuple containing (refer to the following example):
+			(tuple): tuple containing:
 
-				* vocab_list (list): vocabulary list of the datasets.
-				* data (dict): a dict contains data.
-				* data_size (dict): a dict contains size of each item in data.
+			* all_vocab_list (list): vocabulary list of the datasets,
+			  including valid and invalid words
+			* valid_vocab_len (int): the number of valid vocab.
+			  ``vocab_list[:valid_vocab_len]`` will be regarded as valid words,
+			  while ``vocab_list[valid_vocab_len:]`` regarded as invalid words
+			* data (dict): a dict contains data.
+			* data_size (dict): a dict contains size of each item in data.
 		'''
 		raise NotImplementedError( \
 			"This function should be implemented by subclasses.")
 
 	@property
 	def vocab_size(self):
-		'''Equals to `len(self.vocab_list)`. Read only.
+		'''int: equals to ``valid_vocab_len``. Read only.
 		'''
-		return len(self.vocab_list)
+		return self.valid_vocab_len
+
+	@property
+	def all_vocab_size(self):
+		'''int: equals to ``len(self.all_vocab_list)``. Read only.
+		'''
+		return len(self.all_vocab_list)
+
+	@property
+	def vocab_list(self):
+		r'''list: valid vocab list, equals to ``all_vocab_list[：valid_vocab_len]``.
+		Read only.
+		'''
+		# using utf-8 ：instead of : for avoiding bug in sphinx
+		return self.all_vocab_list[:self.valid_vocab_len]
 
 	def restart(self, key, batch_size=None, shuffle=True):
 		'''Initialize mini-batches. Must call this function before :func:`get_next_batch`
@@ -113,7 +140,7 @@ class BasicLanguageGeneration(Dataloader):
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
 		if batch_size is None and self.batch_size[key] is None:
-			raise ValueError("You need batch_size to intialize.")
+			raise ValueError("You need batch_size to initialize.")
 		if shuffle:
 			random.shuffle(self.index[key])
 
@@ -127,12 +154,12 @@ class BasicLanguageGeneration(Dataloader):
 	def get_batch(self, key, index):
 		'''Get a batch of specified `index`.
 
-				Arguments:
-						key (str): must be contained in `key_name`
-						index (list): a list of specified index
+		Arguments:
+				key (str): must be contained in `key_name`
+				index (list): a list of specified index
 
-				Returns:
-						A dict. See examples in subclasses.
+		Returns:
+				A dict. See examples in subclasses.
 		'''
 		raise NotImplementedError( \
 			"This function should be implemented by subclasses.")
@@ -165,11 +192,15 @@ class BasicLanguageGeneration(Dataloader):
 		self.batch_id[key] += 1
 		return res
 
-	def sen_to_index(self, sen):
+	def sen_to_index(self, sen, invalid_vocab=False):
 		'''Convert a sentence from string to index representation.
 
 		Arguments:
 			sen (list): a list of str, representing each token of the sentences.
+			invalid_vocab (bool): whether to provide invalid words.
+					If ``False``, invalid words will be replaced by `unk_id`.
+					If ``True``, invalid words will using their own id.
+					Default: `False`
 
 		Examples:
 			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
@@ -178,14 +209,19 @@ class BasicLanguageGeneration(Dataloader):
 			...	["<go>", "I", "have", "been", "to", "Sichuan", "<eos>"])
 			>>> [2, 4, 5, 6, 7 ,8 ,3]
 
+		TODO:
+			* add invalid vocab example
 		'''
-		return list(map(lambda word: self.word2id.get(word, self.unk_id), sen))
+		if invalid_vocab:
+			return list(map(lambda word: self.word2id.get(word, self.unk_id), sen))
+		else:
+			return list(map(self._valid_word2id, sen))
 
 	def trim_index(self, index):
 		'''Trim index. There will be two steps:
 
-			* If there is an `<eos>` in sentences, \
-				find first `<eos>` and abondon words after it (included the `<eos>`).
+			* If there is an `<eos>` in sentences,
+			  find first `<eos>` and abondon words after it (included the `<eos>`).
 			* ignore `<pad>` s at the end of the sentence.
 
 		Arguments:
@@ -194,7 +230,7 @@ class BasicLanguageGeneration(Dataloader):
 		Examples:
 
 			>>> # end_token = 3 #('<eos>')
-			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
+			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 			>>> #	"been", "to", "Sichuan"]
 			>>> dataloader.trim_index(
 			...	[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0])
@@ -218,7 +254,7 @@ class BasicLanguageGeneration(Dataloader):
 
 		Examples:
 			>>> # end_token = 3 #('<eos>')
-			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
+			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 			>>> #	"been", "to", "Sichuan"]
 			>>> dataloader.index_to_sen(
 			...		[2, 4, 5, 6, 7, 8, 3, 0, 0], trim = True)
@@ -230,4 +266,4 @@ class BasicLanguageGeneration(Dataloader):
 		'''
 		if trim:
 			index = self.trim_index(index)
-		return list(map(lambda word: self.vocab_list[word], index))
+		return list(map(lambda word: self.all_vocab_list[word], index))

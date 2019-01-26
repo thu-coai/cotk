@@ -28,7 +28,7 @@ class MultiTurnDialog(BasicLanguageGeneration):
 			eos_id (int): token at the end of sentences, always equal to `3`
 			eot_id (int): token at the end of turns, always equal to `4`
 			key_name (list): name of subsets of the data. For example: `["train", "dev", "test"]`
-			vocab_list (list): vocabulary list of the datasets.
+			all_vocab_list (list): vocabulary list of the datasets.
 			word2id (dict): a dict mapping tokens to index.
 					Maybe you want to use :meth:`sen_to_index` instead.
 			end_token (int): token for end. default: equals to `eot_id`
@@ -52,12 +52,16 @@ class MultiTurnDialog(BasicLanguageGeneration):
 		Returns:
 			(dict): A dict at least contains:
 
-				* turn_length(list): A 1-d list, the number of turns in sessions. \
+				* turn_length(list): A 1-d list, the number of turns in sessions.
 					Size: `[batch_size]`
-				* sent_length(list): A 2-d non-padded list, the length of sentence in turns. \
-					The second dimension is various in different session. \
+				* sent_length(list): A 2-d non-padded list, the length of sentence in turns.
+					The second dimension is various in different session.
 					Length of outer list: `[batch_size]`
-				* sent(:class:numpy.array): A 3-d padding array containing id of words. \
+				* sent(:class:`numpy.array`): A 3-d padding array containing id of words.
+					Only provide valid words. `unk_id` will be used if a word is not valid.
+					Size: `[batch_size, max(turn_length[i]), max(sent_length)]`
+				* sent_allwords(:class:`numpy.array`): A 3-d padding array containing id of words.
+					Provide both valid and invalid words.
 					Size: `[batch_size, max(turn_length[i]), max(sent_length)]`
 
 			See the example belows.
@@ -77,11 +81,14 @@ class MultiTurnDialog(BasicLanguageGeneration):
 		for i in index:
 			sent_length = [len(sent) for sent in self.data[key]['session'][i]]
 			res["sent_length"].append(sent_length)
-		res["sent"] = np.zeros((len(index), np.max(res['turn_length']), \
+		res_sent = res["sent"] = np.zeros((len(index), np.max(res['turn_length']), \
 			np.max(list(chain(*res['sent_length'])))), dtype=int)
 		for i, index_i in enumerate(index):
 			for j, sent in enumerate(self.data[key]['session'][index_i]):
-				res['sent'][i, j, :len(sent)] = sent
+				res_sent[i, j, :len(sent)] = sent
+
+		res["sent_allwords"] = res_sent.copy()
+		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
 		return res
 
 	def multi_turn_trim_index(self, index):
@@ -92,7 +99,7 @@ class MultiTurnDialog(BasicLanguageGeneration):
 			* Ignore `<pad>` s at the end of every turn.
 
 		Arguments:
-			index (list or :class:numpy.array): a 2-d array of int.
+			index (list or :class:`numpy.array`): a 2-d array of int.
 			Size: [turn_length, max_sent_length]
 
 		Examples:
@@ -110,27 +117,36 @@ class MultiTurnDialog(BasicLanguageGeneration):
 				break
 		return res
 
-	def multi_turn_sen_to_index(self, session):
+	def multi_turn_sen_to_index(self, session, invalid_vocab=False):
 		'''Convert a session from string to index representation.
 
 		Arguments:
 			sen (list): a 2-d list of str, representing each token of the session.
+			invalid_vocab (bool): whether to provide invalid words.
+					If ``False``, invalid words will be trasfered to `unk_id`.
+					If ``True``, invalid words will using their own id.
+					Default: False
 
 		Examples:
 
 		Todo:
 			* fix the missing example
 		'''
-		return list(map(lambda sent: list(map( \
-			lambda word: self.word2id.get(word, self.unk_id), sent)), \
-		session))
+		if invalid_vocab:
+			return list(map(lambda sent: list(map( \
+				lambda word: self.word2id.get(word, self.unk_id), sent)), \
+			session))
+		else:
+			return list(map(lambda sent: list(map( \
+				self._valid_word2id, sent)), \
+			session))
 
 	def multi_turn_index_to_sen(self, index, trim=True):
 		'''Convert a session from index to string representation
 
 		Arguments:
-			index (list or :class:numpy.array): a 2-d array of int.
-			Size: [turn_length, max_sent_length]
+			index (list or :class:`numpy.array`): a 2-d array of int.
+				Size: [turn_length, max_sent_length]
 			trim (bool): if True, call :func:`multi_turn_trim_index` before convertion.
 
 		Examples:
@@ -141,7 +157,7 @@ class MultiTurnDialog(BasicLanguageGeneration):
 		if trim:
 			index = self.multi_turn_trim_index(index)
 		return list(map(lambda sent: \
-			list(map(lambda word: self.vocab_list[word], sent)), \
+			list(map(lambda word: self.all_vocab_list[word], sent)), \
 			index))
 
 	def get_teacher_forcing_metric(self, gen_prob_key="gen_prob"):
@@ -184,17 +200,23 @@ class UbuntuCorpus(MultiTurnDialog):
 			to first `max_sen_length` tokens. Default: 50.
 		max_turn_length (int): All sessions longer than `max_turn_length` will be shortened
 			to first `max_turn_length` sentences. Default: 20.
+		invalid_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
+			not less than `invalid_vocab_times` in the **whole dataset** (except valid words) will be
+			marked as invalid words. Otherwise, they are unknown words, both in training or
+			testing stages. Default: 0 (No unknown words).
 
 	Refer to :class:`.MultiTurnDialog` for attributes and methods.
 
 	Todo:
 		* add references
 	'''
-	def __init__(self, file_path, min_vocab_times=10, max_sen_length=50, max_turn_length=20):
+	def __init__(self, file_path, min_vocab_times=10, max_sen_length=50, max_turn_length=20, \
+			invalid_vocab_times=0):
 		self._file_path = file_path
 		self._min_vocab_times = min_vocab_times
 		self._max_sen_length = max_sen_length
 		self._max_turn_length = max_turn_length
+		self._invalid_vocab_times = invalid_vocab_times
 		super(UbuntuCorpus, self).__init__()
 
 	def _load_data(self):
@@ -214,16 +236,33 @@ class UbuntuCorpus(MultiTurnDialog):
 						for sent in raw.strip().replace('__eou__', '<eos>').split('__eot__')]
 				origin_data[key] = {'session': list(map(raw2line, raw_data))}
 
-		vocab = list(chain(*chain(*(origin_data['train']['session']))))
+		raw_vocab_list = list(chain(*chain(*(origin_data['train']['session']))))
 		# Important: Sort the words preventing the index changes between different runs
-		vocab = sorted(Counter(vocab).most_common(), key=lambda pair: (-pair[1], pair[0]))
+		vocab = sorted(Counter(raw_vocab_list).most_common(), key=lambda pair: (-pair[1], pair[0]))
 		left_vocab = list(filter(lambda x: x[1] >= self._min_vocab_times, vocab))
 		left_vocab = list(map(lambda x: x[0], left_vocab))
 		left_vocab.remove('<eos>')
 		vocab_list = self.ext_vocab + left_vocab
-		word2id = {w: i for i, w in enumerate(vocab_list)}
+		valid_vocab_len = len(vocab_list)
+		valid_vocab_set = set(vocab_list)
+
+		for key in self.key_name:
+			if key == 'train':
+				continue
+			raw_vocab_list.extend(list(chain(*chain(*(origin_data[key]['session'])))))
+		vocab = sorted(Counter(raw_vocab_list).most_common(), \
+					   key=lambda pair: (-pair[1], pair[0]))
+		left_vocab = list( \
+			filter( \
+				lambda x: x[1] >= self._invalid_vocab_times and x[0] not in valid_vocab_set, \
+				vocab))
+		left_vocab = list(map(lambda x: x[0], left_vocab))
+		vocab_list.extend(left_vocab)
+
+		print("valid vocab list length = %d" % valid_vocab_len)
 		print("vocab list length = %d" % len(vocab_list))
 
+		word2id = {w: i for i, w in enumerate(vocab_list)}
 		line2id = lambda line: ([self.go_id] + list(\
 					map(lambda word: word2id.get(word, self.unk_id), line)) + \
 					[self.eot_id])[:self._max_sen_length]
@@ -238,13 +277,14 @@ class UbuntuCorpus(MultiTurnDialog):
 			vocab = list(chain(*chain(*(origin_data[key]['session']))))
 			vocab_num = len(vocab)
 			oov_num = len(list(filter(lambda word: word not in word2id, vocab)))
+			invalid_num = len(list(filter(lambda word: word not in valid_vocab_set, vocab))) - oov_num
 			sent_length = list(map(len, chain(*origin_data[key]['session'])))
 			cut_word_num = np.sum(np.maximum(np.array(sent_length) - self._max_sen_length + 2, 0))
 			turn_length = list(map(len, origin_data[key]['session']))
 			sent_num = np.sum(turn_length)
 			cut_sent_num = np.sum(np.maximum(np.array(turn_length) - self._max_turn_length, 0))
-			print(("%s set. OOV rate: %f, max sentence length before cut: %d, cut word " + \
-					"rate: %f\n\tmax turn length before cut: %d, cut sentence rate: %f") % \
-					(key, oov_num / vocab_num, max(sent_length), cut_word_num / vocab_num, \
-					max(turn_length), cut_sent_num / sent_num))
-		return vocab_list, data, data_size
+			print(("%s set. invalid rate: %f, unknown rate: %f, max sentence length before cut: %d, " + \
+					"cut word rate: %f\n\tmax turn length before cut: %d, cut sentence rate: %f") % \
+					(key, invalid_num / vocab_num, oov_num / vocab_num, max(sent_length), \
+					cut_word_num / vocab_num, max(turn_length), cut_sent_num / sent_num))
+		return vocab_list, valid_vocab_len, data, data_size

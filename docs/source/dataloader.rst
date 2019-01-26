@@ -8,8 +8,11 @@ LanguageGeneration
 -----------------------------------
 .. autoclass:: LanguageGeneration
 
+    .. autoattribute:: vocab_list
     .. autoattribute:: vocab_size
+    .. autoattribute:: all_vocab_size
     .. automethod:: _load_data
+    .. automethod:: _valid_word2id
     .. automethod:: restart
     .. automethod:: get_batch
     .. automethod:: get_next_batch
@@ -29,8 +32,11 @@ SingleTurnDialog
 -----------------------------------
 .. autoclass:: SingleTurnDialog
 
+    .. autoattribute:: vocab_list
     .. autoattribute:: vocab_size
+    .. autoattribute:: all_vocab_size
     .. automethod:: _load_data
+    .. automethod:: _valid_word2id
     .. automethod:: restart
     .. automethod:: get_batch
     .. automethod:: get_next_batch
@@ -50,8 +56,11 @@ MultiTurnDialog
 -----------------------------------
 .. autoclass:: MultiTurnDialog
 
+    .. autoattribute:: vocab_list
     .. autoattribute:: vocab_size
+    .. autoattribute:: all_vocab_size
     .. automethod:: _load_data
+    .. automethod:: _valid_word2id
     .. automethod:: restart
     .. automethod:: get_batch
     .. automethod:: get_next_batch

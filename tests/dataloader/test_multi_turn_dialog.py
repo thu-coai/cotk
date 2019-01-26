@@ -11,20 +11,20 @@ class TestMultiTurnDialog():
 		assert isinstance(dl.ext_vocab, list)
 		assert dl.ext_vocab[:5] == ["<pad>", "<unk>", "<go>", "<eos>", "<eot>"]
 		assert [dl.pad_id, dl.unk_id, dl.go_id, dl.eos_id, dl.eot_id] == [0, 1, 2, 3, 4]
+		assert dl.eot_id == dl.end_token
 		assert isinstance(dl.key_name, list)
 		assert dl.key_name
 		for word in dl.key_name:
 			assert isinstance(word, str)
-		assert isinstance(dl.vocab_list, list)
+		assert isinstance(dl.all_vocab_list, list)
 		assert dl.vocab_list[:len(dl.ext_vocab)] == dl.ext_vocab
 		assert isinstance(dl.word2id, dict)
-		print(dl.word2id)
-		print(dl.vocab_list)
-		assert len(dl.word2id) == len(dl.vocab_list)
-		for i, word in enumerate(dl.vocab_list):
+		assert len(dl.word2id) == len(dl.all_vocab_list)
+		assert dl.vocab_size == len(dl.vocab_list)
+		for i, word in enumerate(dl.all_vocab_list):
 			assert isinstance(word, str)
 			assert dl.word2id[word] == i
-		assert dl.vocab_size == len(dl.vocab_list)
+		assert dl.all_vocab_size == len(dl.all_vocab_list)
 		assert isinstance(dl.data, dict)
 		assert len(dl.data) == 3
 		for key in dl.key_name:
@@ -34,6 +34,15 @@ class TestMultiTurnDialog():
 			content = dl.data[key]['session'][0][0]
 			assert content[0] == dl.go_id
 			assert content[-1] == dl.eot_id
+
+		# assert the data has valid token
+		assert dl.vocab_size > 5
+		# assert the data has invalid token
+		assert dl.all_vocab_size > dl.vocab_size
+
+	def base_test_all_unknown(self, dl):
+		# if invalid_vocab_times very big, there is no invalid words.
+		assert dl.vocab_size == dl.vocab_size
 
 	def base_test_restart(self, dl):
 		with pytest.raises(ValueError):
@@ -69,9 +78,29 @@ class TestMultiTurnDialog():
 			assert batch['sent'].shape[1] == max(batch['turn_length'])
 			assert batch['sent'].shape[2] == max(chain(*batch['sent_length']))
 
+			for idx in [0, 1]:
+				for turn in range(batch['turn_length'][idx]):
+					if batch['sent_length'][idx][turn] < batch['sent'].shape[2]:
+						assert batch['sent'][idx][turn][batch['sent_length'][idx][turn]-1] == dl.end_token
+					assert batch['sent'][idx][turn][0] == dl.go_id
+
+		# this is true, only when there is no unknown words in dl
+		# (Only valid & invalid words)
+		flag = False
+		for key in dl.key_name:
+			length = len(dl.data[key]['session'])
+			for i in range(length):
+				batch = dl.get_batch(key, [i])
+				assert dl.unk_id not in batch["sent_allwords"]
+				batch = dl.get_batch(key, [i])
+				if dl.unk_id in batch["sent"]:
+					flag = True
+		assert flag
+
 	def base_test_get_next_batch(self, dl):
 		with pytest.raises(ValueError):
 			dl.get_next_batch("unknown set")
+
 		for key in dl.key_name:
 			with pytest.raises(RuntimeError):
 				dl.get_next_batch(key)
@@ -115,6 +144,11 @@ class TestMultiTurnDialog():
 		sent = ["<unk>", "<go>", "<pad>", "<unkownword>", "<pad>", "<go>"]
 		sent_id = [1, 2, 0, 1, 0, 2]
 		assert sent_id == dl.sen_to_index(sent)
+		assert sent_id == dl.sen_to_index(sent, invalid_vocab=True)
+
+		sent = [dl.all_vocab_list[dl.vocab_size]]
+		assert [1] == dl.sen_to_index(sent)
+		assert [dl.vocab_size] == dl.sen_to_index(sent, invalid_vocab=True)
 
 		sent_id = [0, 1, 2, 3, 0, 4, 1, 0, 0]
 		sent = ["<pad>", "<unk>", "<go>", "<eos>", "<pad>", "<eot>", "<unk>", "<pad>", "<pad>"]
@@ -156,7 +190,9 @@ class TestMultiTurnDialog():
 		sent = [["<pad>", "<unk>", "<go>", "<eos>"]]
 		assert sent == dl.multi_turn_index_to_sen(sent_id)
 
-
+		sent = [[dl.all_vocab_list[dl.vocab_size]]]
+		assert [[1]] == dl.multi_turn_sen_to_index(sent)
+		assert [[dl.vocab_size]] == dl.multi_turn_sen_to_index(sent, invalid_vocab=True)
 
 	def base_test_teacher_forcing_metric(self, dl):
 		assert isinstance(dl.get_teacher_forcing_metric(), MetricBase)
@@ -169,23 +205,28 @@ class TestMultiTurnDialog():
 
 @pytest.fixture
 def load_ubuntucorpus():
-	def _load_ubuntucorpus():
-		return UbuntuCorpus("./tests/dataloader/dummy_ubuntucorpus")
+	def _load_ubuntucorpus(invalid_vocab_times=0):
+		return UbuntuCorpus("./tests/dataloader/dummy_ubuntucorpus", invalid_vocab_times=invalid_vocab_times)
 	return _load_ubuntucorpus
 
 class TestUbuntuCorpus(TestMultiTurnDialog):
+
+	@pytest.mark.dependency()
 	def test_init(self, load_ubuntucorpus):
 		super().base_test_init(load_ubuntucorpus())
 
 	def test_restart(self, load_ubuntucorpus):
 		super().base_test_restart(load_ubuntucorpus())
 
+	@pytest.mark.dependency(depends=["TestUbuntuCorpus::test_init"])
 	def test_get_batch(self, load_ubuntucorpus):
 		super().base_test_get_batch(load_ubuntucorpus())
 
+	@pytest.mark.dependency(depends=["TestUbuntuCorpus::test_init"])
 	def test_get_next_batch(self, load_ubuntucorpus):
 		super().base_test_get_next_batch(load_ubuntucorpus())
 
+	@pytest.mark.dependency(depends=["TestUbuntuCorpus::test_init"])
 	def test_convert(self, load_ubuntucorpus):
 		super().base_test_convert(load_ubuntucorpus())
 

@@ -1,6 +1,7 @@
 import copy
 
 import pytest
+from pytest_mock import mocker
 
 from contk.dataloader import LanguageGeneration, MSCOCO
 from contk.metric import MetricBase
@@ -11,24 +12,35 @@ class TestLanguageGeneration():
 		assert isinstance(dl.ext_vocab, list)
 		assert dl.ext_vocab[:4] == ["<pad>", "<unk>", "<go>", "<eos>"]
 		assert [dl.pad_id, dl.unk_id, dl.go_id, dl.eos_id] == [0, 1, 2, 3]
+		assert dl.eos_id == dl.end_token
 		assert isinstance(dl.key_name, list)
 		assert dl.key_name
 		for word in dl.key_name:
 			assert isinstance(word, str)
-		assert isinstance(dl.vocab_list, list)
+		assert isinstance(dl.all_vocab_list, list)
 		assert dl.vocab_list[:len(dl.ext_vocab)] == dl.ext_vocab
 		assert isinstance(dl.word2id, dict)
-		assert len(dl.word2id) == len(dl.vocab_list)
-		for i, word in enumerate(dl.vocab_list):
+		assert len(dl.word2id) == len(dl.all_vocab_list)
+		assert dl.vocab_size == len(dl.vocab_list)
+		for i, word in enumerate(dl.all_vocab_list):
 			assert isinstance(word, str)
 			assert dl.word2id[word] == i
-		assert dl.vocab_size == len(dl.vocab_list)
+		assert dl.all_vocab_size == len(dl.all_vocab_list)
 		for key in dl.key_name:
 			sentence = dl.data[key]['sen']
 			assert isinstance(sentence, list)
 			assert isinstance(sentence[0], list)
 			assert sentence[0][0] == dl.go_id
 			assert sentence[0][-1] == dl.eos_id
+
+		# assert the data has valid token
+		assert dl.vocab_size > 4
+		# assert the data has invalid token
+		assert dl.all_vocab_size > dl.vocab_size
+
+	def base_test_all_unknown(self, dl):
+		# if invalid_vocab_times very big, there is no invalid words.
+		assert dl.vocab_size == dl.vocab_size
 
 	def base_test_restart(self, dl):
 		with pytest.raises(ValueError):
@@ -59,6 +71,25 @@ class TestLanguageGeneration():
 			batch = dl.get_batch(key, [0, 1])
 			assert len(batch["sentence_length"]) == 2
 			assert batch["sentence"].shape[0] == 2
+			if batch["sentence_length"][0] < batch['sentence'].shape[1]:
+				assert batch["sentence"][0][batch["sentence_length"][0]-1] == dl.end_token
+			assert batch["sentence"][0][0] == dl.go_id
+			if batch["sentence_length"][1] < batch['sentence'].shape[1]:
+				assert batch["sentence"][1][batch["sentence_length"][1]-1] == dl.end_token
+			assert batch["sentence"][1][0] == dl.go_id
+
+		# this is true, only when there is no unknown words in dl
+		# (Only valid & invalid words)
+		flag = False
+		for key in dl.key_name:
+			length = len(dl.data[key]['sen'])
+			for i in range(length):
+				batch = dl.get_batch(key, [i])
+				assert dl.unk_id not in batch["sentence_allwords"]
+				batch = dl.get_batch(key, [i])
+				if dl.unk_id in batch["sentence"]:
+					flag = True
+		assert flag
 
 	def base_test_get_next_batch(self, dl):
 		with pytest.raises(ValueError):
@@ -101,6 +132,11 @@ class TestLanguageGeneration():
 		sent = ["<unk>", "<go>", "<pad>", "<unkownword>", "<pad>", "<go>"]
 		sent_id = [1, 2, 0, 1, 0, 2]
 		assert sent_id == dl.sen_to_index(sent)
+		assert sent_id == dl.sen_to_index(sent, invalid_vocab=True)
+
+		sent = [dl.all_vocab_list[dl.vocab_size]]
+		assert [1] == dl.sen_to_index(sent)
+		assert [dl.vocab_size] == dl.sen_to_index(sent, invalid_vocab=True)
 
 		sent_id = [0, 1, 2, 0, 0, 3, 1, 0, 0]
 		sent = ["<pad>", "<unk>", "<go>", "<pad>", "<pad>", "<eos>", "<unk>", "<pad>", "<pad>"]
@@ -134,23 +170,29 @@ class TestLanguageGeneration():
 
 @pytest.fixture
 def load_mscoco():
-	def _load_mscoco():
-		return MSCOCO("./tests/dataloader/dummy_mscoco")
+	def _load_mscoco(invalid_vocab_times=0):
+		return MSCOCO("./tests/dataloader/dummy_mscoco", invalid_vocab_times=invalid_vocab_times)
 	return _load_mscoco
 
 class TestMSCOCO(TestLanguageGeneration):
+
+	@pytest.mark.dependency()
 	def test_init(self, load_mscoco):
 		super().base_test_init(load_mscoco())
+		super().base_test_all_unknown(load_mscoco(10000))
 
 	def test_restart(self, load_mscoco):
 		super().base_test_restart(load_mscoco())
 
+	@pytest.mark.dependency(depends=["TestMSCOCO::test_init"])
 	def test_get_batch(self, load_mscoco):
 		super().base_test_get_batch(load_mscoco())
 
+	@pytest.mark.dependency(depends=["TestMSCOCO::test_init"])
 	def test_get_next_batch(self, load_mscoco):
 		super().base_test_get_next_batch(load_mscoco())
 
+	@pytest.mark.dependency(depends=["TestMSCOCO::test_init"])
 	def test_convert(self, load_mscoco):
 		super().base_test_convert(load_mscoco())
 

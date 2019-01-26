@@ -1,6 +1,7 @@
 import copy
 
 import pytest
+from pytest_mock import mocker
 
 from contk.dataloader import SingleTurnDialog, OpenSubtitles
 from contk.metric import MetricBase
@@ -11,18 +12,20 @@ class TestSingleTurnDialog():
 		assert isinstance(dl.ext_vocab, list)
 		assert dl.ext_vocab[:4] == ["<pad>", "<unk>", "<go>", "<eos>"]
 		assert [dl.pad_id, dl.unk_id, dl.go_id, dl.eos_id] == [0, 1, 2, 3]
+		assert dl.eos_id == dl.end_token
 		assert isinstance(dl.key_name, list)
 		assert dl.key_name
 		for word in dl.key_name:
 			assert isinstance(word, str)
-		assert isinstance(dl.vocab_list, list)
+		assert isinstance(dl.all_vocab_list, list)
 		assert dl.vocab_list[:len(dl.ext_vocab)] == dl.ext_vocab
 		assert isinstance(dl.word2id, dict)
-		assert len(dl.word2id) == len(dl.vocab_list)
-		for i, word in enumerate(dl.vocab_list):
+		assert len(dl.word2id) == len(dl.all_vocab_list)
+		assert dl.vocab_size == len(dl.vocab_list)
+		for i, word in enumerate(dl.all_vocab_list):
 			assert isinstance(word, str)
 			assert dl.word2id[word] == i
-		assert dl.vocab_size == len(dl.vocab_list)
+		assert dl.all_vocab_size == len(dl.all_vocab_list)
 		for key in dl.key_name:
 			post = dl.data[key]['post']
 			resp = dl.data[key]['resp']
@@ -33,6 +36,15 @@ class TestSingleTurnDialog():
 			assert post[0][-1] == dl.eos_id
 			assert resp[0][0] == dl.go_id
 			assert resp[0][-1] == dl.eos_id
+
+		# assert the data has valid token
+		assert dl.vocab_size > 4
+		# assert the data has invalid token
+		assert dl.all_vocab_size > dl.vocab_size
+
+	def base_test_all_unknown(self, dl):
+		# if invalid_vocab_times very big, there is no invalid words.
+		assert dl.vocab_size == dl.vocab_size
 
 	def base_test_restart(self, dl):
 		with pytest.raises(ValueError):
@@ -65,6 +77,27 @@ class TestSingleTurnDialog():
 			assert len(batch["resp_length"]) == 2
 			assert batch["post"].shape[0] == 2
 			assert batch["resp"].shape[0] == 2
+
+			for sent, length in [("post", "post_length"), ("resp", "resp_length")]:
+				for idx in [0, 1]:
+					if batch[length][idx] < batch[sent].shape[1]:
+						assert batch[sent][idx][batch[length][idx]-1] == dl.end_token
+					assert batch[sent][idx][0] == dl.go_id
+
+		# this is true, only when there is no unknown words in dl
+		# (Only valid & invalid words)
+		flag = False
+		for key in dl.key_name:
+			length = len(dl.data[key]['post'])
+			for i in range(length):
+				batch = dl.get_batch(key, [i])
+				assert dl.unk_id not in batch["post_allwords"]
+				assert dl.unk_id not in batch["resp_allwords"]
+				batch = dl.get_batch(key, [i])
+				if dl.unk_id in batch["post"] or \
+					dl.unk_id in batch["resp"]:
+					flag = True
+		assert flag
 
 	def base_test_get_next_batch(self, dl):
 		with pytest.raises(ValueError):
@@ -107,6 +140,12 @@ class TestSingleTurnDialog():
 		sent = ["<unk>", "<go>", "<pad>", "<unkownword>", "<pad>", "<go>"]
 		sent_id = [1, 2, 0, 1, 0, 2]
 		assert sent_id == dl.sen_to_index(sent)
+		assert sent_id == dl.sen_to_index(sent, invalid_vocab=True)
+
+		sent = [dl.all_vocab_list[dl.vocab_size]]
+		assert [1] == dl.sen_to_index(sent)
+		assert [dl.vocab_size] == dl.sen_to_index(sent, invalid_vocab=True)
+
 
 		sent_id = [0, 1, 2, 0, 0, 3, 1, 0, 0]
 		sent = ["<pad>", "<unk>", "<go>", "<pad>", "<pad>", "<eos>", "<unk>", "<pad>", "<pad>"]
@@ -140,23 +179,29 @@ class TestSingleTurnDialog():
 
 @pytest.fixture
 def load_opensubtitles():
-	def _load_opensubtitles():
-		return OpenSubtitles("./tests/dataloader/dummy_opensubtitles")
+	def _load_opensubtitles(invalid_vocab_times=0):
+		return OpenSubtitles("./tests/dataloader/dummy_opensubtitles", invalid_vocab_times=invalid_vocab_times)
 	return _load_opensubtitles
 
 class TestOpenSubtitles(TestSingleTurnDialog):
+
+	@pytest.mark.dependency()
 	def test_init(self, load_opensubtitles):
 		super().base_test_init(load_opensubtitles())
+		super().base_test_all_unknown(load_opensubtitles(10000))
 
 	def test_restart(self, load_opensubtitles):
 		super().base_test_restart(load_opensubtitles())
 
+	@pytest.mark.dependency(depends=["TestOpenSubtitles::test_init"])
 	def test_get_batch(self, load_opensubtitles):
 		super().base_test_get_batch(load_opensubtitles())
 
+	@pytest.mark.dependency(depends=["TestOpenSubtitles::test_init"])
 	def test_get_next_batch(self, load_opensubtitles):
 		super().base_test_get_next_batch(load_opensubtitles())
 
+	@pytest.mark.dependency(depends=["TestOpenSubtitles::test_init"])
 	def test_convert(self, load_opensubtitles):
 		super().base_test_convert(load_opensubtitles())
 
