@@ -11,16 +11,11 @@ install:
   - pip install python-coveralls
   - pip install pytest-dependency
   - pip install pytest-mock
+  - pip install -e .
 
 script:
-  - pip install -e .
-  - py.test --cov=contk tests/ --cov-report term-missing
-  - python ./models/run_tests.py
-  - cd docs
-  - make html
-  - mv ./build/html ./build/docs
-  - rm -r ./build/doctrees
-  - cd ..
+  - py.test --cov=contk tests/ --cov-report term-missing && python ./models/run_tests.py
+  - cd docs && make html && mv ./build/html ./build/docs && rm -r ./build/doctrees && cd ..
 
 deploy:
   - provider: pages
