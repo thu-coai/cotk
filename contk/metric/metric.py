@@ -199,7 +199,12 @@ class BleuCorpusMetric(MetricBase):
 
 			* **bleu**: bleu value.
 		'''
-		return {"bleu": corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction().method7)}
+		try:
+			return {"bleu": \
+				corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction().method7)}
+		except ZeroDivisionError as _:
+			raise ZeroDivisionError("Bleu smoothing divided by zero. This is a known bug of corpus_bleu, \
+				usually caused when there is only one sample and the sample length is 1.")
 
 class MultiTurnBleuCorpusMetric(MetricBase):
 	'''Metric for calcualting multi-turn BLEU.
@@ -255,7 +260,12 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 
 			* **bleu**: bleu value.
 		'''
-		return {"bleu": corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction().method7)}
+		try:
+			return {"bleu": \
+				corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction().method7)}
+		except ZeroDivisionError as _:
+			raise ZeroDivisionError("Bleu smoothing divided by zero. This is a known bug of corpus_bleu, \
+				usually caused when there is only one sample and the sample length is 1.")
 
 class SingleTurnDialogRecorder(MetricBase):
 	'''A metric-like class for recording generated sentences and references.
