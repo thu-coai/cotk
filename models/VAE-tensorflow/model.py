@@ -22,6 +22,7 @@ class VAEModel(object):
 
 			self.sentence = tf.placeholder(tf.int32, (None, None), 'sen_inps')  # batch*len
 			self.sentence_length = tf.placeholder(tf.int32, (None,), 'sen_lens')  # batch
+			self.use_prior = tf.placeholder(dtype=tf.bool, name="use_prior")
 
 			batch_size, batch_len = tf.shape(self.sentence)[0], tf.shape(self.sentence)[1]
 			self.decoder_max_len = batch_len - 1
@@ -50,7 +51,6 @@ class VAEModel(object):
 														self.encoder_len, dtype=tf.float32, scope="encoder_rnn")
 
 		with tf.variable_scope('recognition_net'):
-			# TODO
 			recog_input = encoder_state
 			self.recog_mu = tf.layers.dense(inputs=recog_input, units=args.z_dim, activation=None, name='recog_mu')
 			self.recog_logvar = tf.layers.dense(inputs=recog_input, units=args.z_dim, activation=None, name='recog_logvar')
@@ -62,8 +62,12 @@ class VAEModel(object):
 			self.kld = tf.reduce_mean(
 				0.5 * tf.reduce_sum(tf.exp(self.recog_logvar) + self.recog_mu * self.recog_mu - self.recog_logvar - 1,
 									axis=-1))
-
-			dec_init_state = tf.layers.dense(inputs=self.recog_z, units=args.dh_size, activation=None)
+			self.prior_z = tf.random_normal(tf.shape(self.recog_logvar), name="prior_z")
+			latent_sample = tf.cond(self.use_prior,
+									lambda: self.prior_z,
+									lambda: self.recog_z,
+									name='latent_sample')
+			dec_init_state = tf.layers.dense(inputs=latent_sample, units=args.dh_size, activation=None)
 
 		with tf.variable_scope("output_layer", initializer=tf.orthogonal_initializer()):
 			self.output_layer = Dense(data.vocab_size, kernel_initializer=tf.truncated_normal_initializer(stddev=0.1),
@@ -93,7 +97,6 @@ class VAEModel(object):
 			self.sen_loss = crossent / tf.to_float(batch_size)
 			self.ppl_loss = crossent / tf.reduce_sum(self.decoder_mask)
 
-			# TODO
 			self.decoder_distribution_teacher = tf.nn.log_softmax(logits)
 
 		with tf.variable_scope("decode", reuse=True):
@@ -169,7 +172,9 @@ class VAEModel(object):
 			print('%s: %s' % (item.name, item.get_shape()))
 
 	def step_decoder(self, session, data, forward_only=False):
-		input_feed = {self.sentence: data['sentence'], self.sentence_length: data['sentence_length']}
+		input_feed = {self.sentence: data['sentence'],
+					  self.sentence_length: data['sentence_length'],
+					  self.use_prior: False}
 		if forward_only:
 			output_feed = [self.loss,
 						   self.decoder_distribution_teacher,
@@ -189,7 +194,9 @@ class VAEModel(object):
 		return session.run(output_feed, input_feed)
 
 	def inference(self, session, data):
-		input_feed = {self.sentence: data['sentence'], self.sentence_length: data['sentence_length']}
+		input_feed = {self.sentence: data['sentence'],
+					  self.sentence_length: data['sentence_length'],
+					  self.use_prior: True}
 		output_feed = [self.generation_index]
 		return session.run(output_feed, input_feed)
 
@@ -230,7 +237,6 @@ class VAEModel(object):
 		for epoch_step in range(args.epochs):
 			while batched_data != None:
 				if self.global_step.eval() % args.checkpoint_steps == 0 and self.global_step.eval() != 0:
-					show = lambda a: '[%s]' % (' '.join(['%.2f' % x for x in a]))
 					print("Epoch %d global step %d learning rate %.4f step-time %.2f"
 						  % (epoch_step, self.global_step.eval(), self.learning_rate.eval(),
 							 time_step))
@@ -328,9 +334,9 @@ class VAEModel(object):
 			print("Test Result:")
 			for key, value in res.items():
 				if isinstance(value, float):
-					print("\t%s:\t%f", key, value)
+					print("\t%s:\t%f" % (key, value))
 					f.write("%s:\t%f\n" % (key, value))
 			for i in range(len(res['gen'])):
 				f.write("%s\n" % " ".join(res['gen'][i]))
 
-		print("result output to %s.", test_file)
+		print("result output to %s." % test_file)

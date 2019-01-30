@@ -17,14 +17,14 @@ if __name__ == '__main__':
 		help='"train" or "test". Default: train')
 	parser.add_argument('--dataset', type=str, default='MSCOCO',
 		help='Dataloader class. Default: MSCOCO')
-	parser.add_argument('--datapath', type=str, default='/home/data/share/mscoco',
+	parser.add_argument('--datapath', type=str, default='./data',
 		help='Directory for data set. Default: ./data')
-	parser.add_argument('--epoch', type=int, default=100,
-		help="Epoch for trainning. Default: 100")
+	parser.add_argument('--epoch', type=int, default=10,
+		help="Epoch for trainning. Default: 10")
 	parser.add_argument('--wvclass', type=str, default=None,
-		help="Wordvector class, none for not using pretrained wordvec. Default: None")
-	parser.add_argument('--wvpath', type=str, default='/home/data/share/glove/glove.6B.300d.txt',
-		help="Directory for pretrained wordvector. Default: ./wordvec")
+		help="Wordvector class, None for using Glove pretrained wordvec. Default: None")
+	parser.add_argument('--wvpath', type=str, default='wordvec',
+		help="Path for pretrained wordvector. Default: wordvec")
 
 	parser.add_argument('--out_dir', type=str, default="./output",
 		help='Output directory for test output. Default: ./output')
@@ -64,8 +64,8 @@ if __name__ == '__main__':
 	args.eh_size = 200
 	args.dh_size = 200
 	args.z_dim = 100
-	args.min_kl = 1
-	args.full_kl_step = 50000
+	args.min_kl = 10
+	args.full_kl_step = 30000
 	args.lr = 1e-1
 	args.lr_decay = 0.995
 	args.momentum = 0.9
