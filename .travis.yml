@@ -11,6 +11,7 @@ install:
   - pip install python-coveralls
   - pip install pytest-dependency
   - pip install pytest-mock
+  - pip install requests-mock
   - pip install -e .
 
 script:
