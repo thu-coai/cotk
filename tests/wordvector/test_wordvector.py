@@ -18,26 +18,26 @@ class TestWordVector():
 		assert WordVector.load_class('not_subclass') == None
 
 	def base_test_load(self, dl):
-		vocab_list = ['first', 'second']
-		n_dims = 3
+		vocab_list = ['the', 'of']
+		n_dims = 300
 		wordvec = dl.load(n_dims, vocab_list)
 		assert isinstance(wordvec, np.ndarray)
 		assert wordvec.shape == (len(vocab_list), n_dims)
 		print(wordvec[1])
-		assert wordvec[1].all() == np.array([0.1, 0.5, 0]).all()
+		assert wordvec[1][0] == -0.076947
 
 
-		vocab_list = ['first', 'word_not_exist']
-		n_dims = 3
+		vocab_list = ['the', 'word_not_exist']
+		n_dims = 300
 		wordvec = dl.load(n_dims, vocab_list)
 		assert isinstance(wordvec, np.ndarray)
 		assert wordvec.shape == (len(vocab_list), n_dims)
-		assert wordvec[0].all() == np.array([0.1, 1, 0.3]).all()
+		assert wordvec[0][0] == 0.04656
 
 @pytest.fixture
 def load_glove():
 	def _load_glove():
-		return Glove("./tests/wordvector/dummy_glove/glove.txt")
+		return Glove("./tests/wordvector/dummy_glove_300d.txt")
 	return _load_glove
 
 class TestGlove(TestWordVector):

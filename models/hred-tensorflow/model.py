@@ -6,10 +6,8 @@ from tensorflow.python.ops.nn import dynamic_rnn
 from utils.output_projection import output_projection_layer, MyDense
 from utils import SummaryHelper
 
-
 class HredModel(object):
 	def __init__(self, data, args, embed):
-
 		self.init_states = tf.placeholder(tf.float32, (None, args.ch_size), 'ctx_inps')  # batch*ch_size
 		self.posts = tf.placeholder(tf.int32, (None, None), 'enc_inps')  # batch*len
 		self.posts_length = tf.placeholder(tf.int32, (None,), 'enc_lens')  # batch
@@ -39,7 +37,7 @@ class HredModel(object):
 		else:
 			# initialize the embedding by pre-trained word vectors
 			self.embed = tf.get_variable('embed', dtype=tf.float32, initializer=embed)
-		
+
 		self.encoder_input = tf.nn.embedding_lookup(self.embed, self.posts_input) #batch*len*unit
 		self.decoder_input = tf.nn.embedding_lookup(self.embed, self.responses_input)
 
@@ -90,9 +88,9 @@ class HredModel(object):
 		self.params = [k for k in tf.trainable_variables() if args.name in k.name]
 		opt = tf.train.AdamOptimizer(self.learning_rate)
 		gradients = tf.gradients(self.decoder_loss, self.params)
-		clipped_gradients, self.gradient_norm = tf.clip_by_global_norm(gradients, 
+		clipped_gradients, self.gradient_norm = tf.clip_by_global_norm(gradients,
 				args.grad_clip)
-		self.update = opt.apply_gradients(zip(clipped_gradients, self.params), 
+		self.update = opt.apply_gradients(zip(clipped_gradients, self.params),
 				global_step=self.global_step)
 
 		# save checkpoint
@@ -120,26 +118,28 @@ class HredModel(object):
 		scalarlist = ["loss", "perplexity"]
 		tensorlist = []
 		textlist = []
+		emblist = []
 		for i in args.show_sample:
 			textlist.append("show_str%d" % i)
 		self.devSummary = self.summaryHelper.addGroup(scalar=scalarlist, tensor=tensorlist, text=textlist,
-				prefix="dev")
+				embedding=emblist, prefix="dev")
 		self.testSummary = self.summaryHelper.addGroup(scalar=scalarlist, tensor=tensorlist, text=textlist,
-				prefix="test")
+				embedding=emblist, prefix="test")
 
 
 	def print_parameters(self):
 		for item in self.params:
 			print('%s: %s' % (item.name, item.get_shape()))
-	
+
 	def step_decoder(self, sess, data, forward_only=False, inference=False):
 		input_feed = {
 				self.init_states: data['init_states'],
-				self.posts: data['posts'], 
+				self.posts: data['posts'],
 				self.posts_length: data['posts_length'],
-				self.origin_responses: data['responses'], 
+				self.origin_responses: data['responses'],
 				self.origin_responses_length: data['responses_length'],
 				}
+
 		if inference:
 			output_feed = [self.generation_index, self.context_state]
 		else:
@@ -150,16 +150,41 @@ class HredModel(object):
 
 		return sess.run(output_feed, input_feed)
 
+	def get_step_data(self, step_data, batched_data, turn):
+		current_batch_size = batched_data['sent'].shape[0]
+		max_turn_length = batched_data['sent'].shape[1]
+		max_sent_length = batched_data['sent'].shape[2]
+		if turn == -1:
+			step_data['posts'] = np.zeros((current_batch_size, 1), dtype=int)
+		else:
+			step_data['posts'] = batched_data['sent'][:, turn, :]
+		step_data['responses'] = batched_data['sent'][:, turn + 1, :]
+		step_data['posts_length'] = np.zeros((current_batch_size,), dtype=int)
+		step_data['responses_length'] = np.zeros((current_batch_size,), dtype=int)
+		for i in range(current_batch_size):
+			if turn < len(batched_data['sent_length'][i]):
+				if turn == -1:
+					step_data['posts_length'][i] = 1
+				else:
+					step_data['posts_length'][i] = batched_data['sent_length'][i][turn]
+			if turn + 1 < len(batched_data['sent_length'][i]):
+				step_data['responses_length'][i] = batched_data['sent_length'][i][turn + 1]
+		max_posts_length = np.max(step_data['posts_length'])
+		max_responses_length = np.max(step_data['responses_length'])
+		step_data['posts'] = step_data['posts'][:, 0:max_posts_length]
+		step_data['responses'] = step_data['responses'][:, 0:max_responses_length]
+
 	def train_step(self, sess, data, args):
+		current_batch_size = data['sent'].shape[0]
+		max_turn_length = data['sent'].shape[1]
+		max_sent_length = data['sent'].shape[2]
 		loss = np.zeros((1,))
 		total_length = np.zeros((1,))
 		step_data = {}
-		context_states = np.zeros((len(data[0]['length']), args.ch_size))
-		for turn in range(len(data[:-1])):
-			step_data['posts'] = data[turn]['content']
-			step_data['posts_length'] = data[turn]['length']
-			step_data['responses'] = data[turn+1]['content']
-			step_data['responses_length'] = data[turn+1]['length']
+		context_states = np.zeros((current_batch_size, args.ch_size))
+
+		for turn in range(max_turn_length - 1):
+			self.get_step_data(step_data, data, turn)
 			step_data['init_states'] = context_states
 			decoder_loss, _, _, context_states = self.step_decoder(sess, step_data)
 			length = np.sum(np.maximum(step_data['responses_length'] - 1, 0))
@@ -174,13 +199,13 @@ class HredModel(object):
 		data.restart(key_name, batch_size=args.batch_size, shuffle=False)
 		batched_data = data.get_next_batch(key_name)
 		while batched_data != None:
+			current_batch_size = batched_data['sent'].shape[0]
+			max_turn_length = batched_data['sent'].shape[1]
+			max_sent_length = batched_data['sent'].shape[2]
 			step_data = {}
-			context_states = np.zeros((len(batched_data[0]['length']), args.ch_size))
-			for turn in range(len(batched_data[:-1])):
-				step_data['posts'] = batched_data[turn]['content']
-				step_data['posts_length'] = batched_data[turn]['length']
-				step_data['responses'] = batched_data[turn+1]['content']
-				step_data['responses_length'] = batched_data[turn+1]['length']
+			context_states = np.zeros((current_batch_size, args.ch_size))
+			for turn in range(max_turn_length - 1):
+				self.get_step_data(step_data, batched_data, turn)
 				step_data['init_states'] = context_states
 				decoder_loss, _, context_states = self.step_decoder(sess, step_data, forward_only=True)
 				length = np.sum(np.maximum(step_data['responses_length'] - 1, 0))
@@ -208,8 +233,8 @@ class HredModel(object):
 					time_step += time.time() - start_time
 					batched_data = data.get_next_batch("train")
 
-				loss_step /= step
-				time_step /= step
+				loss_step /= args.checkpoint_steps
+				time_step /= args.checkpoint_steps
 				show = lambda a: '[%s]' % (' '.join(['%.2f' % x for x in a]))
 				print("Epoch %d global step %d learning rate %.4f step-time %.2f perplexity %s"
 					  % (epoch_step, self.global_step.eval(), self.learning_rate.eval(),
@@ -262,44 +287,65 @@ class HredModel(object):
 		cnt = 0
 		start_time = time.time()
 		while batched_data != None:
+			current_batch_size = batched_data['sent'].shape[0]
+			max_turn_length = batched_data['sent'].shape[1]
+			max_sent_length = batched_data['sent'].shape[2]
 			if cnt > 0 and cnt % 10 == 0:
 				print('processing %d batch data, time cost %.2f s/batch' % (cnt, (time.time() - start_time) / 10))
 				start_time = time.time()
 			cnt += 1
 			step_data = {}
-			context_states = np.zeros((len(batched_data[0]['length']), args.ch_size))
-			conv_data = [{'posts': [], 'responses': [], 'generations': []} for _ in range(len(batched_data[0]['length']))]
-			for turn in range(len(batched_data[:-1])):
-				step_data['posts'] = batched_data[turn]['content']
-				step_data['posts_length'] = batched_data[turn]['length']
-				step_data['responses'] = batched_data[turn+1]['content']
-				step_data['responses_length'] = batched_data[turn+1]['length']
+			context_states = np.zeros((current_batch_size, args.ch_size))
+			batched_gen_prob = []
+			batched_gen = []
+			for turn in range(max_turn_length):
+				self.get_step_data(step_data, batched_data, turn - 1)
 				step_data['init_states'] = context_states
 				decoder_loss, gen_prob, context_states = self.step_decoder(sess, step_data, forward_only=True)
 				batched_responses_id, context_states = self.step_decoder(sess, step_data, inference=True)
 				batch_results = get_batch_results(batched_responses_id, data)
 				step_data['gen_prob'] = gen_prob
+				batched_gen_prob.append(step_data['gen_prob'])
 				step_data['generations'] = batch_results
-				metric1_data = {
-						'resp': step_data['responses'], 
-						'resp_length': step_data['responses_length'],
-						'gen_prob': step_data['gen_prob']
-						}
-				metric1.forward_pad(metric1_data)
-				valid_index = [idx for idx, length in 
-						enumerate(step_data['responses_length']) if length > 1]
-				for key in ['posts', 'responses', 'generations']:
-					for idx, d in enumerate(step_data[key]):
-						if idx in valid_index:
-							conv_data[idx][key].append(list(d))
+				batched_gen.append(step_data['generations'])
 
-			for conv in conv_data:
-				metric2_data = {
-						'post': np.array(padding(conv['posts'])), 
-						'resp':np.array(padding(conv['responses'])),
-						'gen': np.array(padding(conv['generations']))
-						}
-				metric2.forward(metric2_data)
+			def transpose(batched_gen_prob):
+				batched_gen_prob_temp = [[0 for i in range(max_turn_length)] for j in range(current_batch_size)]
+				for i in range(max_turn_length):
+					for j in range(current_batch_size):
+						batched_gen_prob_temp[j][i] = batched_gen_prob[i][j]
+				batched_gen_prob[:] = batched_gen_prob_temp[:]
+				for i in range(current_batch_size):
+					for j in range(max_turn_length):
+						batched_gen_prob[i][j] = np.concatenate((batched_gen_prob[i][j], [batched_gen_prob[i][j][-1]]), axis=0)
+			transpose(batched_gen_prob)
+			transpose(batched_gen)
+
+			sent_length = np.ones((current_batch_size, max_turn_length), dtype=int)
+			for i in range(current_batch_size):
+				sent_length[i][0:len(batched_data['sent_length'][i])] = batched_data['sent_length'][i]
+			batched_sent = np.zeros((current_batch_size, max_turn_length, max_sent_length + 2), dtype=int)
+			empty_sent = np.zeros((current_batch_size, 1, max_sent_length + 2), dtype=int)
+			for i in range(current_batch_size):
+				for j in range(max_turn_length):
+					batched_sent[i][j][0] = data.go_id
+					batched_sent[i][j][1:sent_length[i][j]+1] = batched_data['sent'][i][j][0:sent_length[i][j]]
+				empty_sent[i][0][0] = data.go_id
+				empty_sent[i][0][1] = data.eos_id
+			sent_length = sent_length + 1
+			metric1_data = {
+					'sent': batched_sent,
+					'sent_length': sent_length,
+					'gen_prob': batched_gen_prob,
+					}
+			metric1.forward(metric1_data)
+			metric2_data = {
+					'context': np.concatenate([empty_sent, batched_sent[:, 0:max_turn_length-1, :]], axis=1),
+					'reference': batched_sent,
+					'turn_length': batched_data['turn_length'],
+					'gen': batched_gen,
+					}
+			metric2.forward(metric2_data)
 			batched_data = data.get_next_batch("test")
 
 		res = metric1.close()
@@ -312,11 +358,13 @@ class HredModel(object):
 				if isinstance(value, float):
 					print("\t%s:\t%f" % (key, value))
 					f.write("%s:\t%f\n" % (key, value))
-			for i in range(len(res['post'])):
-				if i > 0 and " ".join(res['post'][i]) != " ".join(res['resp'][i-1]):
-					f.write("\n")
-				f.write("post:\t%s\n" % " ".join(res['post'][i]))
-				f.write("resp:\t%s\n" % " ".join(res['resp'][i]))
-				f.write("gen:\t%s\n" % " ".join(res['gen'][i]))
+			for i in range(len(res['context'])):
+				f.write("batch number:\t%d\n" % i)
+				for j in range(min(len(res['context'][i]), len(res['reference'][i]))):
+					if j > 0 and " ".join(res['context'][i][j]) != " ".join(res['reference'][i][j-1]):
+						f.write("\n")
+					f.write("post:\t%s\n" % " ".join(res['context'][i][j]))
+					f.write("resp:\t%s\n" % " ".join(res['reference'][i][j]))
+					f.write("gen:\t%s\n" % " ".join(res['gen'][i][j]))
 
 		print("result output to %s" % test_file)

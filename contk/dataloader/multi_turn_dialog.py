@@ -91,7 +91,7 @@ class MultiTurnDialog(BasicLanguageGeneration):
 		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
 		return res
 
-	def multi_turn_trim_index(self, index):
+	def multi_turn_trim_index(self, index, ignore_first_token=False):
 		'''Trim indexes for multi turn dialog. There will be 3 steps:
 			* For every turn, if there is an `<eot>`, \
 				find first `<eot>` and abondon words after it (included the `<eot>`).
@@ -101,6 +101,7 @@ class MultiTurnDialog(BasicLanguageGeneration):
 		Arguments:
 			index (list or :class:`numpy.array`): a 2-d array of int.
 			Size: [turn_length, max_sent_length]
+			ignore_first_token (bool): if True, ignore first token of each turn (must be `<go>`).
 
 		Examples:
 
@@ -110,7 +111,10 @@ class MultiTurnDialog(BasicLanguageGeneration):
 
 		res = []
 		for turn_index in index:
-			turn_trim = self.trim_index(turn_index)
+			if ignore_first_token:
+				turn_trim = self.trim_index(turn_index[1:])
+			else:
+				turn_trim = self.trim_index(turn_index)
 			if turn_trim:
 				res.append(turn_trim)
 			else:
@@ -141,13 +145,15 @@ class MultiTurnDialog(BasicLanguageGeneration):
 				self._valid_word2id, sent)), \
 			session))
 
-	def multi_turn_index_to_sen(self, index, trim=True):
+	def multi_turn_index_to_sen(self, index, trim=True, ignore_first_token=False):
 		'''Convert a session from index to string representation
 
 		Arguments:
 			index (list or :class:`numpy.array`): a 2-d array of int.
 				Size: [turn_length, max_sent_length]
 			trim (bool): if True, call :func:`multi_turn_trim_index` before convertion.
+			ignore_first_token (bool): Only works when trim=True.
+				If True, ignore first token of each turn (must be `<go>`).
 
 		Examples:
 
@@ -155,7 +161,7 @@ class MultiTurnDialog(BasicLanguageGeneration):
 			* fix the missing example
 		'''
 		if trim:
-			index = self.multi_turn_trim_index(index)
+			index = self.multi_turn_trim_index(index, ignore_first_token=ignore_first_token)
 		return list(map(lambda sent: \
 			list(map(lambda word: self.all_vocab_list[word], sent)), \
 			index))

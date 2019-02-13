@@ -1,6 +1,6 @@
 # coding:utf-8
 
-if __name__ == '__main__':
+def run():
 	import argparse
 	import time
 
@@ -80,3 +80,6 @@ if __name__ == '__main__':
 
 	from main import main
 	main(args)
+
+if __name__ == '__main__':
+	run()

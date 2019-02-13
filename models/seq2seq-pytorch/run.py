@@ -1,6 +1,6 @@
 # coding:utf-8
 
-if __name__ == '__main__':
+def run():
 	import argparse
 	import time
 
@@ -9,29 +9,29 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='A seq2seq model')
 	args = Storage()
 
-	parser.add_argument('--name', type=str, default=None, 
+	parser.add_argument('--name', type=str, default=None,
 		help='The name of your model, used for tensorboard, etc. Default: runXXXXXX_XXXXXX (initialized by current time)')
-	parser.add_argument('--restore', type=str, default=None, 
+	parser.add_argument('--restore', type=str, default=None,
 		help='Checkpoints name to load. \
 			"NAME_last" for the last checkpoint of model named NAME. "NAME_best" means the best checkpoint. \
 			You can also use "last" and "best", defaultly use last model you run. \
 			Attention: "NAME_last" and "NAME_best" are not guaranteed to work when 2 models with same name run in the same time. \
 			"last" and "best" are not guaranteed to work when 2 models run in the same time.\
 			Default: None (don\'t load anything)')
-	parser.add_argument('--mode', type=str, default="train", 
+	parser.add_argument('--mode', type=str, default="train",
 		help='"train" or "test". Default: train')
-	parser.add_argument('--dataset', type=str, default='OpenSubtitles', 
+	parser.add_argument('--dataset', type=str, default='OpenSubtitles',
 		help='Dataloader class. Default: OpenSubtitles')
-	parser.add_argument('--datapath', type=str, default='./data', 
+	parser.add_argument('--datapath', type=str, default='./data',
 		help='Directory for data set. Default: ./data')
-	parser.add_argument('--epoch', type=int, default=100, 
+	parser.add_argument('--epoch', type=int, default=100,
 		help="Epoch for trainning. Default: 100")
-	parser.add_argument('--wvclass', type=str, default=None, 
+	parser.add_argument('--wvclass', type=str, default=None,
 		help="Wordvector class, none for not using pretrained wordvec. Default: None")
-	parser.add_argument('--wvpath', type=str, default=None, 
+	parser.add_argument('--wvpath', type=str, default=None,
 		help="Directory for pretrained wordvector. Default: ./wordvec")
-	
-	parser.add_argument('--out_dir', type=str, default="./output", 
+
+	parser.add_argument('--out_dir', type=str, default="./output",
 		help='Output directory for test output. Default: ./output')
 	parser.add_argument('--log_dir', type=str, default="./tensorboard",
 		help='Log directory for tensorboard. Default: ./tensorboard')
@@ -39,11 +39,11 @@ if __name__ == '__main__':
 		help='Checkpoints directory for model. Default: ./model')
 	parser.add_argument('--cache_dir', type=str, default="./cache",
 		help='Checkpoints directory for cache. Default: ./cache')
-	parser.add_argument('--cpu', action="store_true", 
+	parser.add_argument('--cpu', action="store_true",
 		help='Use cpu.')
-	parser.add_argument('--debug', action='store_true', 
+	parser.add_argument('--debug', action='store_true',
 		help='Enter debug mode (using ptvsd).')
-	parser.add_argument('--cache', action='store_true', 
+	parser.add_argument('--cache', action='store_true',
 		help='Use cache for speeding up load data and wordvec. (It may cause problems when you switch dataset.)')
 	cargs = parser.parse_args()
 
@@ -87,3 +87,6 @@ if __name__ == '__main__':
 
 	from main import main
 	main(args)
+
+if __name__ == '__main__':
+	run()
