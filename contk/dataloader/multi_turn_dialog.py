@@ -111,11 +111,10 @@ class MultiTurnDialog(BasicLanguageGeneration):
 
 		res = []
 		for turn_index in index:
-			if ignore_first_token:
-				turn_trim = self.trim_index(turn_index[1:])
-			else:
-				turn_trim = self.trim_index(turn_index)
+			turn_trim = self.trim_index(turn_index)
 			if turn_trim:
+				if ignore_first_token:
+					turn_trim = turn_index[1:]
 				res.append(turn_trim)
 			else:
 				break

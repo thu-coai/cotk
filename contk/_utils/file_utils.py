@@ -20,7 +20,7 @@ import requests
 from .resource_processor import DefaultResourceProcessor
 
 LOGGER = logging.getLogger(__name__)
-CACHE_DIR = os.path.join(Path.home(), '.contk_cache')
+CACHE_DIR = os.path.join(str(Path.home()), '.contk_cache')
 CONFIG_DIR = './contk/resource_config'
 
 def get_config(res_name, config_dir):

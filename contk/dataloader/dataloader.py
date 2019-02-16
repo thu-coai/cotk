@@ -220,8 +220,8 @@ class BasicLanguageGeneration(Dataloader):
 	def trim_index(self, index):
 		'''Trim index. There will be two steps:
 
-			* If there is an `<eos>` in sentences,
-			  find first `<eos>` and abondon words after it (included the `<eos>`).
+			* If there is an end token (`<eos>`) in sentences,
+			  find first end token and abondon words after it (included the end token).
 			* ignore `<pad>` s at the end of the sentence.
 
 		Arguments:

@@ -328,8 +328,9 @@ class HredModel(object):
 			empty_sent = np.zeros((current_batch_size, 1, max_sent_length + 2), dtype=int)
 			for i in range(current_batch_size):
 				for j in range(max_turn_length):
-					batched_sent[i][j][0] = data.go_id
-					batched_sent[i][j][1:sent_length[i][j]+1] = batched_data['sent'][i][j][0:sent_length[i][j]]
+					if sent_length[i][j]:
+						batched_sent[i][j][0] = data.go_id
+						batched_sent[i][j][1:sent_length[i][j]+1] = batched_data['sent'][i][j][0:sent_length[i][j]]
 				empty_sent[i][0][0] = data.go_id
 				empty_sent[i][0][1] = data.eos_id
 			sent_length = sent_length + 1
