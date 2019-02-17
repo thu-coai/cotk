@@ -18,22 +18,13 @@ def test_bleu_bug():
 		corpus_bleu(ref, gen, smoothing_function=SmoothingFunction().method7)
 
 
-class FakeDataLoader:
+class FakeDataLoader(BasicLanguageGeneration):
 	def __init__(self):
-		self.all_vocab_list = self.vocab_list = ['<pad>', '<unk>', '<go>', '<eos>', 'what', 'how', 'here', 'do']
-		self.vocab_to_index = {'<pad>': 0, '<unk>': 1, '<go>': 2, '<eos>': 3, 'what': 4, 'how': 5, 'here': 6, 'do': 7}
-		self.vocab_size = 8
+		self.all_vocab_list  = ['<pad>', '<unk>', '<go>', '<eos>', 'what', 'how', 'here', 'do']
+		self.valid_vocab_len = 8
+		self.vocab_to_index = {x: i for i, x in enumerate(self.vocab_list)}
 		self.end_token = 3
 		self.pad_id = 0
-
-	def trim_before_target(self, lists, target):
-		return BasicLanguageGeneration.trim_index(self, lists, target)
-
-	def trim_index(self, index):
-		return BasicLanguageGeneration.trim_index(self, index)
-
-	def index_to_sen(self, index, trim=True):
-		return BasicLanguageGeneration.index_to_sen(self, index, trim)
 
 	def get_sen(self, max_len, len, gen=False, pad=True, end_token="<eos>"):
 		sen = []
@@ -101,31 +92,13 @@ class FakeDataLoader:
 					data[key] = np.array(data[key])
 		return data
 
-class FakeMultiDataloader:
+class FakeMultiDataloader(MultiTurnDialog):
 	def __init__(self):
-		self.all_vocab_list = self.vocab_list = ['<pad>', '<unk>', '<go>', '<eos>', '<eot>', 'what', 'how', 'here', 'do']
+		self.all_vocab_list  = ['<pad>', '<unk>', '<go>', '<eos>', 'what', 'how', 'here', 'do']
+		self.valid_vocab_len = 8
 		self.vocab_to_index = {x: i for i, x in enumerate(self.vocab_list)}
-		self.vocab_size = 8
 		self.end_token = 4
 		self.pad_id = 0
-
-	def multi_turn_sen_to_index(self, session):
-		return MultiTurnDialog.multi_turn_index_to_sen(self, session)
-
-	def multi_turn_trim_index(self, index, ignore_first_token=False):
-		return MultiTurnDialog.multi_turn_trim_index(self, index, ignore_first_token=False)
-
-	def multi_turn_index_to_sen(self, index, trim=True, ignore_first_token=False):
-		return MultiTurnDialog.multi_turn_index_to_sen(self, index, trim, False)
-	
-	def trim_before_target(self, lists, target):
-		return BasicLanguageGeneration.trim_index(self, lists, target)
-
-	def trim_index(self, index):
-		return BasicLanguageGeneration.trim_index(self, index)
-
-	def index_to_sen(self, index, trim=True):
-		return BasicLanguageGeneration.index_to_sen(self, index, trim)
 
 	def get_sen(self, max_len, len, gen=False, pad=True):
 		return FakeDataLoader.get_sen(self, max_len, len, gen, pad, end_token="<eot>")
@@ -484,7 +457,7 @@ class TestMultiTurnBleuCorpusMetric:
 		if argument == 'default':
 			mtbcm = MultiTurnBleuCorpusMetric(dataloader)
 		else:
-			mtbcm = MultiTurnBleuCorpusMetric(dataloader, reference_key, turn_len_key, gen_key)
+			mtbcm = MultiTurnBleuCorpusMetric(dataloader, reference_key, gen_key, turn_len_key)
 
 		if batch_len == 'unequal':
 			data[reference_key] = data[reference_key][1:]
@@ -562,20 +535,11 @@ multi_turn_dialog_test_parameter = generate_testcase(\
 )
 
 class TestMultiTurnDialogRecorder:
-	def get_sen_from_index(self, dataloader, data, post_key='context', resp_key='reference', gen_key='gen'):
-		ans = { \
-			'context': [], \
-			'reference': [], \
-			'gen': [], \
-			}
-		for turn in data[post_key]:
-			ans['context'].append(dataloader.multi_turn_index_to_sen(np.array(turn), ignore_first_token=True))
-		for turn in data[resp_key]:
-			ans['reference'].append(dataloader.multi_turn_index_to_sen(np.array(turn), ignore_first_token=True))
-		for turn in data[gen_key]:
-			ans['gen'].append(dataloader.multi_turn_index_to_sen(turn))
-
-		return ans
+	def check(self, ans, dataloader, data, post_key='context', resp_key='reference', gen_key='gen', turn_length='turn_length'):
+		assert len(ans['context']) == len(ans['reference'])
+		for i, turn in enumerate(data[turn_length]):
+			assert len(ans['reference'][i]) == turn
+			assert len(ans['gen'][i]) == turn
 
 	@pytest.mark.parametrize('argument, shape, type, batch_len, gen_len, ref_len', multi_turn_dialog_test_parameter)
 	def test_close(self, argument, shape, type, batch_len, gen_len, ref_len):
@@ -586,16 +550,16 @@ class TestMultiTurnDialogRecorder:
 		# 'random', 'non-empty', 'empty'
 		# 'random', 'non-empty', 'empty'
 		dataloader = FakeMultiDataloader()
-		context_key, reference_key, gen_key = ('context', 'reference', 'gen') \
-			if argument == 'default' else ('ck', 'rk', 'gk')
-		data = dataloader.get_data(context_key=context_key, reference_key=reference_key, gen_key=gen_key, \
+		context_key, reference_key, gen_key, turn_len_key = ('context', 'reference', 'gen', 'turn_length') \
+			if argument == 'default' else ('ck', 'rk', 'gk', 'tk')
+		data = dataloader.get_data(context_key=context_key, turn_len_key=turn_len_key, reference_key=reference_key, gen_key=gen_key, \
 								   to_list=(type == 'list'), pad=(shape == 'pad'), \
 								   gen_len=gen_len, ref_len=ref_len)
 		_data = copy.deepcopy(data)
 		if argument == 'default':
 			mtbr = MultiTurnDialogRecorder(dataloader)
 		else:
-			mtbr = MultiTurnDialogRecorder(dataloader, context_key, reference_key, gen_key)
+			mtbr = MultiTurnDialogRecorder(dataloader, context_key, reference_key, gen_key, turn_len_key)
 
 		if batch_len == 'unequal':
 			data[reference_key] = data[reference_key][1:]
@@ -604,10 +568,10 @@ class TestMultiTurnDialogRecorder:
 				mtbr.forward(data)
 		else:
 			mtbr.forward(data)
-			
-			assert mtbr.close() == self.get_sen_from_index(dataloader, data, context_key, reference_key, gen_key)
-		assert same_dict(data, _data)
+			self.check(mtbr.close(), dataloader, \
+				data, context_key, reference_key, gen_key, turn_len_key)
 
+		assert same_dict(data, _data)
 
 language_generation_test_parameter = generate_testcase(\
 	(zip(test_argument), "add"),
@@ -663,7 +627,7 @@ class TestMetricChain():
 									   full_check=True)
 		perplexity = TestMultiTurnPerplexityMetric().get_perplexity(data, 'reference_key', 'reference_len_key', 'gen_prob_key')
 
-		bcm = MultiTurnBleuCorpusMetric(dataloader, 'reference_key', 'turn_len_key', 'gen_key')
+		bcm = MultiTurnBleuCorpusMetric(dataloader, 'reference_key', 'gen_key', 'turn_len_key')
 		bleu = TestMultiTurnBleuCorpusMetric().get_bleu(dataloader, data, 'reference_key', 'gen_key')
 
 		_data = copy.deepcopy(data)

@@ -91,16 +91,18 @@ class MultiTurnDialog(BasicLanguageGeneration):
 		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
 		return res
 
-	def multi_turn_trim_index(self, index, ignore_first_token=False):
+	def multi_turn_trim_index(self, index, turn_length=None, ignore_first_token=False):
 		'''Trim indexes for multi turn dialog. There will be 3 steps:
 			* For every turn, if there is an `<eot>`, \
 				find first `<eot>` and abondon words after it (included the `<eot>`).
-			* If the sentence after triming is empty, discard this turn and the turn after it.
 			* Ignore `<pad>` s at the end of every turn.
+			* When `turn_length` is None, discard the first empty turn and the turn after it. \
+				Otherwise, discard the turn according to turn_length.
 
 		Arguments:
 			index (list or :class:`numpy.array`): a 2-d array of int.
-			Size: [turn_length, max_sent_length]
+				Size: `[turn_length, max_sent_length]`
+			turn_length (int): Default: None
 			ignore_first_token (bool): if True, ignore first token of each turn (must be `<go>`).
 
 		Examples:
@@ -108,16 +110,16 @@ class MultiTurnDialog(BasicLanguageGeneration):
 		Todo:
 			* fix the missing example
 		'''
-
 		res = []
-		for turn_index in index:
-			turn_trim = self.trim_index(turn_index)
-			if turn_trim:
-				if ignore_first_token:
-					turn_trim = turn_index[1:]
-				res.append(turn_trim)
-			else:
+		for i, turn_index in enumerate(index):
+			if turn_length and i >= turn_length:
 				break
+			turn_trim = self.trim_index(turn_index)
+			if turn_length is None and not turn_trim:
+				break
+			elif ignore_first_token:
+				turn_trim = turn_index[1:]
+			res.append(turn_trim)
 		return res
 
 	def multi_turn_sen_to_index(self, session, invalid_vocab=False):
@@ -144,13 +146,15 @@ class MultiTurnDialog(BasicLanguageGeneration):
 				self._valid_word2id, sent)), \
 			session))
 
-	def multi_turn_index_to_sen(self, index, trim=True, ignore_first_token=False):
+	def multi_turn_index_to_sen(self, index, trim=True, turn_length=None, ignore_first_token=False):
 		'''Convert a session from index to string representation
 
 		Arguments:
 			index (list or :class:`numpy.array`): a 2-d array of int.
 				Size: [turn_length, max_sent_length]
 			trim (bool): if True, call :func:`multi_turn_trim_index` before convertion.
+			turn_length (int): Only works when trim=True.
+				If True, the session is trimmed according the turn_length. Default: None
 			ignore_first_token (bool): Only works when trim=True.
 				If True, ignore first token of each turn (must be `<go>`).
 
@@ -160,7 +164,8 @@ class MultiTurnDialog(BasicLanguageGeneration):
 			* fix the missing example
 		'''
 		if trim:
-			index = self.multi_turn_trim_index(index, ignore_first_token=ignore_first_token)
+			index = self.multi_turn_trim_index(index, turn_length=turn_length, \
+				ignore_first_token=ignore_first_token)
 		return list(map(lambda sent: \
 			list(map(lambda word: self.all_vocab_list[word], sent)), \
 			index))
