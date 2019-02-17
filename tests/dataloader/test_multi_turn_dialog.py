@@ -2,7 +2,7 @@ import copy
 from itertools import chain
 import pytest
 
-from contk.dataloader import MultiTurnDialog, UbuntuCorpus
+from contk.dataloader import MultiTurnDialog, UbuntuCorpus, SwitchboardCorpus
 from contk.metric import MetricBase
 
 class TestMultiTurnDialog():
@@ -26,7 +26,7 @@ class TestMultiTurnDialog():
 			assert dl.word2id[word] == i
 		assert dl.all_vocab_size == len(dl.all_vocab_list)
 		assert isinstance(dl.data, dict)
-		assert len(dl.data) == 3
+		assert len(dl.data) >= 3
 		for key in dl.key_name:
 			assert isinstance(dl.data[key], dict)
 			assert isinstance(dl.data[key]['session'], list)
@@ -241,3 +241,42 @@ class TestUbuntuCorpus(TestMultiTurnDialog):
 
 	def test_init_multi_runs(self, load_ubuntucorpus):
 		super().base_test_multi_runs([load_ubuntucorpus() for i in range(3)])
+
+@pytest.fixture
+def load_switchboardcorpus():
+	def _load_switchboardcorpus(invalid_vocab_times=0):
+		return SwitchboardCorpus("./tests/dataloader/dummy_switchboardcorpus", invalid_vocab_times=invalid_vocab_times)
+	return _load_switchboardcorpus
+
+class TestSwitchboardCorpus(TestMultiTurnDialog):
+
+	@pytest.mark.dependency()
+	def test_init(self, load_switchboardcorpus):
+		super().base_test_init(load_switchboardcorpus())
+
+	def test_restart(self, load_switchboardcorpus):
+		super().base_test_restart(load_switchboardcorpus())
+
+	@pytest.mark.dependency(depends=["TestSwitchboardCorpus::test_init"])
+	def test_get_batch(self, load_switchboardcorpus):
+		super().base_test_get_batch(load_switchboardcorpus())
+
+	@pytest.mark.dependency(depends=["TestSwitchboardCorpus::test_init"])
+	def test_get_next_batch(self, load_switchboardcorpus):
+		super().base_test_get_next_batch(load_switchboardcorpus())
+
+	@pytest.mark.dependency(depends=["TestSwitchboardCorpus::test_init"])
+	def test_convert(self, load_switchboardcorpus):
+		super().base_test_convert(load_switchboardcorpus())
+
+	def test_multi_turn_convert(self, load_switchboardcorpus):
+		super().base_test_multi_turn_convert(load_switchboardcorpus())
+
+	def test_teacher_forcing_metric(self, load_switchboardcorpus):
+		super().base_test_teacher_forcing_metric(load_switchboardcorpus())
+
+	def test_teacher_inference_metric(self, load_switchboardcorpus):
+		super().base_test_teacher_inference_metric(load_switchboardcorpus())
+
+	def test_init_multi_runs(self, load_switchboardcorpus):
+		super().base_test_multi_runs([load_switchboardcorpus() for i in range(3)])

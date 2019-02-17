@@ -7,8 +7,8 @@ your model from one dataset to other datasets.
 
 from .dataloader import Dataloader, BasicLanguageGeneration
 from .single_turn_dialog import SingleTurnDialog, OpenSubtitles
-from .multi_turn_dialog import MultiTurnDialog, UbuntuCorpus
+from .multi_turn_dialog import MultiTurnDialog, UbuntuCorpus, SwitchboardCorpus
 from .language_generation import LanguageGeneration, MSCOCO
 
 __all__ = ['Dataloader', 'SingleTurnDialog', 'OpenSubtitles', 'MultiTurnDialog', 'UbuntuCorpus', \
-        'LanguageGeneration', 'MSCOCO', 'BasicLanguageGeneration']
+           'SwitchboardCorpus', 'LanguageGeneration', 'MSCOCO', 'BasicLanguageGeneration']

@@ -5,8 +5,10 @@ a fair metric for every model.
 
 from .metric import MetricBase, PerlplexityMetric, BleuCorpusMetric, \
                     SingleTurnDialogRecorder, LanguageGenerationRecorder, MetricChain, \
-                    MultiTurnDialogRecorder, MultiTurnPerplexityMetric, MultiTurnBleuCorpusMetric
+                    MultiTurnDialogRecorder, MultiTurnPerplexityMetric, MultiTurnBleuCorpusMetric, \
+					BleuPrecisionRecallMetric, EmbSimilarityPrecisionRecallMetric
 
 __all__ = ["MetricBase", "PerlplexityMetric", "BleuCorpusMetric", \
         "SingleTurnDialogRecorder", "LanguageGenerationRecorder", "MetricChain", \
-        "MultiTurnDialogRecorder", "MultiTurnPerplexityMetric", "MultiTurnBleuCorpusMetric"]
+        "MultiTurnDialogRecorder", "MultiTurnPerplexityMetric", "MultiTurnBleuCorpusMetric", \
+		"BleuPrecisionRecallMetric", "EmbSimilarityPrecisionRecallMetric"]
