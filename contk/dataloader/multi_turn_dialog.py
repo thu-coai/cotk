@@ -202,7 +202,7 @@ class MultiTurnDialog(BasicLanguageGeneration):
 		return metric
 
 class UbuntuCorpus(MultiTurnDialog):
-	'''A dataloder for OpenSubtitles dataset.
+	'''A dataloder for Ubuntu dataset.
 
 	Arguments:
 		file_path (str): a str indicates the dir of OpenSubtitles dataset.
