@@ -6,6 +6,12 @@ from pytest_mock import mocker
 from contk.dataloader import SingleTurnDialog, OpenSubtitles
 from contk.metric import MetricBase
 
+def setup_module():
+	import random
+	random.seed(0)
+	import numpy as np
+	np.random.seed(0)
+
 class TestSingleTurnDialog():
 	def base_test_init(self, dl):
 		assert isinstance(dl, SingleTurnDialog)

@@ -6,6 +6,12 @@ from pytest_mock import mocker
 from contk.dataloader import LanguageGeneration, MSCOCO
 from contk.metric import MetricBase
 
+def setup_module():
+	import random
+	random.seed(0)
+	import numpy as np
+	np.random.seed(0)
+
 class TestLanguageGeneration():
 	def base_test_init(self, dl):
 		assert isinstance(dl, LanguageGeneration)
@@ -65,7 +71,7 @@ class TestLanguageGeneration():
 		for key in dl.key_name:
 			with pytest.raises(IndexError):
 				length = len(dl.data[key]['sen'])
-				dl.get_batch(key, [length-1, length])	
+				dl.get_batch(key, [length-1, length])
 			assert len(dl.index[key]) >= 2
 			batch = dl.get_batch(key, [0, 1])
 			assert len(batch["sentence_length"]) == 2

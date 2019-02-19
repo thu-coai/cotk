@@ -5,6 +5,12 @@ import pytest
 from contk.dataloader import MultiTurnDialog, UbuntuCorpus, SwitchboardCorpus
 from contk.metric import MetricBase
 
+def setup_module():
+	import random
+	random.seed(0)
+	import numpy as np
+	np.random.seed(0)
+
 class TestMultiTurnDialog():
 	def base_test_init(self, dl):
 		assert isinstance(dl, MultiTurnDialog)

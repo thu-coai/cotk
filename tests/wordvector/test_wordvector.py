@@ -8,6 +8,12 @@ from contk.wordvector.wordvector import WordVector
 from contk.wordvector.gloves import Glove
 import logging
 
+def setup_module():
+	import random
+	random.seed(0)
+	import numpy as np
+	np.random.seed(0)
+
 class TestWordVector():
 	def base_test_init(self, dl):
 		assert isinstance(dl, WordVector)
