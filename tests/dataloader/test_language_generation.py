@@ -12,7 +12,6 @@ class TestLanguageGeneration():
 		assert isinstance(dl.ext_vocab, list)
 		assert dl.ext_vocab[:4] == ["<pad>", "<unk>", "<go>", "<eos>"]
 		assert [dl.pad_id, dl.unk_id, dl.go_id, dl.eos_id] == [0, 1, 2, 3]
-		assert dl.eos_id == dl.end_token
 		assert isinstance(dl.key_name, list)
 		assert dl.key_name
 		for word in dl.key_name:
@@ -72,10 +71,10 @@ class TestLanguageGeneration():
 			assert len(batch["sentence_length"]) == 2
 			assert batch["sentence"].shape[0] == 2
 			if batch["sentence_length"][0] < batch['sentence'].shape[1]:
-				assert batch["sentence"][0][batch["sentence_length"][0]-1] == dl.end_token
+				assert batch["sentence"][0][batch["sentence_length"][0]-1] == dl.eos_id
 			assert batch["sentence"][0][0] == dl.go_id
 			if batch["sentence_length"][1] < batch['sentence'].shape[1]:
-				assert batch["sentence"][1][batch["sentence_length"][1]-1] == dl.end_token
+				assert batch["sentence"][1][batch["sentence_length"][1]-1] == dl.eos_id
 			assert batch["sentence"][1][0] == dl.go_id
 
 		# this is true, only when there is no unknown words in dl

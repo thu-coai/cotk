@@ -105,7 +105,7 @@ class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
         Returns:
             (scalar): sentence bleu score \in [0, 1]
         '''
-		return sentence_bleu([reference], gen, self.weights)
+		return sentence_bleu([reference], gen, self.weights, SmoothingFunction().method1)
 
 class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
 	'''Metric for calculating cosine similarity precision and recall

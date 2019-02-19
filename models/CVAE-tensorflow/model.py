@@ -24,7 +24,7 @@ class CVAEModel(object):
 
 		decoder_len = tf.shape(self.origin_responses)[1]
 		self.responses_target = tf.split(self.origin_responses, [1, decoder_len-1], 1)[1] # no go_id
-		self.responses_input = tf.split(self.origin_responses, [decoder_len-1, 1], 1)[0] # no eot_id
+		self.responses_input = tf.split(self.origin_responses, [decoder_len-1, 1], 1)[0] # no eoｓ_id
 		self.responses_length = self.origin_responses_length - 1
 		decoder_len = decoder_len - 1
 		self.decoder_mask = tf.sequence_mask(self.responses_length, decoder_len, dtype=tf.float32)
@@ -138,7 +138,7 @@ class CVAEModel(object):
 
 				infer_helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(self.word_embed,
 										tf.fill([tf.size(self.contexts_length)], data.go_id),
-																		data.eot_id)
+																		data.eos_id)
 				decoder_infer = MyBasicDecoder(cell_dec, infer_helper, dec_init_state, output_layer=output_fn,
 											   _aug_context_vector=None)
 				infer_outputs, _, _ = tf.contrib.seq2seq.dynamic_decode(decoder_infer, impute_finished=True,
@@ -415,8 +415,8 @@ class CVAEModel(object):
 			batch_results = []
 			for response_id in batched_responses_id:
 				response_id_list = response_id.tolist()
-				if data.eot_id in response_id_list:
-					end = response_id_list.index(data.eot_id) + 1
+				if data.eos_id in response_id_list:
+					end = response_id_list.index(data.eos_id) + 1
 					result_id = response_id_list[:end]
 				else:
 					result_id = response_id_list
@@ -520,8 +520,8 @@ class CVAEModel(object):
 					resp = list(resp)
 					if rid == len(responses):
 						responses.append([])
-					if data.eot_id in resp:
-						resp = resp[:resp.index(data.eot_id)]
+					if data.eos_id in resp:
+						resp = resp[:resp.index(data.eos_id)]
 					if len(resp) > 0:
 						responses[rid].append(resp)
 			metric_data = {'resp': process_cands(batch_data['candidate']), 'gen': responses}

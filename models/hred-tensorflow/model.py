@@ -18,7 +18,7 @@ class HredModel(object):
 		batch_size, decoder_len = tf.shape(self.origin_responses)[0], tf.shape(self.origin_responses)[1]
 		self.responses = tf.split(self.origin_responses, [1, decoder_len-1], 1)[1] # no go_id
 		self.responses_length = self.origin_responses_length - 1
-		self.responses_input = tf.split(self.origin_responses, [decoder_len-1, 1], 1)[0] # no eot_id
+		self.responses_input = tf.split(self.origin_responses, [decoder_len-1, 1], 1)[0] # no eos_id
 		self.responses_target = self.responses
 		decoder_len = decoder_len - 1
 		self.posts_input = self.posts   # batch*len
@@ -60,7 +60,7 @@ class HredModel(object):
 
 		# construct helper and attention
 		train_helper = tf.contrib.seq2seq.TrainingHelper(self.decoder_input, tf.maximum(self.responses_length, 1))
-		infer_helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(self.embed, tf.fill([batch_size], data.go_id), data.eot_id)
+		infer_helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(self.embed, tf.fill([batch_size], data.go_id), data.eos_id)
 		attn_mechanism = tf.contrib.seq2seq.LuongAttention(args.dh_size, encoder_output,
 				memory_sequence_length=tf.maximum(self.posts_length, 1))
 		cell_dec_attn = tf.contrib.seq2seq.AttentionWrapper(cell_dec, attn_mechanism,
@@ -268,8 +268,8 @@ class HredModel(object):
 			for response_id in batched_responses_id:
 				response_id_list = response_id.tolist()
 				response_token = data.index_to_sen(response_id_list)
-				if data.eot_id in response_id_list:
-					result_id = response_id_list[:response_id_list.index(data.eot_id)+1]
+				if data.eos_id in response_id_list:
+					result_id = response_id_list[:response_id_list.index(data.eos_id)+1]
 				else:
 					result_id = response_id_list
 				batch_results.append(result_id)

@@ -12,7 +12,7 @@ setup(
 	long_description=open('README.md', encoding='UTF-8').read(),
 	install_requires=[
 		'numpy>=1.13',
-		'nltk>=3.2',
+		'nltk>=3.4',
 		'tqdm>=4.30',
 		'checksumdir>=1.1'
 	],

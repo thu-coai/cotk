@@ -9,7 +9,7 @@
 
 * **python 3**
 * numpy >= 1.13
-* nltk >= 3.2
+* nltk >= 3.4
 * tqdm >= 4.30
 * checksumdir >= 1.1
 

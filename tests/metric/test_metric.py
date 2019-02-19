@@ -28,7 +28,7 @@ class FakeDataLoader(BasicLanguageGeneration):
 		self.all_vocab_list  = ['<pad>', '<unk>', '<go>', '<eos>', 'what', 'how', 'here', 'do']
 		self.valid_vocab_len = 8
 		self.vocab_to_index = {x: i for i, x in enumerate(self.vocab_list)}
-		self.end_token = 3
+		self.eos_id = 3
 		self.pad_id = 0
 
 	def get_sen(self, max_len, len, gen=False, pad=True, end_token="<eos>"):
@@ -70,7 +70,7 @@ class FakeDataLoader(BasicLanguageGeneration):
 			data[post_key].append(self.get_sen(max_len, ref_nowlen, pad=pad))
 
 			if gen_len == "random":
-				gen_nowlen = randrange(1, 4) if i != 0 else 3 # for BLEU not empty
+				gen_nowlen = randrange(1, 4) if i > 2 else 3 # for BLEU not empty
 			elif gen_len == "non-empty":
 				gen_nowlen = 7
 			elif gen_len == "empty":
@@ -102,7 +102,7 @@ class FakeMultiDataloader(MultiTurnDialog):
 		self.all_vocab_list  = ['<pad>', '<unk>', '<go>', '<eos>', 'what', 'how', 'here', 'do']
 		self.valid_vocab_len = 8
 		self.vocab_to_index = {x: i for i, x in enumerate(self.vocab_list)}
-		self.end_token = 4
+		self.eos_id = 4
 		self.pad_id = 0
 
 	def get_sen(self, max_len, len, gen=False, pad=True):
@@ -404,6 +404,8 @@ class TestBleuCorpusMetric:
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 								   to_list=(type == 'list'), pad=(shape == 'pad'), \
 								   gen_len=gen_len, ref_len=ref_len)
+		print(data)
+		print(self.get_bleu(dataloader, data, reference_key, gen_key))
 		_data = copy.deepcopy(data)
 		if argument == 'default':
 			bcm = BleuCorpusMetric(dataloader)

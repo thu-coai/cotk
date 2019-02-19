@@ -16,33 +16,20 @@ from ..metric import BleuPrecisionRecallMetric, EmbSimilarityPrecisionRecallMetr
 class MultiTurnDialog(BasicLanguageGeneration):
 	r"""Base class for multi-turn dialog datasets. This is an abstract class.
 
-	Arguments:
-			end_token (int): the special token that stands for end. default: `4("<eot>")`
-			ext_vocab (list): special tokens. default: `["<pad>", "<unk>", "<go>", "<eos>", "<eot>"]`
-			key_name (list): name of subsets of the data. default: `["train", "dev", "test"]`
+	Arguments:{ARGUMENTS}
 
-	Attributes:
-			ext_vocab (list): special tokens, be placed at beginning of `vocab_list`.
-					For example: `["<pad>", "<unk>", "<go>", "<eos>", "<eot>"]`
-			pad_id (int): token for padding, always equal to `0`
-			unk_id (int): token for unknown words, always equal to `1`
-			go_id (int): token at the beginning of sentences, always equal to `2`
-			eos_id (int): token at the end of sentences, always equal to `3`
-			eot_id (int): token at the end of turns, always equal to `4`
-			key_name (list): name of subsets of the data. For example: `["train", "dev", "test"]`
-			all_vocab_list (list): vocabulary list of the datasets.
-			word2id (dict): a dict mapping tokens to index.
-					Maybe you want to use :meth:`sen_to_index` instead.
-			end_token (int): token for end. default: equals to `eot_id`
+	Attributes:{ATTRIBUTES}
 	"""
+
+	ARGUMENTS = BasicLanguageGeneration.ARGUMENTS
+	ATTRIBUTES = BasicLanguageGeneration.ATTRIBUTES
+
 	def __init__(self, \
-				 end_token=None, \
 				 ext_vocab=None, \
 				 key_name=None,	\
 		):
-		ext_vocab = ext_vocab or ["<pad>", "<unk>", "<go>", "<eos>", "<eot>"]
-		self.eot_id = ext_vocab.index("<eot>")
-		super().__init__(end_token or self.eot_id, ext_vocab, key_name)
+		ext_vocab = ext_vocab or ["<pad>", "<unk>", "<go>", "<eos>"]
+		super().__init__(ext_vocab, key_name)
 
 	def get_batch(self, key, index):
 		'''Get a batch of specified `index`.
@@ -95,8 +82,8 @@ class MultiTurnDialog(BasicLanguageGeneration):
 
 	def multi_turn_trim_index(self, index, turn_length=None, ignore_first_token=False):
 		'''Trim indexes for multi turn dialog. There will be 3 steps:
-			* For every turn, if there is an `<eot>`, \
-				find first `<eot>` and abondon words after it (included the `<eot>`).
+			* For every turn, if there is an `<eos>`, \
+				find first `<eos>` and abondon words after it (included the `<eos>`).
 			* Ignore `<pad>` s at the end of every turn.
 			* When `turn_length` is None, discard the first empty turn and the turn after it. \
 				Otherwise, discard the turn according to turn_length.
@@ -204,24 +191,28 @@ class MultiTurnDialog(BasicLanguageGeneration):
 class UbuntuCorpus(MultiTurnDialog):
 	'''A dataloder for Ubuntu dataset.
 
-	Arguments:
-		file_path (str): a str indicates the dir of OpenSubtitles dataset.
-		min_vocab_times (int): A cut-off threshold of `UNK` tokens. All tokens appear
-			less than `min_vocab_times`	will be replaced by `<unk>`. Default: 10.
-		max_sen_length (int): All sentences longer than `max_sen_length` will be shortened
-			to first `max_sen_length` tokens. Default: 50.
-		max_turn_length (int): All sessions longer than `max_turn_length` will be shortened
-			to first `max_turn_length` sentences. Default: 20.
-		invalid_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
-			not less than `invalid_vocab_times` in the **whole dataset** (except valid words) will be
-			marked as invalid words. Otherwise, they are unknown words, both in training or
-			testing stages. Default: 0 (No unknown words).
+	Arguments:{ARGUMENTS}
 
 	Refer to :class:`.MultiTurnDialog` for attributes and methods.
 
 	Todo:
 		* add references
 	'''
+
+	ARGUMENTS = r'''
+			file_path (str): a str indicates the dir of OpenSubtitles dataset.
+			min_vocab_times (int): A cut-off threshold of `UNK` tokens. All tokens appear
+				less than `min_vocab_times`	will be replaced by `<unk>`. Default: 10.
+			max_sen_length (int): All sentences longer than `max_sen_length` will be shortened
+				to first `max_sen_length` tokens. Default: 50.
+			max_turn_length (int): All sessions longer than `max_turn_length` will be shortened
+				to first `max_turn_length` sentences. Default: 20.
+			invalid_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
+				not less than `invalid_vocab_times` in the **whole dataset** (except valid words) will be
+				marked as invalid words. Otherwise, they are unknown words, both in training or
+				testing stages. Default: 0 (No unknown words).
+	'''
+
 	def __init__(self, file_path, min_vocab_times=10, max_sen_length=50, max_turn_length=20, \
 			invalid_vocab_times=0):
 		self._file_path = file_path
@@ -245,7 +236,7 @@ class UbuntuCorpus(MultiTurnDialog):
 					raw_data = [d[0] + d[1] for d in raw_data[1:]]
 
 				raw2line = lambda raw: [sent.strip().split() \
-						for sent in raw.strip().replace('__eou__', '<eos>').split('__eot__')]
+						for sent in raw.strip().replace('__eou__', '').split('__eot__')]
 				origin_data[key] = {'session': list(map(raw2line, raw_data))}
 
 		raw_vocab_list = list(chain(*chain(*(origin_data['train']['session']))))
@@ -253,7 +244,6 @@ class UbuntuCorpus(MultiTurnDialog):
 		vocab = sorted(Counter(raw_vocab_list).most_common(), key=lambda pair: (-pair[1], pair[0]))
 		left_vocab = list(filter(lambda x: x[1] >= self._min_vocab_times, vocab))
 		left_vocab = list(map(lambda x: x[0], left_vocab))
-		left_vocab.remove('<eos>')
 		vocab_list = self.ext_vocab + left_vocab
 		valid_vocab_len = len(vocab_list)
 		valid_vocab_set = set(vocab_list)
@@ -277,7 +267,7 @@ class UbuntuCorpus(MultiTurnDialog):
 		word2id = {w: i for i, w in enumerate(vocab_list)}
 		line2id = lambda line: ([self.go_id] + list(\
 					map(lambda word: word2id.get(word, self.unk_id), line)) + \
-					[self.eot_id])[:self._max_sen_length]
+					[self.eos_id])[:self._max_sen_length]
 
 		data = {}
 		data_size = {}
@@ -304,13 +294,16 @@ class UbuntuCorpus(MultiTurnDialog):
 class SwitchboardCorpus(MultiTurnDialog):
 	'''A dataloder for Switchboard dataset.
 
-	Refer to :class:^UbuntuCorpus^ for arguments
+	Arguments: {ARGUMENTS}
 
 	Refer to :class:`.MultiTurnDialog` for attributes and methods.
 
 	Todo:
 	    * add references
 	'''
+
+	ARGUMENTS = UbuntuCorpus.ARGUMENTS
+
 	def __init__(self, file_path, min_vocab_times=5, max_sen_length=50, max_turn_length=1000, \
 				 invalid_vocab_times=0):
 		self._file_path = file_path
@@ -340,7 +333,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 		data = {}
 		sess2id = lambda sess: [([self.go_id] + \
 								 list(map(lambda word: self.word2id.get(word, self.unk_id), utt)) + \
-								 [self.eot_id])[:self._max_sen_length] for utt in sess]
+								 [self.eos_id])[:self._max_sen_length] for utt in sess]
 		data['session'] = list(map(sess2id, origin_data['session']))
 		return data
 
@@ -358,15 +351,15 @@ class SwitchboardCorpus(MultiTurnDialog):
 				line = json.loads(line)
 				prefix_utts = [['X', '<d>']] + line['utts']
 				# pylint: disable=cell-var-from-loop
-				suffix_utts = list(map(lambda utt: utt[1][1].strip() + ' <eos> ' \
+				suffix_utts = list(map(lambda utt: utt[1][1].strip() + ' ' \
 							if prefix_utts[utt[0]][0] == utt[1][0] \
-							else '<eot> ' + utt[1][1].strip() + ' <eos> ', enumerate(line['utts'])))
-				utts = ('<d> <eos> ' + "".join(suffix_utts).strip()).split("<eot>")
+							else '<eos> ' + utt[1][1].strip() + ' ', enumerate(line['utts'])))
+				utts = ('<d> ' + "".join(suffix_utts).strip()).split("<eos>")
 				sess = list(map(lambda utt: utt.strip().split(), utts))
 				if not add_pre_turn:
 					sess = sess[1:]
 				if add_suf_turn:
-					sess += [['<d>', '<eos>']]
+					sess += [['<d>']]
 				origin_data['session'].append(sess[:self._max_turn_length])
 		return origin_data
 
@@ -377,7 +370,6 @@ class SwitchboardCorpus(MultiTurnDialog):
 		vocab = sorted(Counter(raw_vocab).most_common(), key=lambda pair: (-pair[1], pair[0]))
 		left_vocab = list(filter(lambda x: x[1] >= self._min_vocab_times, vocab))
 		left_vocab = list(map(lambda x: x[0], left_vocab))
-		left_vocab.remove('<eos>')
 		vocab_list = self.ext_vocab + left_vocab
 		self.valid_vocab_len = len(vocab_list)
 		valid_vocab_set = set(vocab_list)
