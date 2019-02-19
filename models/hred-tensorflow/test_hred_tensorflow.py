@@ -80,7 +80,6 @@ def test_train(mocker):
 	run()
 	tf.reset_default_graph()
 
-@pytest.mark.skip("HRED model test is wrong.")
 def test_test(mocker):
 	def side_effect_test(args):
 		modify_args(args)
