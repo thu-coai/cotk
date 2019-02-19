@@ -3,7 +3,9 @@ Word Vector
 
 .. automodule:: contk.wordvector
 .. autoclass:: WordVector
-    :members:
+
+    .. automethod:: get_all_subclasses
+    .. automethod:: load_class
 
 .. autoclass:: Glove
     :members:

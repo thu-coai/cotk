@@ -2,7 +2,9 @@ Data Loader
 ===================================
 .. automodule:: contk.dataloader
 .. autoclass:: Dataloader
-    :members:
+
+    .. automethod:: get_all_subclasses
+    .. automethod:: load_class
 
 LanguageGeneration
 -----------------------------------
