@@ -59,12 +59,12 @@ class Seq2seq(BaseModel):
 		data.resp = cuda(torch.LongTensor(data.resp.transpose(1, 0))) # length * batch_size
 		return incoming
 
-	def get_next_batch(self, dm, key, restart=True):
-		data = dm.get_next_batch(key)
+	def get_next_batch(self, dm, key, restart=True, needhash=False):
+		data = dm.get_next_batch(key, needhash=needhash)
 		if data is None:
 			if restart:
 				dm.restart(key)
-				return self.get_next_batch(dm, key, False)
+				return self.get_next_batch(dm, key, False, needhash=needhash)
 			else:
 				return None
 		return self._preprocess_batch(data)
@@ -157,14 +157,14 @@ class Seq2seq(BaseModel):
 		metric1 = dm.get_teacher_forcing_metric()
 
 		while True:
-			incoming = self.get_next_batch(dm, key, restart=False)
+			incoming = self.get_next_batch(dm, key, restart=False, needhash=True)
 			if incoming is None:
 				break
 			incoming.args = Storage()
 			with torch.no_grad():
 				self.net.forward(incoming)
 				gen_prob = nn.functional.log_softmax(incoming.gen.w, -1)
-			data = Storage()
+			data = incoming.data
 			data.resp = incoming.data.resp.detach().cpu().numpy().transpose(1, 0)
 			data.resp_length = incoming.data.resp_length
 			data.gen_prob = gen_prob.detach().cpu().numpy().transpose(1, 0, 2)
@@ -180,7 +180,7 @@ class Seq2seq(BaseModel):
 			incoming.args = Storage()
 			with torch.no_grad():
 				self.net.detail_forward(incoming)
-			data = Storage()
+			data = incoming.data
 			data.resp = incoming.data.resp.detach().cpu().numpy().transpose(1, 0)
 			data.post = incoming.data.post.detach().cpu().numpy().transpose(1, 0)
 			data.gen = incoming.gen.w_o.detach().cpu().numpy().transpose(1, 0)
@@ -194,9 +194,9 @@ class Seq2seq(BaseModel):
 		with open(filename, 'w') as f:
 			logging.info("%s Test Result:", key)
 			for key, value in res.items():
-				if isinstance(value, float):
-					logging.info("\t%s:\t%f", key, value)
-					f.write("%s:\t%f\n" % (key, value))
+				if isinstance(value, float) or isinstance(value, bytes):
+					logging.info("\t{}:\t{}".format(key, value))
+					f.write("{}:\t{}\n".format(key, value))
 			for i in range(len(res['post'])):
 				f.write("post:\t%s\n" % " ".join(res['post'][i]))
 				f.write("resp:\t%s\n" % " ".join(res['resp'][i]))

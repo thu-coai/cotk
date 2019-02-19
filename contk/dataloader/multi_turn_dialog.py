@@ -7,9 +7,11 @@ from itertools import chain
 import json
 
 import numpy as np
+
+from .._utils.unordered_hash import UnorderedSha256
 from .dataloader import BasicLanguageGeneration
 from ..metric import MetricChain, MultiTurnPerplexityMetric, MultiTurnBleuCorpusMetric, \
-	MultiTurnDialogRecorder
+	MultiTurnDialogRecorder, HashValueRecorder
 from ..metric import BleuPrecisionRecallMetric, EmbSimilarityPrecisionRecallMetric
 
 # pylint: disable=W0223
@@ -31,7 +33,7 @@ class MultiTurnDialog(BasicLanguageGeneration):
 		ext_vocab = ext_vocab or ["<pad>", "<unk>", "<go>", "<eos>"]
 		super().__init__(ext_vocab, key_name)
 
-	def get_batch(self, key, index):
+	def get_batch(self, key, index, needhash=False):
 		'''Get a batch of specified `index`.
 
 		Arguments:
@@ -75,6 +77,13 @@ class MultiTurnDialog(BasicLanguageGeneration):
 		for i, index_i in enumerate(index):
 			for j, sent in enumerate(self.data[key]['session'][index_i]):
 				res_sent[i, j, :len(sent)] = sent
+
+		if needhash:
+			unordered_hash = UnorderedSha256()
+			for j in index:
+				unordered_hash.update_data(repr((self.data[key]['session'][j], self.valid_vocab_len)).encode())
+			res["hashvalue"] = unordered_hash.digest()
+			# hashvalue must be unique for representing the whole batch
 
 		res["sent_allwords"] = res_sent.copy()
 		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
@@ -169,7 +178,10 @@ class MultiTurnDialog(BasicLanguageGeneration):
 		Arguments:
 			gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerlplexityMetric`
 		'''
-		return MultiTurnPerplexityMetric(self, gen_prob_key=gen_prob_key)
+		metric = MetricChain()
+		metric.add_metric(HashValueRecorder(hash_key="teacher_forcing_hashvalue"))
+		metric.add_metric(MultiTurnPerplexityMetric(self, gen_prob_key=gen_prob_key))
+		return metric
 
 	def get_inference_metric(self, gen_key="gen"):
 		'''Get metric for inference.
@@ -184,6 +196,7 @@ class MultiTurnDialog(BasicLanguageGeneration):
 					   :class:`.metric.MultiTurnDialogRecorder`
 		'''
 		metric = MetricChain()
+		metric.add_metric(HashValueRecorder(hash_key="inference_hashvalue"))
 		metric.add_metric(MultiTurnBleuCorpusMetric(self, gen_key=gen_key))
 		metric.add_metric(MultiTurnDialogRecorder(self, gen_key=gen_key))
 		return metric
@@ -299,7 +312,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 	Refer to :class:`.MultiTurnDialog` for attributes and methods.
 
 	Todo:
-	    * add references
+		* add references
 	'''
 
 	ARGUMENTS = UbuntuCorpus.ARGUMENTS
@@ -320,15 +333,17 @@ class SwitchboardCorpus(MultiTurnDialog):
 		and ^SwitchboardCorpus._load_multi_ref_data^
 
 		Arguments:
-		    * origin_data (dict): Contains at least:
-		    	* session (list): A 3-d list, utterances in words
-		    		Size of the outermost list: num_data
-		    		Size of the second innermost list: num of utterances in a session
-		    		Size of the innermost list: num of words in a utterance
+			origin_data (dict): Contains at least:
+
+				* session (list): A 3-d list, utterances in words.
+				  Size of the outermost list: num_data.
+				  Size of the second innermost list: num of utterances in a session.
+				  Size of the innermost list: num of words in a utterance.
+
 		Returns:
-		    * data (dict): Contains
-		    	* session (list): utterances in ids
-		    		Size: same as input
+			(dict): Contains:
+
+			* session (list): utterances in ids. Size: same as input
 		'''
 		data = {}
 		sess2id = lambda sess: [([self.go_id] + \
@@ -342,8 +357,8 @@ class SwitchboardCorpus(MultiTurnDialog):
 			and ^SwitchboardCorpus._load_multi_ref_data^
 
 		Arguments:
-		    * filepath (str): Name of the file to read from
-		    * add_pre_turn (bool): Whether to add turn ^<d>^ ahead of each session
+			* filepath (str): Name of the file to read from
+			* add_pre_turn (bool): Whether to add turn ^<d>^ ahead of each session
 		'''
 		origin_data = {'session': []}
 		with open(filepath, "r") as data_file:
@@ -439,20 +454,23 @@ class SwitchboardCorpus(MultiTurnDialog):
 		data['multi_ref']['candidate'] = self._load_multi_ref_data()
 		return vocab_list, len(valid_vocab_set), data, data_size
 
-	def get_batch(self, key, index):
+	def get_batch(self, key, index, needhash=False):
 		'''Get a batch of specified `index`.
 
 		Arguments:
 			key (str): must be contained in `key_name`
 			index (list): a list of specified index
+			needhash (bool): whether to return a hashvalue
+			  representing this batch of data. Default: False.
 
 		Returns:
 			(dict): A dict contains what is in the return of MultiTurnDialog.get_batch.
-				It additionally contains:
+			  It additionally contains:
+
 				* candidates (list): A 3-d list, multiple responses for reference
-					Size of outermost list: batch_size
-					Size of second innermost list: varying num of references
-					Size of innermost list: varying num of words in a reference
+				  Size of outermost list: batch_size
+				  Size of second innermost list: varying num of references
+				  Size of innermost list: varying num of words in a reference
 
 			See the example belows.
 
@@ -463,23 +481,25 @@ class SwitchboardCorpus(MultiTurnDialog):
 		Todo:
 			* fix the missing example
 		'''
-		res = super(SwitchboardCorpus, self).get_batch(key, index)
+		res = super().get_batch(key, index)
 		gather = lambda sub_key: [self.data[key][sub_key][i] for i in index]
 		for sub_key in self.data[key]:
 			if sub_key not in res:
 				res[sub_key] = gather(sub_key)
+		#TODO: add hashvalue for SwitchBoard
 		return res
 
+	#TODO: move to inference metric. embedding have to be a property of dataloader
 	def get_precision_recall_metric(self, embed):
 		'''Get metrics for precision and recall in terms of BLEU, cosine similarity.
 
-        It contains:
+		It contains:
 
-        * :class:`.metric.PrecisionRecallMetric`
+		* :class:`.metric.PrecisionRecallMetric`
 
-        Arguments:
-            embed (:class:`numpy.array`): Glove word embedding
-        '''
+		Arguments:
+			embed (:class:`numpy.array`): Glove word embedding
+		'''
 		metric = MetricChain()
 		for ngram in range(1, 5):
 			metric.add_metric(BleuPrecisionRecallMetric(ngram))

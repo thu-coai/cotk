@@ -8,6 +8,8 @@ import numpy as np
 from nltk.translate.bleu_score import corpus_bleu, SmoothingFunction
 from nltk.translate.bleu_score import sentence_bleu
 
+from .._utils.unordered_hash import UnorderedSha256
+
 class MetricBase:
 	'''Base class for metrics.
 	'''
@@ -573,6 +575,34 @@ class LanguageGenerationRecorder(MetricBase):
 			* **gen**: a list of generated sentences.
 		'''
 		return {"gen": self.gen_list}
+
+class HashValueRecorder(MetricBase):
+	'''A metric-like class for recording hash value metric.
+	'''
+	def __init__(self, hash_key="hashvalue"):
+		super().__init__()
+		self._hash_key = hash_key
+		self.unordered_hash = None
+
+	def forward(self, data):
+		'''Processing a batch of data.
+
+		Arguments:
+			data (dict): A dict at least contains hashvalue.
+		'''
+		if "hashvalue" in data:
+			if self.unordered_hash is None:
+				self.unordered_hash = UnorderedSha256()
+			self.unordered_hash.update_hash(data["hashvalue"])
+
+	def close(self):
+		'''Return a dict which contains the items which all the
+			meric components returned.
+		'''
+		if self.unordered_hash:
+			return {self._hash_key: self.unordered_hash.digest()}
+		else:
+			return {}
 
 class MetricChain(MetricBase):
 	'''A metric-like class for stacked metric. You can use this class

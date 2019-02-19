@@ -1,10 +1,10 @@
 import copy
 import itertools
+import random
 
 import numpy as np
 import pytest
 
-from random import random, randrange
 from contk.metric import MetricBase, PerlplexityMetric, MultiTurnPerplexityMetric, BleuCorpusMetric, \
 	MultiTurnBleuCorpusMetric, SingleTurnDialogRecorder, MultiTurnDialogRecorder, LanguageGenerationRecorder, \
 	MetricChain
@@ -12,7 +12,6 @@ from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunct
 from contk.dataloader import BasicLanguageGeneration, MultiTurnDialog
 
 def setup_module():
-	import random
 	random.seed(0)
 	np.random.seed(0)
 
@@ -34,7 +33,7 @@ class FakeDataLoader(BasicLanguageGeneration):
 	def get_sen(self, max_len, len, gen=False, pad=True, end_token="<eos>"):
 		sen = []
 		for i in range(len):
-			sen.append(randrange(self.vocab_to_index['<eos>'] + 1, self.vocab_size))
+			sen.append(random.randrange(self.vocab_to_index['<eos>'] + 1, self.vocab_size))
 		if not gen:
 			sen[0] = self.vocab_to_index['<go>']
 		sen[len - 1] = self.vocab_to_index['<eos>']
@@ -59,7 +58,7 @@ class FakeDataLoader(BasicLanguageGeneration):
 
 		for i in range(batch):
 			if ref_len == "random":
-				ref_nowlen = randrange(2, 5)
+				ref_nowlen = random.randrange(2, 5)
 			elif ref_len == "non-empty":
 				ref_nowlen = 8
 			elif ref_len == 'empty':
@@ -70,7 +69,7 @@ class FakeDataLoader(BasicLanguageGeneration):
 			data[post_key].append(self.get_sen(max_len, ref_nowlen, pad=pad))
 
 			if gen_len == "random":
-				gen_nowlen = randrange(1, 4) if i > 2 else 3 # for BLEU not empty
+				gen_nowlen = random.randrange(1, 4) if i > 2 else 3 # for BLEU not empty
 			elif gen_len == "non-empty":
 				gen_nowlen = 7
 			elif gen_len == "empty":
@@ -81,7 +80,7 @@ class FakeDataLoader(BasicLanguageGeneration):
 			for j in range(max_len if pad else ref_nowlen):
 				vocab_prob = []
 				for k in range(self.vocab_size):
-					vocab_prob.append(random())
+					vocab_prob.append(random.random())
 				vocab_prob /= np.sum(vocab_prob)
 				if gen_prob_check != "random_check":
 					vocab_prob = np.log(vocab_prob)
@@ -124,7 +123,7 @@ class FakeMultiDataloader(MultiTurnDialog):
 		}
 
 		for i in range(batch):
-			turn_length = randrange(1, max_turn+1)
+			turn_length = random.randrange(1, max_turn+1)
 			turn_reference = []
 			turn_reference_len = []
 			turn_gen_prob = []
@@ -133,7 +132,7 @@ class FakeMultiDataloader(MultiTurnDialog):
 
 			for j in range(turn_length):
 				if ref_len == "random":
-					ref_nowlen = randrange(2, 5)
+					ref_nowlen = random.randrange(2, 5)
 				elif ref_len == "non-empty":
 					ref_nowlen = 8
 				elif ref_len == 'empty':
@@ -143,7 +142,7 @@ class FakeMultiDataloader(MultiTurnDialog):
 
 				turn_context.append(self.get_sen(max_len, ref_nowlen, pad=pad))
 				if gen_len == "random":
-					gen_nowlen = randrange(1, 4) if i != 0 else 3 # for BLEU not empty
+					gen_nowlen = random.randrange(1, 4) if i != 0 else 3 # for BLEU not empty
 				elif gen_len == "non-empty":
 					gen_nowlen = 7
 				elif gen_len == "empty":
@@ -154,7 +153,7 @@ class FakeMultiDataloader(MultiTurnDialog):
 				for k in range(max_len if pad else ref_nowlen):
 					vocab_prob = []
 					for l in range(self.vocab_size):
-						vocab_prob.append(random())
+						vocab_prob.append(random.random())
 					vocab_prob /= np.sum(vocab_prob)
 					if gen_prob_check != "random_check":
 						vocab_prob = np.log(vocab_prob)

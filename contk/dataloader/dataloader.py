@@ -131,7 +131,7 @@ class BasicLanguageGeneration(Dataloader):
 				len(self.index[key]) // self.batch_size[key], \
 				len(self.index[key]) % self.batch_size[key]))
 
-	def get_batch(self, key, index):
+	def get_batch(self, key, index, needhash=False):
 		'''Get a batch of specified `index`.
 
 		Arguments:
@@ -144,7 +144,7 @@ class BasicLanguageGeneration(Dataloader):
 		raise NotImplementedError( \
 			"This function should be implemented by subclasses.")
 
-	def get_next_batch(self, key, ignore_left_samples=False):
+	def get_next_batch(self, key, ignore_left_samples=False, needhash=False):
 		'''Get next batch.
 
 		Arguments:
@@ -168,7 +168,7 @@ class BasicLanguageGeneration(Dataloader):
 		if ignore_left_samples and end > len(self.index[key]):
 			return None
 		index = self.index[key][start:end]
-		res = self.get_batch(key, index)
+		res = self.get_batch(key, index, needhash=needhash)
 		self.batch_id[key] += 1
 		return res
 

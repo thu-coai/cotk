@@ -81,3 +81,8 @@ UbuntuCorpus
     :members:
     :private-members:
 
+SwitchBoardCorpus
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autoclass:: SwitchboardCorpus
+    :members:
+    :private-members:

@@ -4,8 +4,10 @@ from itertools import chain
 
 import numpy as np
 
+from .._utils.unordered_hash import UnorderedSha256
 from .dataloader import BasicLanguageGeneration
-from ..metric import MetricChain, PerlplexityMetric, LanguageGenerationRecorder
+from ..metric import MetricChain, PerlplexityMetric, LanguageGenerationRecorder, \
+	HashValueRecorder
 
 # pylint: disable=W0223
 class LanguageGeneration(BasicLanguageGeneration):
@@ -19,12 +21,14 @@ class LanguageGeneration(BasicLanguageGeneration):
 	ARGUMENTS = BasicLanguageGeneration.ARGUMENTS
 	ATTRIBUTES = BasicLanguageGeneration.ATTRIBUTES
 
-	def get_batch(self, key, index):
+	def get_batch(self, key, index, needhash=False):
 		'''Get a batch of specified `index`.
 
 		Arguments:
 			key (str): must be contained in `key_name`
 			index (list): a list of specified index
+			needhash (bool): whether to return a hashvalue
+				representing this batch of data. Default: False.
 
 		Returns:
 			(dict): A dict at least contains:
@@ -37,6 +41,7 @@ class LanguageGeneration(BasicLanguageGeneration):
 				* sentence_allwords(:class:`numpy.array`): A 2-d padding array containing id of words.
 				  Provide both valid and invalid words.
 				  Size: `[batch_size, max(sent_length)]`
+				* hashvalue(bytes): (If `needhash` is True.) A bytes representing hash value of the data.
 
 		Examples:
 			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you",
@@ -47,7 +52,7 @@ class LanguageGeneration(BasicLanguageGeneration):
 						[2, 4, 5, 6, 3],   # first sentence: <go> how are you <eos>
 						[2, 7, 3, 0, 0],   # second sentence:  <go> hello <eos> <pad> <pad>
 					],
-					"sentence_length": [5, 3], # length of sentences
+				"sentence_length": [5, 3], # length of sentences
 			}
 
 		Todo:
@@ -66,6 +71,13 @@ class LanguageGeneration(BasicLanguageGeneration):
 			sentence = self.data[key]['sen'][j]
 			res["sentence"][i, :len(sentence)] = sentence
 
+		if needhash:
+			unordered_hash = UnorderedSha256()
+			for j in index:
+				unordered_hash.update_data(repr((self.data[key]['sen'][j], self.valid_vocab_len)).encode())
+			res["hashvalue"] = unordered_hash.digest()
+			# hashvalue must be unique for representing the whole batch
+
 		res["sentence_allwords"] = res_sent.copy()
 		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
 		return res
@@ -80,10 +92,13 @@ class LanguageGeneration(BasicLanguageGeneration):
 		Arguments:
 				gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerlplexityMetric`
 		'''
-		return PerlplexityMetric(self, \
-								 reference_key='sentence', \
-								 reference_len_key='sentence_length', \
-								 gen_prob_key=gen_prob_key)
+		metric = MetricChain()
+		metric.add_metric(HashValueRecorder(hash_key="teacher_forcing_hashvalue"))
+		metric.add_metric(PerlplexityMetric(self, \
+					reference_key='sentence', \
+					reference_len_key='sentence_length', \
+					gen_prob_key=gen_prob_key))
+		return metric
 
 	def get_inference_metric(self, gen_key="gen"):
 		'''Get metric for inference.
@@ -96,6 +111,7 @@ class LanguageGeneration(BasicLanguageGeneration):
 				gen_key (str): default: "gen". Refer to :class:`.metric.LanguageGenerationRecorder`
 		'''
 		metric = MetricChain()
+		metric.add_metric(HashValueRecorder(hash_key="inference_hashvalue"))
 		metric.add_metric(LanguageGenerationRecorder(self, \
 													 gen_key=gen_key))
 		return metric

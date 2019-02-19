@@ -3,7 +3,7 @@ from itertools import chain
 import pytest
 
 from contk.dataloader import MultiTurnDialog, UbuntuCorpus, SwitchboardCorpus
-from contk.metric import MetricBase
+from contk.metric import MetricBase, HashValueRecorder
 
 def setup_module():
 	import random
@@ -208,6 +208,29 @@ class TestMultiTurnDialog():
 	def base_test_multi_runs(self, dl_list):
 		assert all(x.vocab_list == dl_list[0].vocab_list for x in dl_list)
 
+	def base_test_hash(self, dl):
+		recorder1 = HashValueRecorder()
+		recorder2 = HashValueRecorder()
+		
+		for key in dl.key_name:
+			dl.restart(key, 7)
+			recorder1 = HashValueRecorder()
+			while True:
+				batch = dl.get_next_batch(key, needhash=True)
+				if not batch:
+					break
+				recorder1.forward(batch)
+
+			dl.restart(key, 7)
+			recorder2 = HashValueRecorder()
+			while True:
+				batch = dl.get_next_batch(key, needhash=True)
+				if not batch:
+					break
+				recorder2.forward(batch)
+
+			assert recorder1.close()['hashvalue'] == recorder2.close()['hashvalue'] 
+
 @pytest.fixture
 def load_ubuntucorpus():
 	def _load_ubuntucorpus(invalid_vocab_times=0):
@@ -247,6 +270,10 @@ class TestUbuntuCorpus(TestMultiTurnDialog):
 	def test_init_multi_runs(self, load_ubuntucorpus):
 		super().base_test_multi_runs([load_ubuntucorpus() for i in range(3)])
 
+	@pytest.mark.dependency(depends=["TestUbuntuCorpus::test_init"])
+	def test_hash(self, load_ubuntucorpus):
+		super().base_test_hash(load_ubuntucorpus())
+
 @pytest.fixture
 def load_switchboardcorpus():
 	def _load_switchboardcorpus(invalid_vocab_times=0):
@@ -285,3 +312,8 @@ class TestSwitchboardCorpus(TestMultiTurnDialog):
 
 	def test_init_multi_runs(self, load_switchboardcorpus):
 		super().base_test_multi_runs([load_switchboardcorpus() for i in range(3)])
+
+	@pytest.mark.skip()
+	@pytest.mark.dependency(depends=["TestSwitchboardCorpus::test_init"])
+	def test_hash(self, load_switchboardcorpus):
+		super().base_test_hash(load_switchboardcorpus())
