@@ -13,6 +13,9 @@ def setup_function(function):
 	import sys
 	sys.argv = ['python3']
 	random.seed(0)
+	import numpy as np
+	np.random.seed(0)
+	tf.set_random_seed(0)
 	try:
 		shutil.rmtree(cwd + '/output_test')
 	except Exception:

@@ -11,6 +11,11 @@ from contk.metric import MetricBase, PerlplexityMetric, MultiTurnPerplexityMetri
 from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunction
 from contk.dataloader import BasicLanguageGeneration, MultiTurnDialog
 
+def setup_module():
+	import random
+	random.seed(0)
+	np.random.seed(0)
+
 def test_bleu_bug():
 	ref = [[[1, 3], [3], [4]]]
 	gen = [[1]]
@@ -117,7 +122,7 @@ class FakeMultiDataloader(MultiTurnDialog):
 			gen_key: [], \
 			context_key: [] \
 		}
-		
+
 		for i in range(batch):
 			turn_length = randrange(1, max_turn+1)
 			turn_reference = []
@@ -598,7 +603,7 @@ class TestLanguageGenerationRecorder():
 		gen_key = 'gen' \
 			if argument == 'default' else 'gk'
 		data = dataloader.get_data(gen_key=gen_key, \
-								   to_list=(type == 'list'), pad=(shape == 'pad'), 
+								   to_list=(type == 'list'), pad=(shape == 'pad'),
 								   gen_len=gen_len)
 		_data = copy.deepcopy(data)
 		if argument == 'default':
