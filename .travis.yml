@@ -7,16 +7,10 @@ python:
 cache: pip
 
 install:
-  - pip install sphinx
-  - pip install pytest-cov==2.4.0
-  - pip install python-coveralls
-  - pip install pytest-dependency
-  - pip install pytest-mock
-  - pip install requests-mock
   - pip install -e .
 
 script:
-  - py.test --cov=contk tests/ --cov-report term-missing && python ./models/run_tests.py
+  - python setup.py test && python ./models/run_tests.py
   - cd docs && make html && mv ./build/html ./build/docs && rm -r ./build/doctrees && cd ..
 
 deploy:

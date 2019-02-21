@@ -1,0 +1,3 @@
+include LICENSE.txt
+include README.md
+prune contk/*/__pycache__

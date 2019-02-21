@@ -1,7 +1,12 @@
-.vscode
-
+# Compiled python modules.
 *.pyc
-*.swp
-*.egg-info
 __pycache__
-cache
+
+# Setuptools distribution folder.
+/dist/
+
+# Python egg metadata, regenerated from source files by setuptools.
+/*.egg-info
+
+.vscode
+*.swp
