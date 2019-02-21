@@ -2,10 +2,15 @@
 setup.py for contk
 '''
 import sys
+import os
 from setuptools import setup, find_packages
+from setuptools.command.test import test as TestCommand
 
-needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
-pytest_runner = ['pytest-runner'] if needs_pytest else []
+class LibTest(TestCommand):
+	def run_tests(self):
+		# import here, cause outside the eggs aren't loaded
+		ret = os.system("pytest --cov=contk tests/ --cov-report term-missing && python ./models/run_tests.py")
+		sys.exit(ret >> 8)
 
 setup(
 	name='contk',
@@ -30,16 +35,22 @@ setup(
 		'checksumdir>=1.1',
 		'requests'
 	],
-	setup_requires=[] + pytest_runner,
-    tests_require=[
-		"pytest",
-		"sphinx",
-		"pytest-cov==2.4.0",
-		"python-coveralls",
-		"pytest-dependency",
-		"pytest-mock",
-		"requests-mock"
-	],
+	extras_require={
+		'develop':  [
+			"python-coveralls",
+			"pytest-dependency",
+			"pytest-mock",
+			"requests-mock",
+			"pytest>=3.6.0",
+			"pytest-cov==2.4.0"
+		]
+	},
+	cmdclass={'test': LibTest},
+	entry_points={
+		'console_scripts': [
+			"cotk-report=contk.scripts:report"
+		]
+	},
 	include_package_data=True,
 	url='https://github.com/thu-coai/contk',
 	author='thu-coai',

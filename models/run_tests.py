@@ -11,7 +11,7 @@ for dirname in dirs:
 	print("testing %s" % dirname)
 	os.chdir(os.path.join(models_path, dirname))
 	os.system("pip install -r requirements.txt")
-	ret = os.system("py.test --cov=./ ./ --cov-report term-missing --cov-append --cov-config ../.coveragerc")
+	ret = os.system("pytest --cov=./ ./ --cov-report term-missing --cov-append --cov-config ../.coveragerc")
 	ret = ret >> 8
 	print("pytest return %d" % ret)
 	if ret != 0 and ret != 5:

@@ -7,10 +7,11 @@ python:
 cache: pip
 
 install:
-  - pip install -e .
+  - pip install -e .[develop]
+  - pip install sphinx
 
 script:
-  - python setup.py test && python ./models/run_tests.py
+  - python setup.py test
   - cd docs && make html && mv ./build/html ./build/docs && rm -r ./build/doctrees && cd ..
 
 deploy:
