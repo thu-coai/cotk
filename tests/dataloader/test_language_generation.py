@@ -5,6 +5,8 @@ from pytest_mock import mocker
 
 from contk.dataloader import LanguageGeneration, MSCOCO
 from contk.metric import MetricBase, HashValueRecorder
+from contk.dataloader import Dataloader
+from contk.dataloader import BasicLanguageGeneration
 
 def setup_module():
 	import random
@@ -42,6 +44,27 @@ class TestLanguageGeneration():
 		assert dl.vocab_size > 4
 		# assert the data has invalid token
 		assert dl.all_vocab_size > dl.vocab_size
+
+
+
+		gen = Dataloader().get_all_subclasses()
+		for each in gen:
+			pass
+		Dataloader().load_class('LanguageGeneration')
+		Dataloader().load_class('None')
+
+
+		with pytest.raises(NotImplementedError):
+			basic = BasicLanguageGeneration()
+
+
+
+		with pytest.raises(NotImplementedError):
+			class MyLanguageGeneration(BasicLanguageGeneration):
+				def __init__(self):
+					pass
+			MyLanguageGeneration().get_batch(None, None)
+
 
 	def base_test_all_unknown(self, dl):
 		# if invalid_vocab_times very big, there is no invalid words.
