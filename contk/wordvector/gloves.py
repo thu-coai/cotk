@@ -4,6 +4,7 @@ A module for GloVe
 import numpy as np
 
 from .wordvector import WordVector
+from .._utils.file_utils import get_resource_file_path
 
 class Glove(WordVector):
 	r'''GloVe is pre-trained word vectors from
@@ -11,11 +12,14 @@ class Glove(WordVector):
 	GloVe: Global Vectors for Word Representation.
 
 	Arguments:
-		file_path (str): a str indicates the dir of GloVe word vectors.
+		file_id (str): a str indicates the source of GloVe word vectors.
+		file_type (str): a str indicates the type of GloVe word vectors. Default: Glove300d
 	'''
-	def __init__(self, file_path):
+	def __init__(self, file_id, file_type="Glove300d"):
 		super().__init__()
-		self.file_path = file_path
+		self.file_id = file_id
+		self.file_path = get_resource_file_path(file_id, file_type)
+		self.file_type = file_type
 
 	def load(self, n_dims, vocab_list):
 		r'''
@@ -23,7 +27,7 @@ class Glove(WordVector):
 		'''
 		raw_word2vec = {}
 		if self.file_path:
-			with open(self.file_path, "r") as glove_file:
+			with open("%s/glove.txt" % (self.file_path), "r") as glove_file:
 				lines = glove_file.readlines()
 			for line in lines:
 				word, vec = line.split(" ", 1)

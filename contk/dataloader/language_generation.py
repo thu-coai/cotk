@@ -5,6 +5,7 @@ from itertools import chain
 import numpy as np
 
 from .._utils.unordered_hash import UnorderedSha256
+from .._utils.file_utils import get_resource_file_path
 from .dataloader import BasicLanguageGeneration
 from ..metric import MetricChain, PerplexityMetric, LanguageGenerationRecorder, \
 	HashValueRecorder
@@ -121,7 +122,8 @@ class MSCOCO(LanguageGeneration):
 	'''A dataloder for preprocessed MSCOCO dataset.
 
 	Arguments:
-			file_path (str): a str indicates the dir of MSCOCO dataset.
+			file_id (str): a str indicates the source of MSCOCO dataset.
+			file_type (str): a str indicates the type of MSCOCO dataset. Default: "MSCOCO"
 			valid_vocab_times (int): A cut-off threshold of valid tokens. All tokens appear
 					not less than `min_vocab_times` in **training set** will be marked as valid words.
 					Default: 10.
@@ -141,8 +143,11 @@ class MSCOCO(LanguageGeneration):
 
 	'''
 
-	def __init__(self, file_path, min_vocab_times=10, max_sen_length=50, invalid_vocab_times=0):
-		self._file_path = file_path
+	def __init__(self, file_id, file_type="MSCOCO", min_vocab_times=10, \
+			max_sen_length=50, invalid_vocab_times=0):
+		self._file_id = file_id
+		self._file_path = get_resource_file_path(file_id, file_type)
+		self._file_type = file_type
 		self._min_vocab_times = min_vocab_times
 		self._max_sen_length = max_sen_length
 		self._invalid_vocab_times = invalid_vocab_times

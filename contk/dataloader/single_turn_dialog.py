@@ -7,6 +7,7 @@ from itertools import chain
 import numpy as np
 
 from .._utils.unordered_hash import UnorderedSha256
+from .._utils.file_utils import get_resource_file_path
 from .dataloader import BasicLanguageGeneration
 from ..metric import MetricChain, PerplexityMetric, BleuCorpusMetric, SingleTurnDialogRecorder, \
 			HashValueRecorder
@@ -139,7 +140,8 @@ class OpenSubtitles(SingleTurnDialog):
 	'''A dataloder for OpenSubtitles dataset.
 
 	Arguments:
-		file_path (str): a str indicates the dir of OpenSubtitles dataset.
+		file_id (str): a str indicates the source of OpenSubtitles dataset.
+		file_type (str): a str indicates the type of OpenSubtitles dataset. Default: "OpenSubtitles"
 		min_vocab_times (int): A cut-off threshold of `UNK` tokens. All tokens appear
 			less than `min_vocab_times`	will be replaced by `<unk>`. Default: 10.
 		max_sen_length (int): All sentences longer than `max_sen_length` will be shortened
@@ -157,8 +159,11 @@ class OpenSubtitles(SingleTurnDialog):
 		[2] P. Lison and J. Tiedemann, OpenSubtitles2016: Extracting Large Parallel Corpora from
 		Movie and TV Subtitles.(LREC 2016)
 	'''
-	def __init__(self, file_path, min_vocab_times=10, max_sen_length=50, invalid_vocab_times=0):
-		self._file_path = file_path
+	def __init__(self, file_id, file_type="OpenSubtitles", min_vocab_times=10, \
+			max_sen_length=50, invalid_vocab_times=0):
+		self._file_id = file_id
+		self._file_path = get_resource_file_path(file_id, file_type)
+		self._file_type = file_type
 		self._min_vocab_times = min_vocab_times
 		self._max_sen_length = max_sen_length
 		self._invalid_vocab_times = invalid_vocab_times

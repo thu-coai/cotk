@@ -42,7 +42,8 @@ setup(
 			"pytest-mock",
 			"requests-mock",
 			"pytest>=3.6.0",
-			"pytest-cov==2.4.0"
+			"pytest-cov==2.4.0",
+			"checksumdir"
 		]
 	},
 	cmdclass={'test': LibTest},
