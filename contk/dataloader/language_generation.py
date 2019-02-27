@@ -6,7 +6,7 @@ import numpy as np
 
 from .._utils.unordered_hash import UnorderedSha256
 from .dataloader import BasicLanguageGeneration
-from ..metric import MetricChain, PerlplexityMetric, LanguageGenerationRecorder, \
+from ..metric import MetricChain, PerplexityMetric, LanguageGenerationRecorder, \
 	HashValueRecorder
 
 # pylint: disable=W0223
@@ -33,12 +33,12 @@ class LanguageGeneration(BasicLanguageGeneration):
 		Returns:
 			(dict): A dict at least contains:
 
-				* sentence_length(list): A 1-d list, the length of sentence in each batch.
+				* sent_length(list): A 1-d list, the length of sentence in each batch.
 				  Size: `[batch_size]`
-				* sentence(:class:`numpy.array`): A 2-d padding array containing id of words.
+				* sent(:class:`numpy.array`): A 2-d padding array containing id of words.
 				  Only provide valid words. `unk_id` will be used if a word is not valid.
 				  Size: `[batch_size, max(sent_length)]`
-				* sentence_allwords(:class:`numpy.array`): A 2-d padding array containing id of words.
+				* sent_allvocabs(:class:`numpy.array`): A 2-d padding array containing id of words.
 				  Provide both valid and invalid words.
 				  Size: `[batch_size, max(sent_length)]`
 				* hashvalue(bytes): (If `needhash` is True.) A bytes representing hash value of the data.
@@ -48,11 +48,11 @@ class LanguageGeneration(BasicLanguageGeneration):
 			>>> #	"hello", "i", "am", "fine"]
 			>>> dataloader.get_batch('train', [0, 1])
 			{
-				"sentence": [
+				"sent": [
 						[2, 4, 5, 6, 3],   # first sentence: <go> how are you <eos>
 						[2, 7, 3, 0, 0],   # second sentence:  <go> hello <eos> <pad> <pad>
 					],
-				"sentence_length": [5, 3], # length of sentences
+				"sent_length": [5, 3], # length of sentences
 			}
 
 		Todo:
@@ -63,41 +63,41 @@ class LanguageGeneration(BasicLanguageGeneration):
 			raise ValueError("No set named %s." % key)
 		res = {}
 		batch_size = len(index)
-		res["sentence_length"] = np.array( \
-			list(map(lambda i: len(self.data[key]['sen'][i]), index)))
-		res_sent = res["sentence"] = np.zeros( \
-			(batch_size, np.max(res["sentence_length"])), dtype=int)
+		res["sent_length"] = np.array( \
+			list(map(lambda i: len(self.data[key]['sent'][i]), index)))
+		res_sent = res["sent"] = np.zeros( \
+			(batch_size, np.max(res["sent_length"])), dtype=int)
 		for i, j in enumerate(index):
-			sentence = self.data[key]['sen'][j]
-			res["sentence"][i, :len(sentence)] = sentence
+			sentence = self.data[key]['sent'][j]
+			res["sent"][i, :len(sentence)] = sentence
 
 		if needhash:
 			unordered_hash = UnorderedSha256()
 			for j in index:
-				unordered_hash.update_data(repr((self.data[key]['sen'][j], self.valid_vocab_len)).encode())
+				unordered_hash.update_data(repr((self.data[key]['sent'][j], self.valid_vocab_len)).encode())
 			res["hashvalue"] = unordered_hash.digest()
 			# hashvalue must be unique for representing the whole batch
 
-		res["sentence_allwords"] = res_sent.copy()
+		res["sent_allvocabs"] = res_sent.copy()
 		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
 		return res
 
-	def get_teacher_forcing_metric(self, gen_prob_key="gen_prob"):
+	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob"):
 		'''Get metric for teacher-forcing mode.
 
 		It contains:
 
-		* :class:`.metric.PerlplexityMetric`
+		* :class:`.metric.PerplexityMetric`
 
 		Arguments:
-				gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerlplexityMetric`
+				gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerplexityMetric`
 		'''
 		metric = MetricChain()
 		metric.add_metric(HashValueRecorder(hash_key="teacher_forcing_hashvalue"))
-		metric.add_metric(PerlplexityMetric(self, \
-					reference_key='sentence', \
-					reference_len_key='sentence_length', \
-					gen_prob_key=gen_prob_key))
+		metric.add_metric(PerplexityMetric(self, \
+					reference_allvocabs_key='sent_allvocabs', \
+					reference_len_key='sent_length', \
+					gen_log_prob_key=gen_log_prob_key))
 		return metric
 
 	def get_inference_metric(self, gen_key="gen"):
@@ -155,10 +155,10 @@ class MSCOCO(LanguageGeneration):
 		for key in self.key_name:
 			f_file = open("%s/mscoco_%s.txt" % (self._file_path, key))
 			origin_data[key] = {}
-			origin_data[key]['sen'] = list( \
+			origin_data[key]['sent'] = list( \
 				map(lambda line: line.split(), f_file.readlines()))
 
-		raw_vocab_list = list(chain(*(origin_data['train']['sen'])))
+		raw_vocab_list = list(chain(*(origin_data['train']['sent'])))
 		# Important: Sort the words preventing the index changes between
 		# different runs
 		vocab = sorted(Counter(raw_vocab_list).most_common(), \
@@ -174,7 +174,7 @@ class MSCOCO(LanguageGeneration):
 		for key in self.key_name:
 			if key == 'train':
 				continue
-			raw_vocab_list.extend(list(chain(*(origin_data[key]['sen']))))
+			raw_vocab_list.extend(list(chain(*(origin_data[key]['sent']))))
 		vocab = sorted(Counter(raw_vocab_list).most_common(), \
 					   key=lambda pair: (-pair[1], pair[0]))
 		left_vocab = list( \
@@ -196,10 +196,10 @@ class MSCOCO(LanguageGeneration):
 		data_size = {}
 		for key in self.key_name:
 			data[key] = {}
-			data[key]['sen'] = list(map(line2id, origin_data[key]['sen']))
-			data_size[key] = len(data[key]['sen'])
+			data[key]['sent'] = list(map(line2id, origin_data[key]['sent']))
+			data_size[key] = len(data[key]['sent'])
 
-			vocab = list(chain(*(origin_data[key]['sen'])))
+			vocab = list(chain(*(origin_data[key]['sent'])))
 			vocab_num = len(vocab)
 			oov_num = len( \
 				list( \
@@ -212,7 +212,7 @@ class MSCOCO(LanguageGeneration):
 						lambda word: word not in valid_vocab_set, \
 						vocab))) - oov_num
 			length = list( \
-				map(len, origin_data[key]['sen']))
+				map(len, origin_data[key]['sent']))
 			cut_num = np.sum( \
 				np.maximum( \
 					np.array(length) - \

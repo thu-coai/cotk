@@ -31,7 +31,8 @@ class BasicLanguageGeneration(Dataloader):
 			go_id (int): token at the beginning of sentences, always equal to `2`
 			eos_id (int): token at the end of sentences, always equal to `3`
 			key_name (list): name of subsets of the data. For example: `["train", "dev", "test"]`
-			all_vocab_list (list): vocabulary list of the datasets, including valid words and invalid words.
+			all_vocab_list (list): vocabulary list of the datasets,
+					including valid vocabs and invalid vocabs.
 			word2id (dict): a dict mapping all vocab to index.
 					Maybe you want to use :meth:`sen_to_index` instead.
 	"""
@@ -78,10 +79,10 @@ class BasicLanguageGeneration(Dataloader):
 			(tuple): tuple containing:
 
 			* all_vocab_list (list): vocabulary list of the datasets,
-			  including valid and invalid words
+			  including valid and invalid vocabs
 			* valid_vocab_len (int): the number of valid vocab.
-			  ``vocab_list[:valid_vocab_len]`` will be regarded as valid words,
-			  while ``vocab_list[valid_vocab_len:]`` regarded as invalid words
+			  ``vocab_list[:valid_vocab_len]`` will be regarded as valid vocabs,
+			  while ``vocab_list[valid_vocab_len:]`` regarded as invalid vocabs
 			* data (dict): a dict contains data.
 			* data_size (dict): a dict contains size of each item in data.
 		'''
@@ -177,9 +178,9 @@ class BasicLanguageGeneration(Dataloader):
 
 		Arguments:
 			sen (list): a list of str, representing each token of the sentences.
-			invalid_vocab (bool): whether to provide invalid words.
-					If ``False``, invalid words will be replaced by `unk_id`.
-					If ``True``, invalid words will using their own id.
+			invalid_vocab (bool): whether to provide invalid vocabs.
+					If ``False``, invalid vocabs will be replaced by `unk_id`.
+					If ``True``, invalid vocabs will using their own id.
 					Default: `False`
 
 		Examples:

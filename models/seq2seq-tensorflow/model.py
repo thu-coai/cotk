@@ -206,9 +206,9 @@ class Seq2SeqModel(object):
 		results = []
 		while batched_data != None:
 			batched_responses_id = self.inference(sess, batched_data)[0]
-			_, gen_prob = self.step_decoder(sess, batched_data, forward_only=True)
-			metric1_data = {'resp': np.array(batched_data['resp']), 'resp_length': np.array(batched_data['resp_length']),
-							'gen_prob': np.array(gen_prob)}
+			_, gen_log_prob = self.step_decoder(sess, batched_data, forward_only=True)
+			metric1_data = {'resp_allvocabs': np.array(batched_data['resp_allvocabs']), 'resp_length': np.array(batched_data['resp_length']),
+							'gen_log_prob': np.array(gen_log_prob)}
 			metric1.forward(metric1_data)
 			batch_results = []
 			for response_id in batched_responses_id:
@@ -227,7 +227,7 @@ class Seq2SeqModel(object):
 				results.append(result_token)
 				batch_results.append(result_id)
 
-			metric2_data = {'post': np.array(batched_data['post']), 'resp':np.array(batched_data['resp']),
+			metric2_data = {'post_allvocabs': np.array(batched_data['post_allvocabs']), 'resp_allvocabs':np.array(batched_data['resp_allvocabs']),
 							'gen': np.array(batch_results)}
 			metric2.forward(metric2_data)
 			batched_data = data.get_next_batch("test")

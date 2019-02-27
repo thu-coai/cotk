@@ -165,9 +165,9 @@ class Seq2seq(BaseModel):
 				self.net.forward(incoming)
 				gen_prob = nn.functional.log_softmax(incoming.gen.w, -1)
 			data = incoming.data
-			data.resp = incoming.data.resp.detach().cpu().numpy().transpose(1, 0)
+			data.resp = incoming.data.resp_allvocabs
 			data.resp_length = incoming.data.resp_length
-			data.gen_prob = gen_prob.detach().cpu().numpy().transpose(1, 0, 2)
+			data.gen_log_prob = gen_prob.detach().cpu().numpy().transpose(1, 0, 2)
 			metric1.forward(data)
 		res = metric1.close()
 
@@ -181,8 +181,8 @@ class Seq2seq(BaseModel):
 			with torch.no_grad():
 				self.net.detail_forward(incoming)
 			data = incoming.data
-			data.resp = incoming.data.resp.detach().cpu().numpy().transpose(1, 0)
-			data.post = incoming.data.post.detach().cpu().numpy().transpose(1, 0)
+			data.resp = incoming.data.resp_allvocabs
+			data.post = incoming.data.post_allvocabs
 			data.gen = incoming.gen.w_o.detach().cpu().numpy().transpose(1, 0)
 			metric2.forward(data)
 		res.update(metric2.close())

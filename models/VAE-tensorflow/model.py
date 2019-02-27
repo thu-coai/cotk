@@ -172,8 +172,8 @@ class VAEModel(object):
 			print('%s: %s' % (item.name, item.get_shape()))
 
 	def step_decoder(self, session, data, forward_only=False):
-		input_feed = {self.sentence: data['sentence'],
-					  self.sentence_length: data['sentence_length'],
+		input_feed = {self.sentence: data['sent'],
+					  self.sentence_length: data['sent_length'],
 					  self.use_prior: False}
 		if forward_only:
 			output_feed = [self.loss,
@@ -194,8 +194,8 @@ class VAEModel(object):
 		return session.run(output_feed, input_feed)
 
 	def inference(self, session, data):
-		input_feed = {self.sentence: data['sentence'],
-					  self.sentence_length: data['sentence_length'],
+		input_feed = {self.sentence: data['sent'],
+					  self.sentence_length: data['sent_length'],
 					  self.use_prior: True}
 		output_feed = [self.generation_index]
 		return session.run(output_feed, input_feed)
@@ -300,10 +300,10 @@ class VAEModel(object):
 		results = []
 		while batched_data != None:
 			batched_responses_id = self.inference(sess, batched_data)[0]
-			gen_prob = self.step_decoder(sess, batched_data, forward_only=True)[1]
-			metric1_data = {'sentence': np.array(batched_data['sentence']),
-							'sentence_length': np.array(batched_data['sentence_length']),
-							'gen_prob': np.array(gen_prob)}
+			gen_log_prob = self.step_decoder(sess, batched_data, forward_only=True)[1]
+			metric1_data = {'sent_allvocabs': np.array(batched_data['sent_allvocabs']),
+							'sent_length': np.array(batched_data['sent_length']),
+							'gen_log_prob': np.array(gen_log_prob)}
 			metric1.forward(metric1_data)
 			batch_results = []
 			for response_id in batched_responses_id:

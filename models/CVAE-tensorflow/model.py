@@ -453,9 +453,9 @@ class CVAEModel(object):
 						length += 1
 					responses_length.append(length)
 				metric1_data = {
-						'sent': np.expand_dims(cut_batch_data['responses'], 1),
+						'sent_allvocabs': np.expand_dims(cut_batch_data['responses'], 1),
 						'sent_length': np.expand_dims(responses_length, 1),
-						'gen_prob': np.expand_dims(cut_batch_data['gen_prob'], 1)
+						'gen_log_prob': np.expand_dims(cut_batch_data['gen_prob'], 1)
 						}
 				metric1.forward(metric1_data)
 				valid_index = [idx for idx, length in 
@@ -474,9 +474,9 @@ class CVAEModel(object):
 
 			for conv in conv_data:
 				metric2_data = {
-						'context': np.array(padding(conv['contexts'])),
+						'context_allvocabs': np.array(padding(conv['contexts'])),
 						'turn_length': np.array([len(conv['contexts'])], dtype=np.int32),
-						'reference':np.array(padding(conv['responses'])),
+						'reference_allvocabs':np.array(padding(conv['responses'])),
 						'gen': np.array(padding(conv['generations'], pad_go_id=True))
 						}
 				metric2.forward(metric2_data)

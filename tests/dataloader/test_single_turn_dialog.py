@@ -96,8 +96,8 @@ class TestSingleTurnDialog():
 			length = len(dl.data[key]['post'])
 			for i in range(length):
 				batch = dl.get_batch(key, [i])
-				assert dl.unk_id not in batch["post_allwords"]
-				assert dl.unk_id not in batch["resp_allwords"]
+				assert dl.unk_id not in batch["post_allvocabs"]
+				assert dl.unk_id not in batch["resp_allvocabs"]
 				batch = dl.get_batch(key, [i])
 				if dl.unk_id in batch["post"] or \
 					dl.unk_id in batch["resp"]:

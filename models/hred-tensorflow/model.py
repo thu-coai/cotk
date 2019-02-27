@@ -332,15 +332,16 @@ class HredModel(object):
 					batched_sent[i][j][1:sent_length[i][j]] = batched_data['sent'][i][j][0:sent_length[i][j]-1]
 				empty_sent[i][0][0] = data.go_id
 				empty_sent[i][0][1] = data.eos_id
+
 			metric1_data = {
-					'sent': batched_sent,
-					'sent_length': sent_length,
-					'gen_prob': batched_gen_prob,
+					'sent_allvocabs': batched_data['sent_allvocabs'],
+					'sent_length': batched_data['sent_length'],
+					'gen_log_prob': batched_gen_prob,
 					}
 			metric1.forward(metric1_data)
 			metric2_data = {
-					'context': np.concatenate([empty_sent, batched_sent[:, 0:max_turn_length-1, :]], axis=1),
-					'reference': batched_sent,
+					'context_allvocabs': [],
+					'reference_allvocabs': batched_data['sent_allvocabs'],
 					'turn_length': batched_data['turn_length'],
 					'gen': batched_gen,
 					}

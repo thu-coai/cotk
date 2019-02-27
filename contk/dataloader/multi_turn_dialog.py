@@ -51,8 +51,8 @@ class MultiTurnDialog(BasicLanguageGeneration):
 				* sent(:class:`numpy.array`): A 3-d padding array containing id of words.
 					Only provide valid words. `unk_id` will be used if a word is not valid.
 					Size: `[batch_size, max(turn_length[i]), max(sent_length)]`
-				* sent_allwords(:class:`numpy.array`): A 3-d padding array containing id of words.
-					Provide both valid and invalid words.
+				* sent_allvocabs(:class:`numpy.array`): A 3-d padding array containing id of words.
+					Provide both valid and invalid vocabs.
 					Size: `[batch_size, max(turn_length[i]), max(sent_length)]`
 
 			See the example belows.
@@ -85,7 +85,7 @@ class MultiTurnDialog(BasicLanguageGeneration):
 			res["hashvalue"] = unordered_hash.digest()
 			# hashvalue must be unique for representing the whole batch
 
-		res["sent_allwords"] = res_sent.copy()
+		res["sent_allvocabs"] = res_sent.copy()
 		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
 		return res
 
@@ -113,10 +113,10 @@ class MultiTurnDialog(BasicLanguageGeneration):
 			if turn_length and i >= turn_length:
 				break
 			turn_trim = self.trim_index(turn_index)
-			if turn_length is None and not turn_trim:
+			if turn_trim and ignore_first_token:
+				turn_trim = turn_trim[1:]
+			if turn_length is None and (not turn_trim):
 				break
-			elif ignore_first_token:
-				turn_trim = turn_index[1:]
 			res.append(turn_trim)
 		return res
 
@@ -125,9 +125,9 @@ class MultiTurnDialog(BasicLanguageGeneration):
 
 		Arguments:
 			sen (list): a 2-d list of str, representing each token of the session.
-			invalid_vocab (bool): whether to provide invalid words.
-					If ``False``, invalid words will be trasfered to `unk_id`.
-					If ``True``, invalid words will using their own id.
+			invalid_vocab (bool): whether to provide invalid vocabs.
+					If ``False``, invalid vocabs will be trasfered to `unk_id`.
+					If ``True``, invalid vocabs will using their own id.
 					Default: False
 
 		Examples:
@@ -168,7 +168,7 @@ class MultiTurnDialog(BasicLanguageGeneration):
 			list(map(lambda word: self.all_vocab_list[word], sent)), \
 			index))
 
-	def get_teacher_forcing_metric(self, gen_prob_key="gen_prob"):
+	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob"):
 		'''Get metric for teacher-forcing mode.
 
 		It contains:
@@ -176,11 +176,11 @@ class MultiTurnDialog(BasicLanguageGeneration):
 		* :class:`.metric.MultiTurnPerplexityMetric`
 
 		Arguments:
-			gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerlplexityMetric`
+			gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerplexityMetric`
 		'''
 		metric = MetricChain()
 		metric.add_metric(HashValueRecorder(hash_key="teacher_forcing_hashvalue"))
-		metric.add_metric(MultiTurnPerplexityMetric(self, gen_prob_key=gen_prob_key))
+		metric.add_metric(MultiTurnPerplexityMetric(self, gen_log_prob_key=gen_log_prob_key))
 		return metric
 
 	def get_inference_metric(self, gen_key="gen"):
@@ -202,6 +202,7 @@ class MultiTurnDialog(BasicLanguageGeneration):
 		return metric
 
 class UbuntuCorpus(MultiTurnDialog):
+
 	'''A dataloder for Ubuntu dataset.
 
 	Arguments:{ARGUMENTS}
@@ -502,7 +503,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 		'''
 		metric = MetricChain()
 		for ngram in range(1, 5):
-			metric.add_metric(BleuPrecisionRecallMetric(ngram))
-		metric.add_metric(EmbSimilarityPrecisionRecallMetric(embed, 'avg'))
-		metric.add_metric(EmbSimilarityPrecisionRecallMetric(embed, 'extrema'))
+			metric.add_metric(BleuPrecisionRecallMetric(self, ngram))
+		metric.add_metric(EmbSimilarityPrecisionRecallMetric(self, embed, 'avg'))
+		metric.add_metric(EmbSimilarityPrecisionRecallMetric(self, embed, 'extrema'))
 		return metric

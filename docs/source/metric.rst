@@ -7,7 +7,7 @@ Metric
 
 Metric class
 ---------------------------------
-.. autoclass:: PerlplexityMetric
+.. autoclass:: PerplexityMetric
     :members:
 
 .. autoclass:: MultiTurnPerplexityMetric
