@@ -225,6 +225,7 @@ class HredModel(object):
 		batched_data = data.get_next_batch("train")
 		for epoch_step in range(args.epochs):
 			while batched_data != None:
+				step_cnt = 1
 				for step in range(args.checkpoint_steps):
 					if batched_data == None:
 						break
@@ -232,9 +233,10 @@ class HredModel(object):
 					loss_step += self.train_step(sess, batched_data, args)
 					time_step += time.time() - start_time
 					batched_data = data.get_next_batch("train")
+					step_cnt += 1
 
-				loss_step /= args.checkpoint_steps
-				time_step /= args.checkpoint_steps
+				loss_step /= step_cnt
+				time_step /= step_cnt
 				show = lambda a: '[%s]' % (' '.join(['%.2f' % x for x in a]))
 				print("Epoch %d global step %d learning rate %.4f step-time %.2f perplexity %s"
 					  % (epoch_step, self.global_step.eval(), self.learning_rate.eval(),
