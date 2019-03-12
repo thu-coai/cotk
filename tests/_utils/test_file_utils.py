@@ -39,14 +39,14 @@ class TestFileUtils():
 	def test_download_resource(self):
 		cache_dir = './tests/_utils/dataset_cache'
 		config_dir = './tests/_utils/dummy_coai'
-		res_path = get_resource_file_path('http://coai.cs.tsinghua.edu.cn/file/mscoco.zip', 'MSCOCO', cache_dir=cache_dir, config_dir=config_dir)
+		res_path = get_resource_file_path('resources://MSCOCO', 'MSCOCO', cache_dir=cache_dir, config_dir=config_dir)
 
-		assert(res_path == os.path.join(cache_dir, 'eeb2fb42c3d6f5fef8caa8896c0302c3676965ae73b6cb7c11f831a8ae7c30d6_unzip/mscoco'))
+		assert(res_path == os.path.join(cache_dir, 'f2c79c204e083627ea6c166061b45ba536813058caf178d21ca58daf5abe8a01_unzip/mscoco'))
 		assert(os.path.exists(res_path))
 
 		assert(dirhash(res_path, 'sha256') == 'f8ece190272864935f1849d784cb67d36b970c54aceadbcd7e845bdeefc23544')
 		
-		meta_path = os.path.join(cache_dir, 'eeb2fb42c3d6f5fef8caa8896c0302c3676965ae73b6cb7c11f831a8ae7c30d6.json')
+		meta_path = os.path.join(cache_dir, 'f2c79c204e083627ea6c166061b45ba536813058caf178d21ca58daf5abe8a01.json')
 		assert(os.path.exists(meta_path))
 		with open(meta_path, 'r') as meta_file:
 			meta = json.load(meta_file)

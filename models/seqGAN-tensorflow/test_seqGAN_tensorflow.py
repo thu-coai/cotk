@@ -112,7 +112,7 @@ def my_args():
     path = os.path.split(cwd)[0]
     path = os.path.split(path)[0]
     args.datapath = path + '/tests/dataloader/dummy_mscoco'
-    args.wvpath = path + '/tests/wordvector/dummy_glove_'
+    args.wvpath = path + '/tests/wordvector/dummy_glove'
     args.sample = 2
     args.gen_pre_epoch_num = 1
     args.total_adv_batch = 1

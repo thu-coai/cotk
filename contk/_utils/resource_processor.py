@@ -86,11 +86,12 @@ class GloveResourceProcessor(ResourceProcessor):
 		'''
 		dst_dir = local_path + '_unzip'
 		unzip_file(local_path, dst_dir)
-		for filename in os.listdir(dst_dir):
+		filenames = os.listdir(dst_dir)
+		for filename in filenames:
 			dim = filename.split('.')[-2]
-			sub_dir = dst_dir + dim
+			sub_dir = os.path.join(dst_dir, dim)
 			os.makedirs(sub_dir, exist_ok=True)
-			shutil.copy(os.path.join(dst_dir, filename), os.path.join(sub_dir, 'glove.txt'))
+			os.rename(os.path.join(dst_dir, filename), os.path.join(sub_dir, 'glove.txt'))
 		return dst_dir
 
 class Glove50dResourceProcessor(GloveResourceProcessor):
@@ -99,7 +100,7 @@ class Glove50dResourceProcessor(GloveResourceProcessor):
 	def postprocess(self, local_path):
 		'''Postprocess before read.
 		'''
-		return local_path + '50d'
+		return os.path.join(local_path, '50d')
 
 class Glove100dResourceProcessor(GloveResourceProcessor):
 	'''Processor for glove100d wordvector
@@ -107,7 +108,7 @@ class Glove100dResourceProcessor(GloveResourceProcessor):
 	def postprocess(self, local_path):
 		'''Postprocess before read.
 		'''
-		return local_path + '100d'
+		return os.path.join(local_path, '100d')
 
 class Glove200dResourceProcessor(GloveResourceProcessor):
 	'''Processor for glove200d wordvector
@@ -115,7 +116,7 @@ class Glove200dResourceProcessor(GloveResourceProcessor):
 	def postprocess(self, local_path):
 		'''Postprocess before read.
 		'''
-		return local_path + '200d'
+		return os.path.join(local_path, '200d')
 
 class Glove300dResourceProcessor(GloveResourceProcessor):
 	'''Processor for glove300d wordvector
@@ -123,4 +124,4 @@ class Glove300dResourceProcessor(GloveResourceProcessor):
 	def postprocess(self, local_path):
 		'''Postprocess before read.
 		'''
-		return local_path + '300d'
+		return os.path.join(local_path, '300d')
