@@ -8,7 +8,7 @@ from .._utils.unordered_hash import UnorderedSha256
 from .._utils.file_utils import get_resource_file_path
 from .dataloader import BasicLanguageGeneration
 from ..metric import MetricChain, PerplexityMetric, LanguageGenerationRecorder, \
-	HashValueRecorder
+	FwBwBleuCorpusMetric, SelfBleuCorpusMetric, HashValueRecorder
 
 # pylint: disable=W0223
 class LanguageGeneration(BasicLanguageGeneration):
@@ -101,7 +101,7 @@ class LanguageGeneration(BasicLanguageGeneration):
 					gen_log_prob_key=gen_log_prob_key))
 		return metric
 
-	def get_inference_metric(self, gen_key="gen"):
+	def get_inference_metric(self, gen_key="gen", sample=1000):
 		'''Get metric for inference.
 
 		It contains:
@@ -110,13 +110,17 @@ class LanguageGeneration(BasicLanguageGeneration):
 
 		Arguments:
 				gen_key (str): default: "gen". Refer to :class:`.metric.LanguageGenerationRecorder`
+				sample (int): default: 1000. Refer to :class:`.metric.SelfBleuCorpusMetric`
 		'''
 		metric = MetricChain()
+		metric.add_metric(SelfBleuCorpusMetric(self, gen_key=gen_key, sample=sample))
+		metric.add_metric(FwBwBleuCorpusMetric(self, \
+					reference_test_key="sent", \
+					gen_key=gen_key, \
+					sample=sample))
 		metric.add_metric(HashValueRecorder(hash_key="inference_hashvalue"))
-		metric.add_metric(LanguageGenerationRecorder(self, \
-													 gen_key=gen_key))
+		metric.add_metric(LanguageGenerationRecorder(self, gen_key=gen_key))
 		return metric
-
 
 class MSCOCO(LanguageGeneration):
 	'''A dataloder for preprocessed MSCOCO dataset.
