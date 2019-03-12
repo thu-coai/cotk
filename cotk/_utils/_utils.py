@@ -1,5 +1,5 @@
 r"""
-``contk._utils`` is a function lib for internal use.
+``cotk._utils`` is a function lib for internal use.
 """
 
 def trim_before_target(lists, target):

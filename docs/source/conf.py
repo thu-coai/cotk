@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('../'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'contk'
+project = 'cotk'
 copyright = '2018, thu-coai'
 author = 'thu-coai'
 
@@ -127,7 +127,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'contkdoc'
+htmlhelp_basename = 'cotkdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -154,7 +154,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'contk.tex', 'contk Documentation',
+    (master_doc, 'cotk.tex', 'cotk Documentation',
      'thu-coai', 'manual'),
 ]
 
@@ -164,7 +164,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'contk', 'contk Documentation',
+    (master_doc, 'cotk', 'cotk Documentation',
      [author], 1)
 ]
 
@@ -175,8 +175,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'contk', 'contk Documentation',
-     author, 'contk', 'One line description of project.',
+    (master_doc, 'cotk', 'cotk Documentation',
+     author, 'cotk', 'One line description of project.',
      'Miscellaneous'),
 ]
 

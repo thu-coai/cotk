@@ -7,7 +7,7 @@ Zhao, T., Zhao, R., & Eskenazi, M. (2017). Learning discourse-level diversity fo
 
 ### Require Packages
 
-* contk
+* cotk
 * TensorFlow == 1.3
 * TensorBoardX >= 1.4
 

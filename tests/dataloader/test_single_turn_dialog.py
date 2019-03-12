@@ -3,8 +3,8 @@ import copy
 import pytest
 from pytest_mock import mocker
 
-from contk.dataloader import SingleTurnDialog, OpenSubtitles
-from contk.metric import MetricBase, HashValueRecorder
+from cotk.dataloader import SingleTurnDialog, OpenSubtitles
+from cotk.metric import MetricBase, HashValueRecorder
 
 def setup_module():
 	import random

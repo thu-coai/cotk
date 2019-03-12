@@ -1,6 +1,6 @@
 Data Loader
 ===================================
-.. automodule:: contk.dataloader
+.. automodule:: cotk.dataloader
 .. autoclass:: Dataloader
 
     .. automethod:: get_all_subclasses

@@ -5,13 +5,13 @@ import random
 import numpy as np
 import pytest
 
-from contk.metric import MetricBase, \
+from cotk.metric import MetricBase, \
 	BleuPrecisionRecallMetric, EmbSimilarityPrecisionRecallMetric, \
 	PerplexityMetric, MultiTurnPerplexityMetric, BleuCorpusMetric, MultiTurnBleuCorpusMetric, \
 	SingleTurnDialogRecorder, MultiTurnDialogRecorder, LanguageGenerationRecorder, HashValueRecorder, \
 	MetricChain
 from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunction
-from contk.dataloader import BasicLanguageGeneration, MultiTurnDialog
+from cotk.dataloader import BasicLanguageGeneration, MultiTurnDialog
 
 def setup_module():
 	random.seed(0)

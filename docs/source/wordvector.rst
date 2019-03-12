@@ -1,7 +1,7 @@
 Word Vector
 #############
 
-.. automodule:: contk.wordvector
+.. automodule:: cotk.wordvector
 .. autoclass:: WordVector
 
     .. automethod:: get_all_subclasses

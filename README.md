@@ -1,9 +1,9 @@
 # Conversational Toolkits
 
-[![CodeFactor](https://www.codefactor.io/repository/github/thu-coai/contk/badge)](https://www.codefactor.io/repository/github/thu-coai/contk)
-[![Coverage Status](https://coveralls.io/repos/github/thu-coai/contk/badge.svg?branch=master)](https://coveralls.io/github/thu-coai/contk?branch=master)
-[![Build Status](https://travis-ci.com/thu-coai/contk.svg?branch=master)](https://travis-ci.com/thu-coai/contk)
-[![codebeat badge](https://codebeat.co/badges/2b2107ed-1145-4ce1-bfcf-8b134a0c6e0a)](https://codebeat.co/projects/github-com-thu-coai-contk-master)
+[![CodeFactor](https://www.codefactor.io/repository/github/thu-coai/cotk/badge)](https://www.codefactor.io/repository/github/thu-coai/cotk)
+[![Coverage Status](https://coveralls.io/repos/github/thu-coai/cotk/badge.svg?branch=master)](https://coveralls.io/github/thu-coai/cotk?branch=master)
+[![Build Status](https://travis-ci.com/thu-coai/cotk.svg?branch=master)](https://travis-ci.com/thu-coai/cotk)
+[![codebeat badge](https://codebeat.co/badges/2b2107ed-1145-4ce1-bfcf-8b134a0c6e0a)](https://codebeat.co/projects/github-com-thu-coai-cotk-master)
 
 ## Environment
 
@@ -15,23 +15,23 @@
 
 ## Document
 
-Please refer to [document](https://thu-coai.github.io/contk_docs/)
+Please refer to [document](https://thu-coai.github.io/cotk_docs/)
 
 ## To Developer
 
-### Contk Package
+### cotk Package
 
-`./contk` is the package folder.
+`./cotk` is the package folder.
 
 * All your code must followed a coding standard specified by **Pylint**. You can simply install Pylint via pip:
 
   ```
   pip install pylint
   ```
-  In this project, you should follow the default pylint configuration that we provide and check `contk` after you update it:
+  In this project, you should follow the default pylint configuration that we provide and check `cotk` after you update it:
 
   ```
-  pylint contk
+  pylint cotk
   ```
 
 * Class and function docstring are always required.  
@@ -53,7 +53,7 @@ Here are some references of docstring (it is a part of reStructuredText, like ma
 
 You can implement your model in './models'.
 
-* Before you run a model, you have to install `contk` by  run `pip install -e .` in project root directory.
+* Before you run a model, you have to install `cotk` by  run `pip install -e .` in project root directory.
 * When you run a model, your CWD(current working directory) should be model's folder (eg: Using `python run.py` in `./model/seq2seq-pytorch`).
 * Code style is not so strict in your model implementation.
 * But you have to explain how to use your model.
@@ -74,7 +74,7 @@ We welcome contributions from community.
 
 ## Team
 
-`Contk` is maintained and developed by Tsinghua university conversational AI group (THU-coai). Check our [main pages](http://coai.cs.tsinghua.edu.cn/) (In Chinese).
+`cotk` is maintained and developed by Tsinghua university conversational AI group (THU-coai). Check our [main pages](http://coai.cs.tsinghua.edu.cn/) (In Chinese).
 
 ## License
 

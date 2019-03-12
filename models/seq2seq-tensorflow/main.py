@@ -2,8 +2,8 @@ import os
 
 import numpy as np
 import tensorflow as tf
-from contk.dataloader import SingleTurnDialog
-from contk.wordvector import WordVector, Glove
+from cotk.dataloader import SingleTurnDialog
+from cotk.wordvector import WordVector, Glove
 from utils import debug, try_cache
 
 from model import Seq2SeqModel

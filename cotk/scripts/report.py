@@ -15,7 +15,7 @@ import re
 import traceback
 
 import requests
-import contk
+import cotk
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 
@@ -108,7 +108,7 @@ def run_model(entry, args):
 	'''Run the model and record the info of library'''
 	# before run model
 	# cotk recorder start
-	contk.start_recorder()
+	cotk.start_recorder()
 	model = importlib.import_module(entry)
 
 	try:
@@ -119,11 +119,11 @@ def run_model(entry, args):
 
 	# after run model
 	# cotk recorder end
-	return contk.close_recorder()
+	return cotk.close_recorder()
 
 def upload_report(result_path, entry, args, \
 	git_user, git_repo, git_commit, \
-	contk_record_information):
+	cotk_record_information):
 	'''Upload report to dashboard. Return id of the new record.'''
 	# check result file existence
 	# get git link
@@ -144,7 +144,7 @@ def upload_report(result_path, entry, args, \
 		"git_user": git_user, \
 		"git_repo": git_repo, \
 		"git_commit": git_commit, \
-		"record_information": contk_record_information, \
+		"record_information": cotk_record_information, \
 		"result": json.dumps(result) \
 	}
 	LOGGER.info("Save your report locally at .cotk_upload_backup")
@@ -180,18 +180,18 @@ def report(args):
 	if cargs.only_upload:
 		LOGGER.warning("Your model is not runing, only upload existing result. \
 Some information will be missing and it is not recommended.")
-		contk_record_information = None
+		cotk_record_information = None
 	else:
 		if not check_repo_clean():
 			raise RuntimeError("Your changes of code hasn't been committed. Use \"git status\" \
 to check your changes.")
 		LOGGER.info("Running your model at '%s' with arguments: %s.", cargs.entry, cargs.args)
-		contk_record_information = run_model(cargs.entry, cargs.args)
+		cotk_record_information = run_model(cargs.entry, cargs.args)
 
 	LOGGER.info("Collecting info for update...")
 	upload_id = upload_report(cargs.result, cargs.entry, cargs.args, \
 		git_user, git_repo, git_commit, \
-		contk_record_information)
+		cotk_record_information)
 	LOGGER.info("Upload complete. Check %s for your report.", SHOW_URL % upload_id)
 
 def main():

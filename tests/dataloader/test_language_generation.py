@@ -3,10 +3,10 @@ import copy
 import pytest
 from pytest_mock import mocker
 
-from contk.dataloader import LanguageGeneration, MSCOCO
-from contk.metric import MetricBase, HashValueRecorder
-from contk.dataloader import Dataloader
-from contk.dataloader import BasicLanguageGeneration
+from cotk.dataloader import LanguageGeneration, MSCOCO
+from cotk.metric import MetricBase, HashValueRecorder
+from cotk.dataloader import Dataloader
+from cotk.dataloader import BasicLanguageGeneration
 
 def setup_module():
 	import random

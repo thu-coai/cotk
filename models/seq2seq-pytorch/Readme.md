@@ -6,7 +6,7 @@ Sutskever, I., Vinyals, O., & Le, Q. V. (2014). Sequence to sequence learning wi
 
 ## Require Packages
 
-* contk
+* cotk
 * pytorch == 1.0.0
 * tensorboardX >= 1.4
 

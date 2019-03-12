@@ -26,8 +26,8 @@ FORMAT = logging.Formatter("%(levelname)s: %(message)s")
 SH = logging.StreamHandler(stream=sys.stdout)
 SH.setFormatter(FORMAT)
 LOGGER.addHandler(SH)
-CACHE_DIR = os.path.join(str(Path.home()), '.contk_cache')
-CONFIG_DIR = './contk/resource_config'
+CACHE_DIR = os.path.join(str(Path.home()), '.cotk_cache')
+CONFIG_DIR = './cotk/resource_config'
 
 def url_to_filename(url):
 	r'''Convert the url to sha256 as filename

@@ -2,8 +2,8 @@ import os
 
 import numpy as np
 import tensorflow as tf
-from contk.dataloader import MultiTurnDialog
-from contk.wordvector import WordVector, Glove
+from cotk.dataloader import MultiTurnDialog
+from cotk.wordvector import WordVector, Glove
 from utils import debug, try_cache
 
 from model import HredModel

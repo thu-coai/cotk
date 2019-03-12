@@ -19,7 +19,7 @@ deploy:
     skip-cleanup: true
     github-token: $DEPLOY_KEY
     keep-history: true
-    repo: thu-coai/contk_docs
+    repo: thu-coai/cotk_docs
     target-branch: master
     local-dir: ./docs/build
     on:

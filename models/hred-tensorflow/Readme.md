@@ -7,7 +7,7 @@ Serban, I. V., Sordoni, A., Bengio, Y., Courville, A. C., & Pineau, J. (2016, Fe
 
 ### Require Packages
 
-* contk
+* cotk
 * TensorFlow == 1.3
 * TensorBoardX >= 1.4
 

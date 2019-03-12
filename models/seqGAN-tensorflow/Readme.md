@@ -8,7 +8,7 @@ Lantao Yu, Weinan Zhang, Jun Wang, Yong Yu. SeqGAN: Sequence Generative Adversar
 
 ### Require Packages
 
-- contk
+- cotk
 - TensorFlow == 1.3
 - TensorBoardX >= 1.4
 

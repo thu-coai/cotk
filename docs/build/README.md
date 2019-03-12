@@ -2,11 +2,11 @@
 
 ### Project
 
-Please refer to https://github.com/thu-coai/contk
+Please refer to https://github.com/thu-coai/cotk
 
 ### Github Pages
 
-https://thu-coai.github.io/contk_docs/
+https://thu-coai.github.io/cotk_docs/
 
 ### License
 

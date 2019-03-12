@@ -1,6 +1,6 @@
 Metric
 #########
-.. automodule:: contk.metric
+.. automodule:: cotk.metric
 
 .. autoclass:: MetricBase
     :members:

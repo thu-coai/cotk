@@ -10,7 +10,7 @@ Bowman, S., Vilnis, L., Vinyals, O., Dai, A., Jozefowicz, R., and Bengio, S. Gen
 
 ### Require Packages
 
-- contk
+- cotk
 - TensorFlow == 1.3
 - TensorBoardX >= 1.4
 

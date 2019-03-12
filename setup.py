@@ -1,5 +1,5 @@
 '''
-setup.py for contk
+setup.py for cotk
 '''
 import sys
 import os
@@ -9,11 +9,11 @@ from setuptools.command.test import test as TestCommand
 class LibTest(TestCommand):
 	def run_tests(self):
 		# import here, cause outside the eggs aren't loaded
-		ret = os.system("pytest --cov=contk tests/ --cov-report term-missing && python ./models/run_tests.py")
+		ret = os.system("pytest --cov=cotk tests/ --cov-report term-missing && python ./models/run_tests.py")
 		sys.exit(ret >> 8)
 
 setup(
-	name='contk',
+	name='cotk',
 	version='0.0.1',
 	packages=find_packages(exclude=[]),
 	license='Apache',
@@ -49,11 +49,11 @@ setup(
 	cmdclass={'test': LibTest},
 	entry_points={
 		'console_scripts': [
-			"cotk-report=contk.scripts:report"
+			"cotk-report=cotk.scripts:report"
 		]
 	},
 	include_package_data=True,
-	url='https://github.com/thu-coai/contk',
+	url='https://github.com/thu-coai/cotk',
 	author='thu-coai',
 	author_email='thu-coai-developer@googlegroups.com',
 	python_requires='>=3.5',

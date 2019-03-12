@@ -2,10 +2,10 @@ import copy
 
 import pytest
 import numpy as np
-from contk.dataloader import LanguageGeneration, MSCOCO
-from contk.metric import MetricBase
-from contk.wordvector.wordvector import WordVector
-from contk.wordvector.gloves import Glove
+from cotk.dataloader import LanguageGeneration, MSCOCO
+from cotk.metric import MetricBase
+from cotk.wordvector.wordvector import WordVector
+from cotk.wordvector.gloves import Glove
 import logging
 
 def setup_module():

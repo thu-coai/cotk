@@ -2,8 +2,8 @@ import copy
 from itertools import chain
 import pytest
 
-from contk.dataloader import MultiTurnDialog, UbuntuCorpus, SwitchboardCorpus
-from contk.metric import MetricBase, HashValueRecorder
+from cotk.dataloader import MultiTurnDialog, UbuntuCorpus, SwitchboardCorpus
+from cotk.metric import MetricBase, HashValueRecorder
 
 def setup_module():
 	import random

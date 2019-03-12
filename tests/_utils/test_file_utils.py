@@ -6,7 +6,7 @@ import hashlib
 import json
 from checksumdir import dirhash
 
-from contk._utils.file_utils import get_resource_file_path
+from cotk._utils.file_utils import get_resource_file_path
 
 @pytest.fixture
 def r_mock():
