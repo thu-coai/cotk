@@ -22,7 +22,7 @@ from .resource_processor import ResourceProcessor
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(level=logging.INFO)
-FORMAT = logging.Formatter("%(asctime)s - %(message)s")
+FORMAT = logging.Formatter("%(levelname)s: %(message)s")
 SH = logging.StreamHandler(stream=sys.stdout)
 SH.setFormatter(FORMAT)
 LOGGER.addHandler(SH)

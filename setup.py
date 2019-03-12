@@ -17,7 +17,7 @@ setup(
 	version='0.0.1',
 	packages=find_packages(exclude=[]),
 	license='Apache',
-	description='Coversational Toolkits',
+	description='Conversational Toolkits',
 	long_description=open('README.md', encoding='UTF-8').read(),
 	long_description_content_type="text/markdown",
 	classifiers=[

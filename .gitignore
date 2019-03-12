@@ -10,3 +10,7 @@ __pycache__
 
 .vscode
 *.swp
+
+# Report files
+.cotk_upload_backup
+result.json
