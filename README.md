@@ -3,7 +3,7 @@
 [![CodeFactor](https://www.codefactor.io/repository/github/thu-coai/cotk/badge)](https://www.codefactor.io/repository/github/thu-coai/cotk)
 [![Coverage Status](https://coveralls.io/repos/github/thu-coai/cotk/badge.svg?branch=master)](https://coveralls.io/github/thu-coai/cotk?branch=master)
 [![Build Status](https://travis-ci.com/thu-coai/cotk.svg?branch=master)](https://travis-ci.com/thu-coai/cotk)
-[![codebeat badge](https://codebeat.co/badges/2b2107ed-1145-4ce1-bfcf-8b134a0c6e0a)](https://codebeat.co/projects/github-com-thu-coai-cotk-master)
+[![codebeat badge](https://codebeat.co/badges/dc64db27-7e25-4fea-a231-3c9baac916f8)](https://codebeat.co/projects/github-com-thu-coai-cotk-master)
 
 ## Environment
 
