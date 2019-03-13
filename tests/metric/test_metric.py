@@ -11,7 +11,7 @@ from cotk.metric import MetricBase, \
 	SingleTurnDialogRecorder, MultiTurnDialogRecorder, LanguageGenerationRecorder, HashValueRecorder, \
 	MetricChain
 from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunction
-from cotk.dataloader import BasicLanguageGeneration, MultiTurnDialog
+from cotk.dataloader import GenerationBase, MultiTurnDialog
 
 def setup_module():
 	random.seed(0)
@@ -24,7 +24,7 @@ def test_bleu_bug():
 		corpus_bleu(ref, gen, smoothing_function=SmoothingFunction().method7)
 
 
-class FakeDataLoader(BasicLanguageGeneration):
+class FakeDataLoader(GenerationBase):
 	def __init__(self):
 		self.all_vocab_list = ['<pad>', '<unk>', '<go>', '<eos>', \
 							   'what', 'how', 'here', 'do', 'as', 'can', 'to']
