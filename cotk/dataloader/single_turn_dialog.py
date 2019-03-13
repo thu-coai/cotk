@@ -8,12 +8,12 @@ import numpy as np
 
 from .._utils.unordered_hash import UnorderedSha256
 from .._utils.file_utils import get_resource_file_path
-from .dataloader import BasicLanguageGeneration
+from .dataloader import GenerationBase
 from ..metric import MetricChain, PerplexityMetric, BleuCorpusMetric, SingleTurnDialogRecorder, \
 			HashValueRecorder
 
 # pylint: disable=W0223
-class SingleTurnDialog(BasicLanguageGeneration):
+class SingleTurnDialog(GenerationBase):
 	r"""Base class for single-turn dialog datasets. This is an abstract class.
 
 	Arguments:{ARGUMENTS}
@@ -21,8 +21,8 @@ class SingleTurnDialog(BasicLanguageGeneration):
 	Attributes:{ATTRIBUTES}
 	"""
 
-	ARGUMENTS = BasicLanguageGeneration.ARGUMENTS
-	ATTRIBUTES = BasicLanguageGeneration.ATTRIBUTES
+	ARGUMENTS = GenerationBase.ARGUMENTS
+	ATTRIBUTES = GenerationBase.ATTRIBUTES
 
 	def get_batch(self, key, index, needhash=False):
 		'''Get a batch of specified `index`.
@@ -137,7 +137,7 @@ class SingleTurnDialog(BasicLanguageGeneration):
 		return metric
 
 class OpenSubtitles(SingleTurnDialog):
-	'''A dataloder for OpenSubtitles dataset.
+	'''A dataloader for OpenSubtitles dataset.
 
 	Arguments:
 		file_id (str): a str indicates the source of OpenSubtitles dataset.

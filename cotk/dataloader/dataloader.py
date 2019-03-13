@@ -11,7 +11,7 @@ class Dataloader(LoadClassInterface, metaclass=DocStringInheritor):
 	def __init__(self):
 		pass
 
-class BasicLanguageGeneration(Dataloader):
+class GenerationBase(Dataloader):
 	r"""Base class for all language generation datasets. This is an abstract class.
 
 	Arguments:{ARGUMENTS}
@@ -202,7 +202,7 @@ class BasicLanguageGeneration(Dataloader):
 		'''Trim index. There will be two steps:
 
 			* If there is an end token (`<eos>`) in sentences,
-			  find first end token and abondon words after it (included the end token).
+			  find first end token and abandon words after it (included the end token).
 			* ignore `<pad>` s at the end of the sentence.
 
 		Arguments:

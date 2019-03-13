@@ -10,13 +10,13 @@ import numpy as np
 
 from .._utils.unordered_hash import UnorderedSha256
 from .._utils.file_utils import get_resource_file_path
-from .dataloader import BasicLanguageGeneration
+from .dataloader import GenerationBase
 from ..metric import MetricChain, MultiTurnPerplexityMetric, MultiTurnBleuCorpusMetric, \
 	MultiTurnDialogRecorder, HashValueRecorder
 from ..metric import BleuPrecisionRecallMetric, EmbSimilarityPrecisionRecallMetric
 
 # pylint: disable=W0223
-class MultiTurnDialog(BasicLanguageGeneration):
+class MultiTurnDialog(GenerationBase):
 	r"""Base class for multi-turn dialog datasets. This is an abstract class.
 
 	Arguments:{ARGUMENTS}
@@ -24,8 +24,8 @@ class MultiTurnDialog(BasicLanguageGeneration):
 	Attributes:{ATTRIBUTES}
 	"""
 
-	ARGUMENTS = BasicLanguageGeneration.ARGUMENTS
-	ATTRIBUTES = BasicLanguageGeneration.ATTRIBUTES
+	ARGUMENTS = GenerationBase.ARGUMENTS
+	ATTRIBUTES = GenerationBase.ATTRIBUTES
 
 	def __init__(self, \
 				 ext_vocab=None, \

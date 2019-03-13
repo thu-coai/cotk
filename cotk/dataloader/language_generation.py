@@ -6,12 +6,12 @@ import numpy as np
 
 from .._utils.unordered_hash import UnorderedSha256
 from .._utils.file_utils import get_resource_file_path
-from .dataloader import BasicLanguageGeneration
+from .dataloader import GenerationBase
 from ..metric import MetricChain, PerplexityMetric, LanguageGenerationRecorder, \
 	FwBwBleuCorpusMetric, SelfBleuCorpusMetric, HashValueRecorder
 
 # pylint: disable=W0223
-class LanguageGeneration(BasicLanguageGeneration):
+class LanguageGeneration(GenerationBase):
 	r"""Base class for language modelling datasets. This is an abstract class.
 
 	Arguments:{ARGUMENTS}
@@ -19,8 +19,8 @@ class LanguageGeneration(BasicLanguageGeneration):
 	Attributes:{ATTRIBUTES}
 	"""
 
-	ARGUMENTS = BasicLanguageGeneration.ARGUMENTS
-	ATTRIBUTES = BasicLanguageGeneration.ATTRIBUTES
+	ARGUMENTS = GenerationBase.ARGUMENTS
+	ATTRIBUTES = GenerationBase.ATTRIBUTES
 
 	def get_batch(self, key, index, needhash=False):
 		'''Get a batch of specified `index`.
@@ -123,7 +123,7 @@ class LanguageGeneration(BasicLanguageGeneration):
 		return metric
 
 class MSCOCO(LanguageGeneration):
-	'''A dataloder for preprocessed MSCOCO dataset.
+	'''A dataloader for preprocessed MSCOCO dataset.
 
 	Arguments:
 			file_id (str): a str indicates the source of MSCOCO dataset.
