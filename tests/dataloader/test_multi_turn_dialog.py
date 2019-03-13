@@ -211,7 +211,7 @@ class TestMultiTurnDialog():
 	def base_test_hash(self, dl):
 		recorder1 = HashValueRecorder()
 		recorder2 = HashValueRecorder()
-		
+
 		for key in dl.key_name:
 			dl.restart(key, 7)
 			recorder1 = HashValueRecorder()
@@ -317,3 +317,6 @@ class TestSwitchboardCorpus(TestMultiTurnDialog):
 	@pytest.mark.dependency(depends=["TestSwitchboardCorpus::test_init"])
 	def test_hash(self, load_switchboardcorpus):
 		super().base_test_hash(load_switchboardcorpus())
+
+	# TODO: add test for get_batch
+	# TODO: add test for inference metric

@@ -93,7 +93,7 @@ class MultiTurnDialog(BasicLanguageGeneration):
 	def multi_turn_trim_index(self, index, turn_length=None, ignore_first_token=False):
 		'''Trim indexes for multi turn dialog. There will be 3 steps:
 			* For every turn, if there is an `<eos>`, \
-				find first `<eos>` and abondon words after it (included the `<eos>`).
+				find first `<eos>` and abandon words after it (included the `<eos>`).
 			* Ignore `<pad>` s at the end of every turn.
 			* When `turn_length` is None, discard the first empty turn and the turn after it. \
 				Otherwise, discard the turn according to turn_length.
@@ -127,7 +127,7 @@ class MultiTurnDialog(BasicLanguageGeneration):
 		Arguments:
 			sen (list): a 2-d list of str, representing each token of the session.
 			invalid_vocab (bool): whether to provide invalid vocabs.
-					If ``False``, invalid vocabs will be trasfered to `unk_id`.
+					If ``False``, invalid vocabs will be transferred to `unk_id`.
 					If ``True``, invalid vocabs will using their own id.
 					Default: False
 
@@ -204,7 +204,7 @@ class MultiTurnDialog(BasicLanguageGeneration):
 
 class UbuntuCorpus(MultiTurnDialog):
 
-	'''A dataloder for Ubuntu dataset.
+	'''A dataloader for Ubuntu dataset.
 
 	Arguments:
 		file_id (str): a str indicates the source of UbuntuCorpus dataset.
@@ -311,7 +311,7 @@ class UbuntuCorpus(MultiTurnDialog):
 		return vocab_list, valid_vocab_len, data, data_size
 
 class SwitchboardCorpus(MultiTurnDialog):
-	'''A dataloder for Switchboard dataset.
+	'''A dataloader for Switchboard dataset.
 
 	Arguments:
 		file_id (str): a str indicates the source of SwitchboardCorpus dataset.
@@ -387,6 +387,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 		return origin_data
 
 	def _build_vocab(self, origin_data):
+		# TODO: build vocab has to use multi_ref data
 		r'''Building vocabulary(words, topics, da), invoked by `SwitchboardCorpus._load_data`
 		'''
 		raw_vocab = list(chain(*chain(*origin_data['train']['session'])))
@@ -493,11 +494,11 @@ class SwitchboardCorpus(MultiTurnDialog):
 		gather = lambda sub_key: [self.data[key][sub_key][i] for i in index]
 		for sub_key in self.data[key]:
 			if sub_key not in res:
-				res[sub_key] = gather(sub_key)
+				res[sub_key] = gather(sub_key) # TODO: candidates renamed to candidates_allvocabs
 		#TODO: add hashvalue for SwitchBoard
 		return res
 
-	#TODO: move to inference metric. embedding have to be a property of dataloader
+	#TODO: renamed to inference metric. embedding should have a default realization (use wordvec from Glove)
 	def get_precision_recall_metric(self, embed):
 		'''Get metrics for precision and recall in terms of BLEU, cosine similarity.
 
