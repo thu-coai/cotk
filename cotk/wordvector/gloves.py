@@ -17,8 +17,11 @@ class Glove(WordVector):
 	'''
 	def __init__(self, file_id, file_type="Glove300d"):
 		super().__init__()
-		self.file_id = file_id
-		self.file_path = get_resource_file_path(file_id, file_type)
+		if file_id is not None:
+			self.file_id = file_id
+			self.file_path = get_resource_file_path(file_id, file_type)
+		else:
+			self.file_id = self.file_path = None
 		self.file_type = file_type
 
 	def load(self, n_dims, vocab_list):
