@@ -33,6 +33,7 @@ class DefaultResourceProcessor(ResourceProcessor):
 		'''
 		return local_path
 
+#TODO: merge the following Processor because of duplicate codes
 class MSCOCOResourceProcessor(ResourceProcessor):
 	'''Processor for MSCOCO dataset
 	'''
