@@ -14,6 +14,7 @@ from .dataloader import GenerationBase
 from ..metric import MetricChain, MultiTurnPerplexityMetric, MultiTurnBleuCorpusMetric, \
 	MultiTurnDialogRecorder, HashValueRecorder
 from ..metric import BleuPrecisionRecallMetric, EmbSimilarityPrecisionRecallMetric
+from ..wordvector import Glove
 
 # pylint: disable=W0223
 class MultiTurnDialog(GenerationBase):
@@ -356,18 +357,26 @@ class SwitchboardCorpus(MultiTurnDialog):
 		sess2id = lambda sess: [([self.go_id] + \
 								 list(map(lambda word: self.word2id.get(word, self.unk_id), utt)) + \
 								 [self.eos_id])[:self._max_sen_length] for utt in sess]
+		cand2id = lambda cand: [list(map(lambda word: self.word2id.get(word, self.unk_id), resp)) \
+								for resp in cand]
 		data['session'] = list(map(sess2id, origin_data['session']))
+		if 'candidate_allvocabs' in origin_data:
+			data['candidate_allvocabs'] = list(map(cand2id, origin_data['candidate_allvocabs']))
 		return data
 
-	def _read_file(self, filepath, add_pre_turn=True, add_suf_turn=False):
+	def _read_file(self, filepath, read_multi_ref=False):
 		'''Reading data from file, invoked by ^SwitchboardCorpus._load_data^
-			and ^SwitchboardCorpus._load_multi_ref_data^
+		and ^SwitchboardCorpus._load_multi_ref_data^
 
 		Arguments:
 			* filepath (str): Name of the file to read from
-			* add_pre_turn (bool): Whether to add turn ^<d>^ ahead of each session
+			* read_multi_ref (bool):
+				If False, add turn ^<d>^ ahead of each session
+				If True, add turn ^<d>^ at the end of each session and read candidate ^responses^
 		'''
 		origin_data = {'session': []}
+		if read_multi_ref:
+			origin_data['candidate_allvocabs'] = []
 		with open(filepath, "r") as data_file:
 			for line in data_file:
 				line = json.loads(line)
@@ -378,15 +387,15 @@ class SwitchboardCorpus(MultiTurnDialog):
 							else '<eos> ' + utt[1][1].strip() + ' ', enumerate(line['utts'])))
 				utts = ('<d> ' + "".join(suffix_utts).strip()).split("<eos>")
 				sess = list(map(lambda utt: utt.strip().split(), utts))
-				if not add_pre_turn:
-					sess = sess[1:]
-				if add_suf_turn:
-					sess += [['<d>']]
+				sess = sess[1:] + [['<d>']] if read_multi_ref else sess
 				origin_data['session'].append(sess[:self._max_turn_length])
+
+				if read_multi_ref:
+					origin_data['candidate_allvocabs'].append(list(map(\
+						lambda resp: resp[1].strip().split(), line['responses'])))
 		return origin_data
 
 	def _build_vocab(self, origin_data):
-		# TODO: build vocab has to use multi_ref data
 		r'''Building vocabulary(words, topics, da), invoked by `SwitchboardCorpus._load_data`
 		'''
 		raw_vocab = list(chain(*chain(*origin_data['train']['session'])))
@@ -400,6 +409,8 @@ class SwitchboardCorpus(MultiTurnDialog):
 		for key in self.key_name:
 			if key == 'train':
 				continue
+			if key == 'multi_ref':
+				raw_vocab.extend(list(chain(*chain(*origin_data[key]['candidate_allvocabs']))))
 			raw_vocab.extend(list(chain(*chain(*(origin_data[key]['session'])))))
 		vocab = sorted(Counter(raw_vocab).most_common(), key=lambda pair: (-pair[1], pair[0]))
 		left_vocab = list(filter(lambda x: \
@@ -413,21 +424,6 @@ class SwitchboardCorpus(MultiTurnDialog):
 		print("vocab list length = %d" % len(vocab_list))
 		return vocab_list, valid_vocab_set
 
-	def _load_multi_ref_data(self):
-		r'''Loading dataset, invoked by `SwitchboardCorpus._load_data`
-		'''
-		filename = '%s/switchboard_corpus_multi_ref.jsonl' % self._file_path
-		candidate = []
-		with open(filename, "r") as data_file:
-			idx = 0
-			for line in data_file:
-				line = json.loads(line)
-				utt2id = lambda utt: list(map(lambda w: \
-										self.word2id.get(w, self.unk_id), utt[1].strip().split()))
-				candidate.append(list(map(utt2id, line['responses'])))
-				idx += 1
-		return candidate
-
 	def _load_data(self):
 		r'''Loading dataset, invoked by `MultiTurnDialog.__init__`
 		'''
@@ -435,8 +431,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 		self.key_name.append('multi_ref')
 		for key in self.key_name:
 			origin_data[key] = self._read_file('%s/switchboard_corpus_%s.jsonl' % (self._file_path, key), \
-											   add_pre_turn=(key != 'multi_ref'), \
-											   add_suf_turn=(key == 'multi_ref'))
+											   read_multi_ref=(key == 'multi_ref'))
 
 		vocab_list, valid_vocab_set = self._build_vocab(origin_data)
 
@@ -459,7 +454,6 @@ class SwitchboardCorpus(MultiTurnDialog):
 				   "cut word rate: %f\n\tmax turn length before cut: %d, cut sentence rate: %f") % \
 				  (key, invalid_vocab_num / vocab_num, oov_num / vocab_num, max(sent_lens), \
 				   cut_word_num / vocab_num, max(turn_lens), cut_sent_num / np.sum(turn_lens)))
-		data['multi_ref']['candidate'] = self._load_multi_ref_data()
 		return vocab_list, len(valid_vocab_set), data, data_size
 
 	def get_batch(self, key, index, needhash=False):
@@ -475,7 +469,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 			(dict): A dict contains what is in the return of MultiTurnDialog.get_batch.
 			  It additionally contains:
 
-				* candidates (list): A 3-d list, multiple responses for reference
+				* candidate_allvocabs (list): A 3-d list, multiple responses for reference
 				  Size of outermost list: batch_size
 				  Size of second innermost list: varying num of references
 				  Size of innermost list: varying num of words in a reference
@@ -493,24 +487,29 @@ class SwitchboardCorpus(MultiTurnDialog):
 		gather = lambda sub_key: [self.data[key][sub_key][i] for i in index]
 		for sub_key in self.data[key]:
 			if sub_key not in res:
-				res[sub_key] = gather(sub_key) # TODO: candidates renamed to candidates_allvocabs
+				res[sub_key] = gather(sub_key)
 		#TODO: add hashvalue for SwitchBoard
 		return res
 
-	#TODO: renamed to inference metric. embedding should have a default realization (use wordvec from Glove)
-	def get_precision_recall_metric(self, embed):
+	def get_precision_recall_metric(self, sent_per_inst=20, embed=None):
 		'''Get metrics for precision and recall in terms of BLEU, cosine similarity.
 
-		It contains:
+        It contains:
 
-		* :class:`.metric.PrecisionRecallMetric`
+		* :class:`.metric.BleuPrecisionRecallMetric`
+		* :class:`.metric.EmbSimilarityPrecisionRecallMetric`
 
-		Arguments:
-			embed (:class:`numpy.array`): Glove word embedding
+        Arguments:
+            sent_per_inst (int): The number of sentences to generate per instance
+            embed (:class:`numpy.array`): Word embedding for lookup
+            	Default: Glove word embedding
 		'''
 		metric = MetricChain()
+		if embed is None:
+			glove = Glove("resources://Glove300d")
+			embed = glove.load(300, self.vocab_list)
 		for ngram in range(1, 5):
-			metric.add_metric(BleuPrecisionRecallMetric(self, ngram))
-		metric.add_metric(EmbSimilarityPrecisionRecallMetric(self, embed, 'avg'))
-		metric.add_metric(EmbSimilarityPrecisionRecallMetric(self, embed, 'extrema'))
+			metric.add_metric(BleuPrecisionRecallMetric(self, ngram, sent_per_inst))
+		metric.add_metric(EmbSimilarityPrecisionRecallMetric(self, embed, 'avg', sent_per_inst))
+		metric.add_metric(EmbSimilarityPrecisionRecallMetric(self, embed, 'extrema', sent_per_inst))
 		return metric

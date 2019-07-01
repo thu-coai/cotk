@@ -4,6 +4,7 @@ import pytest
 
 from cotk.dataloader import MultiTurnDialog, UbuntuCorpus, SwitchboardCorpus
 from cotk.metric import MetricBase, HashValueRecorder
+from cotk.wordvector.gloves import Glove
 
 def setup_module():
 	import random
@@ -291,7 +292,16 @@ class TestSwitchboardCorpus(TestMultiTurnDialog):
 
 	@pytest.mark.dependency(depends=["TestSwitchboardCorpus::test_init"])
 	def test_get_batch(self, load_switchboardcorpus):
-		super().base_test_get_batch(load_switchboardcorpus())
+		dl = load_switchboardcorpus()
+		super().base_test_get_batch(dl)
+
+		assert 'multi_ref' in dl.key_name
+		multi_ref = dl.data['multi_ref']
+		length = len(multi_ref['candidate_allvocabs'])
+		for i in range(length):
+			batch = dl.get_batch('multi_ref', [i])
+			for id in [dl.unk_id, dl.go_id, dl.eos_id, dl.pad_id]:
+				assert id not in batch["candidate_allvocabs"]
 
 	@pytest.mark.dependency(depends=["TestSwitchboardCorpus::test_init"])
 	def test_get_next_batch(self, load_switchboardcorpus):
@@ -310,6 +320,12 @@ class TestSwitchboardCorpus(TestMultiTurnDialog):
 	def test_teacher_inference_metric(self, load_switchboardcorpus):
 		super().base_test_teacher_inference_metric(load_switchboardcorpus())
 
+	def test_teacher_precision_recall_metric(self, load_switchboardcorpus):
+		dl = load_switchboardcorpus()
+		glove = Glove("./tests/wordvector/dummy_glove/300d/")
+		embed = glove.load(300, dl.vocab_list)
+		assert isinstance(dl.get_precision_recall_metric(sent_per_inst=3, embed=embed), MetricBase)
+
 	def test_init_multi_runs(self, load_switchboardcorpus):
 		super().base_test_multi_runs([load_switchboardcorpus() for i in range(3)])
 
@@ -317,6 +333,3 @@ class TestSwitchboardCorpus(TestMultiTurnDialog):
 	@pytest.mark.dependency(depends=["TestSwitchboardCorpus::test_init"])
 	def test_hash(self, load_switchboardcorpus):
 		super().base_test_hash(load_switchboardcorpus())
-
-	# TODO: add test for get_batch
-	# TODO: add test for inference metric

@@ -2,7 +2,6 @@ import numpy as np
 import tensorflow as tf
 import time
 
-from utils.output_projection import MyDense
 from utils import SummaryHelper
 from utils.basic_decoder import MyBasicDecoder
 
@@ -95,8 +94,8 @@ class CVAEModel(object):
 
 		with tf.name_scope("decode"):
 			# get output projection function
-			dec_init_fn = MyDense(args.dh_size, use_bias=True)
-			output_fn = MyDense(data.vocab_size, use_bias=True)
+			dec_init_fn = tf.layers.Dense(args.dh_size, use_bias=True)
+			output_fn = tf.layers.Dense(data.vocab_size, use_bias=True)
 
 			with tf.name_scope("training"):
 				decoder_input = responses_dec_input
@@ -303,7 +302,7 @@ class CVAEModel(object):
 		while batch_data is not None:
 			batch = self._cut_batch_data(batch_data,\
 							0, np.max(batch_data['turn_length']))
-			batch['candidate'] = batch_data['candidate']
+			batch['candidate_allvocabs'] = batch_data['candidate_allvocabs']
 			yield batch
 			batch_data = data.get_next_batch('multi_ref')
 
@@ -511,7 +510,7 @@ class CVAEModel(object):
 					tmp.append([wid if wid < data.vocab_size else data.unk_id for wid in sent])
 				res.append(tmp)
 			return res
-		prec_rec_metrics = data.get_precision_recall_metric(embed)
+		prec_rec_metrics = data.get_precision_recall_metric(sent_per_inst=args.repeat_N, embed=embed)
 		for batch_data in self.multi_reference_batches(data, args.batch_size):
 			responses = []
 			for _ in range(args.repeat_N):
@@ -522,9 +521,10 @@ class CVAEModel(object):
 						responses.append([])
 					if data.eos_id in resp:
 						resp = resp[:resp.index(data.eos_id)]
-					if len(resp) > 0:
-						responses[rid].append(resp)
-			metric_data = {'resp': process_cands(batch_data['candidate']), 'gen': responses}
+					if len(resp) == 0:
+						resp = [data.unk_id]
+					responses[rid].append(resp)
+			metric_data = {'resp_allvocabs': process_cands(batch_data['candidate_allvocabs']), 'gen': responses}
 			prec_rec_metrics.forward(metric_data)
 
 		res = prec_rec_metrics.close()

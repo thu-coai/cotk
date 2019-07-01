@@ -147,7 +147,7 @@ class FakeMultiDataloader(MultiTurnDialog):
 				 pad=True, gen_prob_check='no_check', \
 				 gen_len='random', ref_len='random', \
 				 ref_vocab='all_vocab', gen_vocab='all_vocab', gen_prob_vocab='all_vocab', \
-				 resp_len='>=2', batch=5, max_len=10, max_turn=5):
+				 resp_len='>=2', batch=5, max_len=10, max_turn=5, test_prec_rec=False):
 		data = { \
 			reference_key: [], \
 			reference_len_key: [], \
@@ -158,7 +158,10 @@ class FakeMultiDataloader(MultiTurnDialog):
 		}
 
 		for i in range(batch):
-			turn_length = random.randrange(1, max_turn+1)
+			if test_prec_rec:
+				turn_length = 3
+			else:
+				turn_length = random.randrange(1, max_turn+1)
 			turn_reference = []
 			turn_reference_len = []
 			turn_gen_prob = []
@@ -312,7 +315,7 @@ class TestBleuPrecisionRecallMetric():
 			dataloader = FakeMultiDataloader()
 			gen = []
 			reference = []
-			bprm = BleuPrecisionRecallMetric(dataloader, ngram=1)
+			bprm = BleuPrecisionRecallMetric(dataloader, ngram=1, sent_per_inst=3)
 			super(BleuPrecisionRecallMetric, bprm).score(gen, reference)
 
 	@pytest.mark.parametrize('argument, shape, type, batch_len, ref_len, gen_len, ngram', \
@@ -322,19 +325,21 @@ class TestBleuPrecisionRecallMetric():
 
 		if ngram not in range(1, 5):
 			with pytest.raises(ValueError, match="ngram should belong to \[1, 4\]"):
-				bprm = BleuPrecisionRecallMetric(dataloader, ngram)
+				bprm = BleuPrecisionRecallMetric(dataloader, ngram, 3)
 			return
 
 		if argument == 'default':
 			reference_key, gen_key = ('resp_allvocabs', 'gen')
-			bprm = BleuPrecisionRecallMetric(dataloader, ngram)
+			bprm = BleuPrecisionRecallMetric(dataloader, ngram, 3)
 		else:
 			reference_key, gen_key = ('rk', 'gk')
-			bprm = BleuPrecisionRecallMetric(dataloader, ngram, reference_key, gen_key)
+			bprm = BleuPrecisionRecallMetric(dataloader, ngram, 3, reference_key, gen_key)
 
+		# TODO: might need adaptation of dataloader.get_data for test_prec_rec
+		# turn_length is not sent_per_inst conceptually
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 								   to_list=(type == 'list'), pad=(shape == 'pad'), \
-								   ref_len=ref_len, gen_len=gen_len)
+								   ref_len=ref_len, gen_len=gen_len, test_prec_rec=True)
 		_data = copy.deepcopy(data)
 		if batch_len == 'unequal':
 			data[reference_key] = data[reference_key][1:]
@@ -385,30 +390,32 @@ class TestEmbSimilarityPrecisionRecallMetric():
 
 		if emb_type != 'array':
 			with pytest.raises(ValueError, match="invalid type or shape or embed."):
-				espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode)
+				espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
 			return
 		if emb_len == 'unequal':
 			with pytest.raises(ValueError, match="embed size not equal to vocab size."):
-				espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode)
+				espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
 			return
 		if emb_mode not in ['avg', 'extrema']:
 			with pytest.raises(ValueError, match="mode should be 'avg' or 'extrema'."):
-				espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode)
+				espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
 			return
 
 		if argument == 'default':
 			reference_key, gen_key = ('resp_allvocabs', 'gen')
 			print(emb)
-			espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode)
+			espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
 		else:
 			reference_key, gen_key = ('rk', 'gk')
-			espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, \
+			espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3, \
 													  reference_key, gen_key)
 
+		# TODO: might need adaptation of dataloader.get_data for test_prec_rec
+		# turn_length is not sent_per_inst conceptually
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 								   to_list=(type == 'list'), pad=(shape == 'pad'), \
 								   ref_len=ref_len, gen_len=gen_len, \
-								   ref_vocab=ref_vocab, gen_vocab=gen_vocab)
+								   ref_vocab=ref_vocab, gen_vocab=gen_vocab, test_prec_rec=True)
 
 		_data = copy.deepcopy(data)
 		if batch_len == 'unequal':

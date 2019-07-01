@@ -73,7 +73,7 @@ E.g. git push -u origin master. ")
 	git_remote = subprocess.run(["git", "remote", "-v"], stdout=PIPE, stderr=PIPE)
 	ssh_reg = re.search(r"%s\s+git@github.com:(\S+?)/(\S+?)\.git\s+\(push\)" % \
 			remote_name, git_remote.stdout.decode())
-	http_reg = re.search(r"%s\s+https://github\.com/(\S+?)/(\S+?)\.git\s+\(push\)" % \
+	http_reg = re.search(r"%s\s+https?://github\.com/(\S+?)/(\S+?)\.git\s+\(push\)" % \
 			remote_name, git_remote.stdout.decode())
 	if ssh_reg is None and http_reg is None:
 		raise RuntimeError("No remote named %s, please use 'git remote add' to identify \

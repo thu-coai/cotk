@@ -73,13 +73,13 @@ def run():
 	args.dh_size = 400
 	args.lr = 1e-3
 	args.lr_decay = 0.995
-	args.batch_size = 30
+	args.batch_size = 3
 	args.grad_clip = 5.0
 	args.show_sample = [0]
 	args.min_vocab_times = 5
 	args.max_sen_length = 50
 	args.max_turn_length = 1000
-	args.checkpoint_steps = 1000
+	args.checkpoint_steps = 1
 	args.checkpoint_max_to_keep = 5
 
 	import random

@@ -60,7 +60,7 @@ def modify_args(args):
 	args.batch_size = 5
 	args.datapath = path + '/tests/dataloader/dummy_switchboardcorpus'
 
-@pytest.mark.skip()
+# @pytest.mark.skip()
 def test_train(mocker):
 	def side_effect_train(args):
 		modify_args(args)
@@ -86,7 +86,7 @@ def test_train(mocker):
 	run()
 	tf.reset_default_graph()
 
-@pytest.mark.skip()
+# @pytest.mark.skip()
 def test_test(mocker):
 	def side_effect_test(args):
 		modify_args(args)
