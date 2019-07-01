@@ -43,7 +43,7 @@ class TestWordVector():
 @pytest.fixture
 def load_glove():
 	def _load_glove():
-		return Glove("./tests/wordvector/dummy_glove")
+		return Glove("./tests/wordvector/dummy_glove/300d")
 	return _load_glove
 
 class TestGlove(TestWordVector):

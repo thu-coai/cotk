@@ -19,7 +19,7 @@ class TestFileUtils():
 
 		cache_dir = './tests/_utils/dataset_cache'
 		config_dir = './tests/_utils/dummy_coai'
-		res_path = get_resource_file_path('resources://coai', 'Default', cache_dir=cache_dir, config_dir=config_dir)
+		res_path = get_resource_file_path('resources://coai', cache_dir=cache_dir, config_dir=config_dir)
 		
 		assert(res_path == os.path.join(cache_dir, '6bd9bfb20a5159d1848a203ece33886690b15d785b0c5d632eed63d70442c58b'))
 		assert(os.path.exists(res_path))
@@ -39,7 +39,7 @@ class TestFileUtils():
 	def test_download_resource(self):
 		cache_dir = './tests/_utils/dataset_cache'
 		config_dir = './tests/_utils/dummy_coai'
-		res_path = get_resource_file_path('resources://MSCOCO', 'MSCOCO', cache_dir=cache_dir, config_dir=config_dir)
+		res_path = get_resource_file_path('resources://MSCOCO#MSCOCO', cache_dir=cache_dir, config_dir=config_dir)
 
 		assert(res_path == os.path.join(cache_dir, 'f2c79c204e083627ea6c166061b45ba536813058caf178d21ca58daf5abe8a01_unzip/mscoco'))
 		assert(os.path.exists(res_path))
@@ -51,3 +51,4 @@ class TestFileUtils():
 		with open(meta_path, 'r') as meta_file:
 			meta = json.load(meta_file)
 			assert(meta == {'local_path': res_path})
+

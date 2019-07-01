@@ -15,14 +15,13 @@ class Glove(WordVector):
 		file_id (str): a str indicates the source of GloVe word vectors.
 		file_type (str): a str indicates the type of GloVe word vectors. Default: Glove300d
 	'''
-	def __init__(self, file_id, file_type="Glove300d"):
+	def __init__(self, file_id):
 		super().__init__()
 		if file_id is not None:
 			self.file_id = file_id
-			self.file_path = get_resource_file_path(file_id, file_type)
+			self.file_path = get_resource_file_path(file_id)
 		else:
 			self.file_id = self.file_path = None
-		self.file_type = file_type
 
 	def load(self, n_dims, vocab_list):
 		r'''

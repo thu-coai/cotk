@@ -79,20 +79,43 @@ def get_hashtag(file_path):
 	else:
 		return get_file_sha256(file_path)
 
+def parse_file_id(file_id):
+	'''
+	file_id contains one essential part and two optional parts
+	file_id: name[@source][#processor]
+	examples:
+		file_id=https://XXX/			name=https://XXX/ source=None	   processor=Default
+		file_id=MSCOCO@tsinghua#Glove	name=MSCOCO		  source=tsinghua  processor=GloveProcessor
+	'''
+	# There may be # in name, so we process file_id reversely.
+	# TODO: what if there is # in name?
+	source, processor = None, None
+	name = file_id[::-1]
+	if '#' in file_id:
+		processor, name = name.split('#', 1)
+		processor = processor[::-1]
+	if '@' in file_id:
+		source, name = name.split('@', 1)
+		source = source[::-1]
+	name = name[::-1]
+	return name, source, processor
 
-def get_resource(res_name, res_type, cache_dir=CACHE_DIR, config_dir=CONFIG_DIR):
+def get_resource(file_id, cache_dir=CACHE_DIR, config_dir=CONFIG_DIR):
 	'''Get the resource with the given name.
 	If not cached, download it using the URL stored in config file.
 	If cached, check the hashtag.
 	'''
 	os.makedirs(cache_dir, exist_ok=True)
 
-	if '~' in res_name:
-		res_name, src_name = res_name.split('~', 1)
-	else:
-		src_name = 'github'
-
+	res_name, src_name, res_type = parse_file_id(file_id)
 	config = get_config(res_name, config_dir)
+
+	src_name = src_name or 'github'
+	res_type = res_type or config.get('type', 'Default')
+	LOGGER.info('name: %s', res_name)
+	LOGGER.info('source: %s', src_name)
+	LOGGER.info('processor type: %s', res_type)
+
 	if config['type'] != res_type:
 		raise ValueError("res_type {} differs with res_type {}".format(res_type, config['type']))
 
@@ -138,10 +161,15 @@ def get_resource(res_name, res_type, cache_dir=CACHE_DIR, config_dir=CONFIG_DIR)
 	return cache_path
 
 
-def download_resource(url, res_type, cache_dir=CACHE_DIR):
+def download_resource(url, cache_dir=CACHE_DIR):
 	r'''If not cached, download the resource using url.
 	'''
 	os.makedirs(cache_dir, exist_ok=True)
+
+	url, _, res_type = parse_file_id(url)
+	res_type = res_type or 'Default'
+	LOGGER.info('url: %s', url)
+	LOGGER.info('processor type: %s', res_type)
 
 	resource_processor = ResourceProcessor.load_class(res_type + 'ResourceProcessor')()
 	cache_path = os.path.join(cache_dir, url_to_filename(url))
@@ -188,21 +216,25 @@ def import_local_benchmark(res_name, local_path, cache_dir=CACHE_DIR, \
 		raise ValueError("bad hashtag of {}".format(res_name))
 
 
-def import_local_resource(local_path, res_type):
+def import_local_resource(local_path):
 	'''Import temporary resources from local'''
+	local_path, _, res_type = parse_file_id(local_path)
+	res_type = res_type or 'Default'
+	LOGGER.info('local path: %s', local_path)
+	LOGGER.info('processor type: %s', res_type)
 	resource_processor = ResourceProcessor.load_class(res_type + 'ResourceProcessor')()
 	return resource_processor.postprocess(local_path)
 
 
-def get_resource_file_path(file_id, res_type="Default", cache_dir=CACHE_DIR, config_dir=CONFIG_DIR):
+def get_resource_file_path(file_id, cache_dir=CACHE_DIR, config_dir=CONFIG_DIR):
 	'''Get file_path of resource of all types
 	'''
 	if file_id.startswith('resources://'):
 		res_id = file_id[12:]
-		return get_resource(res_id, res_type, cache_dir, config_dir)
+		return get_resource(res_id, cache_dir, config_dir)
 	elif file_id.startswith('http://') or file_id.startswith('https://'):
 		url = file_id
-		return download_resource(url, res_type, cache_dir)
+		return download_resource(url, cache_dir)
 	else:
 		local_path = file_id
-		return import_local_resource(local_path, res_type)
+		return import_local_resource(local_path)

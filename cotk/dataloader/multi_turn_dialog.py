@@ -230,11 +230,10 @@ class UbuntuCorpus(MultiTurnDialog):
 				testing stages. Default: 0 (No unknown words).
 	'''
 
-	def __init__(self, file_id, file_type="Ubuntu", min_vocab_times=10, \
+	def __init__(self, file_id, min_vocab_times=10, \
 			max_sen_length=50, max_turn_length=20, invalid_vocab_times=0):
 		self._file_id = file_id
-		self._file_path = get_resource_file_path(file_id, file_type)
-		self._file_type = file_type
+		self._file_path = get_resource_file_path(file_id)
 		self._min_vocab_times = min_vocab_times
 		self._max_sen_length = max_sen_length
 		self._max_turn_length = max_turn_length
