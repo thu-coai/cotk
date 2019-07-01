@@ -463,7 +463,7 @@ class SelfBleuCorpusMetric(MetricBase):
 		'''Auxiliary function which returns:
 			* **sentence-self-bleu**: sentence-self-bleu value.
 		'''
-		return sentence_bleu(ele[0], ele[1], ele[2], smoothing_function=SmoothingFunction().method1)
+		return sentence_bleu(ele[0], ele[1], smoothing_function=SmoothingFunction().method1)
 
 	def close(self):
 		'''Return a dict which contains:
@@ -476,21 +476,17 @@ class SelfBleuCorpusMetric(MetricBase):
 		ref = self.hyps[:self.sample]
 
 		try:
-			result = {}
-			for ngram in range(2, 5):
-				weight = tuple((1. / ngram for _ in range(ngram)))
-				if self.sample >= 1000:
-					pool = Pool(multiprocessing.cpu_count())
-					bleu_irl = pool.map(self.run_f, [(ref[:i]+ref[i+1:self.sample], ref[i], weight) \
-										for i in range(self.sample)])
-					pool.close()
-					pool.join()
-				else:
-					bleu_irl = []
-					for i in range(self.sample):
-						bleu_irl.append(self.run_f((ref[:i]+ref[i+1:], ref[i], weight)))
-				result["self-bleu-%d"%ngram] = 1.0 * sum(bleu_irl) / len(bleu_irl)
-			return result
+			bleu_irl = []
+			if self.sample >= 1000:
+				pool = Pool(multiprocessing.cpu_count())
+				bleu_irl = pool.map(self.run_f, [(ref[:i]+ref[i+1:self.sample], ref[i]) \
+									for i in range(self.sample)])
+				pool.close()
+				pool.join()
+			elif self.sample > 1:
+				for i in range(self.sample):
+					bleu_irl.append(self.run_f((ref[:i]+ref[i+1:], ref[i])))
+			return {"self-bleu" : 1.0 * sum(bleu_irl) / len(bleu_irl)}
 		except ZeroDivisionError as _:
 			raise ZeroDivisionError("Bleu smoothing divided by zero. This is a known bug of corpus_bleu, \
 				usually caused when there is only one sample and the sample length is 1.")

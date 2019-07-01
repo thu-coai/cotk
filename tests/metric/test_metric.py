@@ -7,7 +7,7 @@ import pytest
 
 from cotk.metric import MetricBase, \
 	BleuPrecisionRecallMetric, EmbSimilarityPrecisionRecallMetric, \
-	PerplexityMetric, MultiTurnPerplexityMetric, BleuCorpusMetric, MultiTurnBleuCorpusMetric, \
+	PerplexityMetric, MultiTurnPerplexityMetric, BleuCorpusMetric, SelfBleuCorpusMetric, MultiTurnBleuCorpusMetric, \
 	SingleTurnDialogRecorder, MultiTurnDialogRecorder, LanguageGenerationRecorder, HashValueRecorder, \
 	MetricChain
 from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunction
@@ -666,6 +666,66 @@ class TestBleuCorpusMetric:
 		gen = [[1]]
 		data = {'resp_allvocabs': ref, 'gen': gen}
 		bcm = BleuCorpusMetric(dataloader)
+
+		with pytest.raises(ZeroDivisionError):
+			bcm.forward(data)
+			bcm.close()
+
+self_bleu_test_parameter = generate_testcase(\
+	(zip(test_argument), "add"),
+	(zip(test_shape, test_type), "multi"),
+	(zip(test_gen_len), "multi"),
+)
+
+
+class TestSelfBleuCorpusMetric:
+	def run_f(self, ele):
+		'''Auxiliary function which returns:
+			* **sentence-self-bleu**: sentence-self-bleu value.
+		'''
+		return sentence_bleu(ele[0], ele[1], smoothing_function=SmoothingFunction().method1)
+
+	def get_self_bleu(self, dataloader, input, gen_key):
+		gens = []
+		for gen_sen in input[gen_key]:
+			gen_sen_processed = dataloader.trim_index(gen_sen)
+			gens.append(gen_sen_processed)
+		refs = copy.deepcopy(gens)
+		bleu_irl = []
+		for i in range(len(gens)):
+			bleu_irl.append(self.run_f((refs[:i]+refs[i+1:], refs[i])))
+		return 1.0 * sum(bleu_irl) / len(bleu_irl)
+
+	@pytest.mark.parametrize('argument, shape, type, gen_len', self_bleu_test_parameter)
+	def test_close(self, argument, shape, type, gen_len):
+		# 'default' or 'custom'
+		# 'pad' or 'jag'
+		# 'list' or 'array'
+		# 'equal' or 'unequal'
+		# 'random', 'non-empty', 'empty'
+		# 'random', 'non-empty', 'empty'
+		dataloader = FakeDataLoader()
+		gen_key = 'gen' \
+			if argument == 'default' else 'gk'
+		data = dataloader.get_data(gen_key=gen_key, \
+								   to_list=(type == 'list'), \
+								   pad=(shape == 'pad'), \
+								   gen_len=gen_len)
+		_data = copy.deepcopy(data)
+		if argument == 'default':
+			bcm = SelfBleuCorpusMetric(dataloader)
+		else:
+			bcm = SelfBleuCorpusMetric(dataloader, gen_key)
+
+		bcm.forward(data)
+		assert np.isclose(bcm.close()['self-bleu'], self.get_self_bleu(dataloader, data, gen_key))
+		assert same_dict(data, _data)
+
+	def test_self_bleu_bug(self):
+		dataloader = FakeDataLoader()
+		gen = [[1]]
+		data = {'gen': gen}
+		bcm = SelfBleuCorpusMetric(dataloader)
 
 		with pytest.raises(ZeroDivisionError):
 			bcm.forward(data)
