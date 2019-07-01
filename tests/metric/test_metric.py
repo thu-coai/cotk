@@ -7,9 +7,9 @@ import pytest
 
 from cotk.metric import MetricBase, \
 	BleuPrecisionRecallMetric, EmbSimilarityPrecisionRecallMetric, \
-	PerplexityMetric, MultiTurnPerplexityMetric, BleuCorpusMetric, SelfBleuCorpusMetric, MultiTurnBleuCorpusMetric, \
-	SingleTurnDialogRecorder, MultiTurnDialogRecorder, LanguageGenerationRecorder, HashValueRecorder, \
-	MetricChain
+	PerplexityMetric, MultiTurnPerplexityMetric, BleuCorpusMetric, SelfBleuCorpusMetric, FwBwBleuCorpusMetric, \
+	MultiTurnBleuCorpusMetric, SingleTurnDialogRecorder, MultiTurnDialogRecorder, LanguageGenerationRecorder, \
+	HashValueRecorder, MetricChain
 from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunction
 from cotk.dataloader import GenerationBase, MultiTurnDialog
 
@@ -36,6 +36,9 @@ class FakeDataLoader(GenerationBase):
 		self.valid_vocab_len = 8
 		self.word2id = {x: i for i, x in enumerate(self.all_vocab_list)}
 		self.key_name = ["train", "dev", "test"]
+		self.data = {}
+		for key in self.key_name:
+			self.data[key] = {}
 
 	def get_sen(self, max_len, len, gen=False, pad=True, all_vocab=False):
 		sen = []
@@ -674,17 +677,11 @@ class TestBleuCorpusMetric:
 self_bleu_test_parameter = generate_testcase(\
 	(zip(test_argument), "add"),
 	(zip(test_shape, test_type), "multi"),
-	(zip(test_gen_len), "multi"),
+	(zip(["non-empty"]), "multi"),
 )
 
 
 class TestSelfBleuCorpusMetric:
-	def run_f(self, ele):
-		'''Auxiliary function which returns:
-			* **sentence-self-bleu**: sentence-self-bleu value.
-		'''
-		return sentence_bleu(ele[0], ele[1], smoothing_function=SmoothingFunction().method1)
-
 	def get_self_bleu(self, dataloader, input, gen_key):
 		gens = []
 		for gen_sen in input[gen_key]:
@@ -693,7 +690,8 @@ class TestSelfBleuCorpusMetric:
 		refs = copy.deepcopy(gens)
 		bleu_irl = []
 		for i in range(len(gens)):
-			bleu_irl.append(self.run_f((refs[:i]+refs[i+1:], refs[i])))
+			bleu_irl.append(sentence_bleu(
+				refs[:i]+refs[i+1:],refs[i], smoothing_function=SmoothingFunction().method7))
 		return 1.0 * sum(bleu_irl) / len(bleu_irl)
 
 	@pytest.mark.parametrize('argument, shape, type, gen_len', self_bleu_test_parameter)
@@ -731,6 +729,71 @@ class TestSelfBleuCorpusMetric:
 			bcm.forward(data)
 			bcm.close()
 
+fwbw_bleu_test_parameter = generate_testcase(\
+	(zip(test_argument), "add"),
+	(zip(test_shape, test_type), "multi"),
+	(zip(["non-empty"]), "multi"),
+	(zip(["non-empty"]), "multi")
+)
+
+class TestFwBwBleuCorpusMetric:
+	def get_bleu(self, dataloader, input, reference_key, gen_key):
+		refs = []
+		gens = []
+		for gen_sen, resp_sen in zip(input[gen_key], input[reference_key]):
+			gen_sen_processed = dataloader.trim_index(gen_sen)
+			resp_sen_processed = dataloader.trim_index(resp_sen[1:])
+			refs.append(resp_sen_processed)
+			gens.append(gen_sen_processed)
+		bleu_irl_bw, bleu_irl_fw = [], []
+		for i in range(len(gens)):
+			bleu_irl_fw.append(sentence_bleu(refs, gens[i], smoothing_function=SmoothingFunction().method7))
+		for i in range(len(refs)):
+			bleu_irl_bw.append(sentence_bleu(gens, refs[i], smoothing_function=SmoothingFunction().method7))
+
+		fw_bleu = (1.0 * sum(bleu_irl_fw) / len(bleu_irl_fw))
+		bw_bleu = (1.0 * sum(bleu_irl_bw) / len(bleu_irl_bw))
+		return 2.0 * bw_bleu * fw_bleu / (fw_bleu + bw_bleu)
+
+	@pytest.mark.parametrize('argument, shape, type, gen_len, ref_len', fwbw_bleu_test_parameter)
+	def test_close(self, argument, shape, type, gen_len, ref_len):
+		# 'default' or 'custom'
+		# 'pad' or 'jag'
+		# 'list' or 'array'
+		# 'equal' or 'unequal'
+		# 'random', 'non-empty', 'empty'
+		# 'random', 'non-empty', 'empty'
+		dataloader = FakeDataLoader()
+		reference_key, gen_key = ('resp_allvocabs', 'gen') \
+			if argument == 'default' else ('rk', 'gk')
+		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
+								   to_list=(type == 'list'), pad=(shape == 'pad'), \
+								   gen_len=gen_len, ref_len=ref_len)
+		dataloader.data["test"][reference_key] = data[reference_key]
+		_data = copy.deepcopy(data)
+		if argument == 'default':
+			bcm = FwBwBleuCorpusMetric(dataloader, reference_key)
+		else:
+			bcm = FwBwBleuCorpusMetric(dataloader, reference_key, gen_key)
+
+		bcm.forward(data)
+		assert np.isclose(bcm.close()['fw-bw-bleu'], self.get_bleu(dataloader, data, reference_key, gen_key))
+		assert same_dict(data, _data)
+
+	def test_fwbwbleu_bug(self):
+		dataloader = FakeDataLoader()
+		ref = [[2, 1, 3]]
+		gen = [[1]]
+		reference_key = 'resp_allvocabs'
+		data = {reference_key: ref, 'gen': gen}
+		dataloader.data["test"][reference_key] = data[reference_key]
+		bcm = FwBwBleuCorpusMetric(dataloader, reference_key)
+
+		with pytest.raises(ZeroDivisionError):
+			bcm.forward(data)
+			bcm.close()
+
+
 multi_bleu_test_parameter = generate_testcase(\
 	(zip(test_argument), "add"),
 	(zip(test_shape, test_type), "multi"),
@@ -738,6 +801,7 @@ multi_bleu_test_parameter = generate_testcase(\
 	(zip(test_gen_len), "multi"),
 	(zip(test_ref_len), "multi")
 )
+
 
 
 class TestMultiTurnBleuCorpusMetric:

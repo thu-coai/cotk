@@ -438,13 +438,14 @@ class SelfBleuCorpusMetric(MetricBase):
 			``data[gen_key]``. Default: ``gen``.
 		sample (int): Number of samples sampled from the generated sentences. Default: 1000.
 	'''
-	def __init__(self, dataloader, gen_key="gen", sample=1000):
+	def __init__(self, dataloader, gen_key="gen", sample=1000, seed=1229):
 		super().__init__()
 		self.dataloader = dataloader
 		self.gen_key = gen_key
 		self.sample = sample
 		self.refs = []
 		self.hyps = []
+		self.seed = seed
 
 	def forward(self, data):
 		'''Processing a batch of data.
@@ -463,7 +464,7 @@ class SelfBleuCorpusMetric(MetricBase):
 		'''Auxiliary function which returns:
 			* **sentence-self-bleu**: sentence-self-bleu value.
 		'''
-		return sentence_bleu(ele[0], ele[1], smoothing_function=SmoothingFunction().method1)
+		return sentence_bleu(ele[0], ele[1], smoothing_function=SmoothingFunction().method7)
 
 	def close(self):
 		'''Return a dict which contains:
@@ -472,6 +473,7 @@ class SelfBleuCorpusMetric(MetricBase):
 		'''
 		if self.sample > len(self.hyps):
 			self.sample = len(self.hyps)
+		random.seed(self.seed)
 		random.shuffle(self.hyps)
 		ref = self.hyps[:self.sample]
 
@@ -492,7 +494,7 @@ class SelfBleuCorpusMetric(MetricBase):
 				usually caused when there is only one sample and the sample length is 1.")
 
 class FwBwBleuCorpusMetric(MetricBase):
-	'''Metric for calculating BLEU.
+	'''Metric for calculating FwBw-BLEU.
 
 	Arguments:
 		dataloader (:class:cotk.GenerationBase): A language generation dataloader.
@@ -505,18 +507,16 @@ class FwBwBleuCorpusMetric(MetricBase):
 	def __init__(self, dataloader, \
 			reference_test_key, \
 			gen_key="gen", \
-			sample=1000):
+			sample=1000,
+			seed=1229):
 		super().__init__()
 		self.dataloader = dataloader
 		self.reference_test_key = reference_test_key
 		self.gen_key = gen_key
 		self.sample = sample
-
+		self.seed = seed
 		self.refs = []
 		self.hyps = []
-		resp = self.dataloader.data["test"][self.reference_test_key]
-		for resp_sen in resp:
-			self.refs.append(self.dataloader.trim_index(resp_sen[1:]))
 
 	def forward(self, data):
 		'''Processing a batch of data.
@@ -528,53 +528,59 @@ class FwBwBleuCorpusMetric(MetricBase):
 				Size: `[batch_size, gen_sentence_length]`.
 		'''
 		gen = data[self.gen_key]
-
-		for gen_sen in gen:
+		resp = self.dataloader.data["test"][self.reference_test_key]
+		for gen_sen, resp_sen in zip(gen, resp):
 			self.hyps.append(self.dataloader.trim_index(gen_sen))
+			self.refs.append(self.dataloader.trim_index(resp_sen[1:]))
 
 	def run_f(self, ele):
 		'''Auxiliary function which returns:
 			* **sentence-self-bleu**: sentence-self-bleu value.
 		'''
-		return sentence_bleu(ele[0], ele[1], ele[2], smoothing_function=SmoothingFunction().method1)
+		return sentence_bleu(ele[0], ele[1], smoothing_function=SmoothingFunction().method7)
 
 	def close(self):
 		'''Return a dict which contains:
 
 			* **fwbwbleu**: fw/bw bleu value.
 		'''
-		max_len = max([len(self.hyps), len(self.refs)])
-		if self.sample > max_len:
-			self.sample = max_len
+		sample_hyps = self.sample if self.sample < len(self.hyps) else len(self.hyps)
+		sample_refs = self.sample if self.sample < len(self.refs) else len(self.refs)
 
+		random.seed(self.seed)
 		random.shuffle(self.hyps)
 		random.shuffle(self.refs)
 		try:
 			result = {}
-			for ngram in range(2, 5):
-				weight = tuple((1. / ngram for _ in range(ngram)))
-				if self.sample >= 1000:
-					pool = Pool(multiprocessing.cpu_count())
-					bleu_irl_fw = pool.map(self.run_f, \
-							[(self.refs, self.hyps[i], weight) for i in range(self.sample)])
-					bleu_irl_bw = pool.map(self.run_f, \
-							[(self.hyps, self.refs[i], weight) for i in range(self.sample)])
-					pool.close()
-					pool.join()
-				else:
-					bleu_irl_fw, bleu_irl_bw = [], []
-					for i in range(self.sample):
-						bleu_irl_fw.append(self.run_f((self.refs, self.hyps[i], weight)))
-						bleu_irl_bw.append(self.run_f((self.hyps, self.refs[i], weight)))
+			if sample_hyps >= 1000:
+				pool = Pool(multiprocessing.cpu_count())
+				bleu_irl_fw = pool.map(self.run_f, \
+						[(self.refs, self.hyps[i]) for i in range(sample_hyps)])
+				pool.close()
+				pool.join()
+			else:
+				bleu_irl_fw = []
+				for i in range(sample_hyps):
+					bleu_irl_fw.append(self.run_f((self.refs, self.hyps[i])))
 
-				fw_bleu = (1.0 * sum(bleu_irl_fw) / len(bleu_irl_fw))
-				bw_bleu = (1.0 * sum(bleu_irl_bw) / len(bleu_irl_bw))
-				result["fw-bleu-%d"%ngram] = fw_bleu
-				result["bw-bleu-%d"%ngram] = bw_bleu
-				result["fw-bw-bleu-%d"%ngram] = 2.0 * bw_bleu * fw_bleu / (fw_bleu + bw_bleu)
+			if sample_refs >= 1000:
+				pool = Pool(multiprocessing.cpu_count())
+				bleu_irl_bw = pool.map(self.run_f, \
+						[(self.hyps, self.refs[i]) for i in range(sample_refs)])
+				pool.close()
+				pool.join()
+			else:
+				bleu_irl_bw = []
+				for i in range(sample_refs):
+					bleu_irl_bw.append(self.run_f((self.hyps, self.refs[i])))
+			fw_bleu = (1.0 * sum(bleu_irl_fw) / len(bleu_irl_fw))
+			bw_bleu = (1.0 * sum(bleu_irl_bw) / len(bleu_irl_bw))
+			result["fw-bleu"] = fw_bleu
+			result["bw-bleu"] = bw_bleu
+			result["fw-bw-bleu"] = 2.0 * bw_bleu * fw_bleu / (fw_bleu + bw_bleu)
 			return result
 		except ZeroDivisionError as _:
-			raise ZeroDivisionError("Bleu smoothing divided by zero. This is a known bug of corpus_bleu, \
+			raise ZeroDivisionError("Bleu smoothing divided by zero. This is a known bug of sentence_bleu, \
 				usually caused when there is only one sample and the sample length is 1.")
 
 
