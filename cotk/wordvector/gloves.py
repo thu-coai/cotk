@@ -1,6 +1,7 @@
 '''
 A module for GloVe
 '''
+import os.path
 import numpy as np
 
 from .wordvector import WordVector
@@ -12,7 +13,8 @@ class Glove(WordVector):
 	GloVe: Global Vectors for Word Representation.
 
 	Arguments:
-		file_id (str): a str indicates the source of GloVe word vectors.
+		file_id (str): a str indicates the source of GloVe word vectors. If it is local file,
+			it can be a directory contains 'glove.txt' or a text file.
 		file_type (str): a str indicates the type of GloVe word vectors. Default: Glove300d
 	'''
 	def __init__(self, file_id):
@@ -29,7 +31,10 @@ class Glove(WordVector):
 		'''
 		raw_word2vec = {}
 		if self.file_path:
-			with open("%s/glove.txt" % (self.file_path), "r") as glove_file:
+			file_path = self.file_path
+			if os.path.isdir(file_path):
+				file_path = "%s/glove.txt" % (file_path)
+			with open(file_path, 'r') as glove_file:
 				lines = glove_file.readlines()
 			for line in lines:
 				word, vec = line.split(" ", 1)
