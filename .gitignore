@@ -14,6 +14,3 @@ __pycache__
 # Report files
 .cotk_upload_backup
 result.json
-
-# test files of niuyilin
-cotk/file_utils_test.py
