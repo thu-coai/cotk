@@ -56,6 +56,7 @@ def modify_args(args):
 	args.name = 'test_VAE_tensorflow'
 	args.wvclass = 'Glove'
 	args.epochs = 5
+	args.checkpoint_steps = 1
 	args.datapath = path + '/tests/dataloader/dummy_mscoco'
 
 def test_train(mocker):
