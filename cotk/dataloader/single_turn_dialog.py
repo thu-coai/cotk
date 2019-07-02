@@ -6,7 +6,7 @@ from itertools import chain
 
 import numpy as np
 
-from .._utils.unordered_hash import UnorderedSha256
+# from .._utils.unordered_hash import UnorderedSha256
 from .._utils.file_utils import get_resource_file_path
 from .dataloader import GenerationBase
 from ..metric import MetricChain, PerplexityMetric, BleuCorpusMetric, SingleTurnDialogRecorder, \
@@ -24,13 +24,11 @@ class SingleTurnDialog(GenerationBase):
 	ARGUMENTS = GenerationBase.ARGUMENTS
 	ATTRIBUTES = GenerationBase.ATTRIBUTES
 
-	def get_batch(self, key, index, needhash=False):
+	def get_batch(self, key, index):
 		'''Get a batch of specified `index`.
 		Arguments:
 			key (str): must be contained in `key_name`
 			index (list): a list of specified index
-			needhash (bool): whether to return a hashvalue \
-				representing this batch of data. Default: False.
 
 		Returns:
 			(dict): A dict at least contains:
@@ -51,7 +49,6 @@ class SingleTurnDialog(GenerationBase):
 			* resp_allvocabs (:class:`numpy.array`): A 2-d padding array containing id of words in responses.
 			  Provide both valid and invalid vocabs.
 			  Size: `[batch_size, max(sent_length)]`
-			* hashvalue(bytes): (If `needhash` is True.) A bytes representing hash value of the data.
 
 		Examples:
 			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you",
@@ -88,15 +85,6 @@ class SingleTurnDialog(GenerationBase):
 			res_post[i, :len(post)] = post
 			res_resp[i, :len(resp)] = resp
 
-		if needhash:
-			unordered_hash = UnorderedSha256()
-			for j in index:
-				unordered_hash.update_data(repr((\
-					self.data[key]['post'][j], \
-					self.data[key]['resp'][j], \
-					self.valid_vocab_len)).encode())
-			res["hashvalue"] = unordered_hash.digest()
-
 		res["post_allvocabs"] = res_post.copy()
 		res["resp_allvocabs"] = res_resp.copy()
 		res_post[res_post >= self.valid_vocab_len] = self.unk_id
@@ -114,7 +102,7 @@ class SingleTurnDialog(GenerationBase):
 			gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerplexityMetric`
 		'''
 		metric = MetricChain()
-		metric.add_metric(HashValueRecorder(hash_key="teacher_forcing_hashvalue"))
+		# metric.add_metric(HashValueRecorder(hash_key="teacher_forcing_hashvalue"))
 		metric.add_metric(PerplexityMetric(self, gen_log_prob_key=gen_log_prob_key))
 		return metric
 
@@ -131,7 +119,7 @@ class SingleTurnDialog(GenerationBase):
 			               :class:`.metric.SingleDialogRecorder`
 		'''
 		metric = MetricChain()
-		metric.add_metric(HashValueRecorder(hash_key="inference_hashvalue"))
+		# metric.add_metric(HashValueRecorder(hash_key="inference_hashvalue"))
 		metric.add_metric(BleuCorpusMetric(self, gen_key=gen_key))
 		metric.add_metric(SingleTurnDialogRecorder(self, gen_key=gen_key))
 		return metric

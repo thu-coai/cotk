@@ -3,6 +3,7 @@ r"""
 a fair metric for every model.
 """
 import random
+from itertools import chain
 import multiprocessing
 from multiprocessing import Pool
 import numpy as np
@@ -14,7 +15,22 @@ class MetricBase:
 	'''Base class for metrics.
 	'''
 	def __init__(self):
-		pass
+		self.unordered_hash = UnorderedSha256()
+
+	def hash_relevant_data(self, data_list):
+		'''Invoked by ^forward^ or ^close^ to hash relevant data when computing a metric
+
+		Arguments:
+			data_list (list): relevant data organized as list
+		'''
+		for item in data_list:
+			self.unordered_hash.update_data(repr(item).encode())
+
+	def hashvalue(self):
+		'''Invoked by ^close^ to return hashvalue
+		'''
+		return self.unordered_hash.digest()
+
 
 class _PrecisionRecallMetric(MetricBase):
 	'''Base class for precision recall metrics. This is an abstract class.
@@ -80,6 +96,7 @@ class _PrecisionRecallMetric(MetricBase):
 				raise ValueError(\
 					"Number of sentences per instance does not equal specified sent_per_inst")
 
+		self.hash_relevant_data(list(chain(*references)))
 		for reference, gen in zip(references, gens):
 			# pylint: disable=no-member
 			matrix = np.zeros((len(reference), len(gen)), dtype=np.float32)
@@ -94,9 +111,11 @@ class _PrecisionRecallMetric(MetricBase):
 
 			* **precision**: average precision
 			* **recall**: average recall
+			* **hashvalue**: hash value of reference data
 		'''
 		return {'{} precision'.format(self.res_prefix): np.average(self.prec_list), \
-				'{} recall'.format(self.res_prefix): np.average(self.rec_list)}
+				'{} recall'.format(self.res_prefix): np.average(self.rec_list),
+				'{} hashvalue'.format(self.res_prefix): self.hashvalue()}
 
 class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
 	'''Metric for calculating sentence BLEU precision and recall
@@ -267,6 +286,7 @@ class PerplexityMetric(MetricBase):
 		#resp = resp_allvocabs.copy()
 		#resp[resp >= self.dataloader.vocab_size] = self.dataloader.unk_id
 
+		relevant_data = []
 		for i, single_length in enumerate(resp_length):
 			# perform full check to assert the probability is valid
 			if self.full_check:
@@ -307,12 +327,17 @@ class PerplexityMetric(MetricBase):
 				self.word_loss += -np.sum(invalid_log_prob)
 			self.length_sum += np.array(invalid_idx).shape[1]
 
+			relevant_data.append(resp_allvocabs[i][:single_length])
+		self.hash_relevant_data(relevant_data)
+
 	def close(self):
 		'''Return a dict which contains:
 
 			* **perplexity**: perplexity value
+			* **hashvalue**: hash value of reference data
 		'''
-		return {"perplexity": np.exp(self.word_loss / self.length_sum)}
+		return {"perplexity": np.exp(self.word_loss / self.length_sum), \
+		"perplexity hashvalue": self.hashvalue()}
 
 class MultiTurnPerplexityMetric(MetricBase):
 	'''Metric for calculating multi-turn perplexity.
@@ -391,6 +416,7 @@ class MultiTurnPerplexityMetric(MetricBase):
 		'''Return a dict which contains:
 
 			* **perplexity**: perplexity value
+			* **hashvalue**: hash value of reference data
 		'''
 		return self.sub_metric.close()
 
@@ -431,18 +457,24 @@ class BleuCorpusMetric(MetricBase):
 		if len(resp) != len(gen):
 			raise ValueError("Batch num is not matched.")
 
+		relevant_data = []
 		for gen_sen, resp_sen in zip(gen, resp):
 			self.hyps.append(self.dataloader.trim_index(gen_sen))
-			self.refs.append([self.dataloader.trim_index(resp_sen[1:])])
+			reference = self.dataloader.trim_index(resp_sen[1:])
+			relevant_data.append(reference)
+			self.refs.append([reference])
+		self.hash_relevant_data(relevant_data)
 
 	def close(self):
 		'''Return a dict which contains:
 
 			* **bleu**: bleu value.
+			* **hashvalue**: hash value of reference data
 		'''
 		try:
 			return {"bleu": \
-				corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction().method7)}
+				corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction().method7), \
+				"bleu hashvalue": self.hashvalue()}
 		except ZeroDivisionError as _:
 			raise ZeroDivisionError("Bleu smoothing divided by zero. This is a known bug of corpus_bleu, \
 				usually caused when there is only one sample and the sample length is 1.")
@@ -561,6 +593,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 		'''Return a dict which contains:
 
 			* **fwbwbleu**: fw/bw bleu value.
+			* **hashvalue**: hash value of reference data
 		'''
 		sample_hyps = self.sample if self.sample < len(self.hyps) else len(self.hyps)
 		sample_refs = self.sample if self.sample < len(self.refs) else len(self.refs)
@@ -596,11 +629,13 @@ class FwBwBleuCorpusMetric(MetricBase):
 			result["fw-bleu"] = fw_bleu
 			result["bw-bleu"] = bw_bleu
 			result["fw-bw-bleu"] = 2.0 * bw_bleu * fw_bleu / (fw_bleu + bw_bleu)
-			return result
 		except ZeroDivisionError as _:
 			raise ZeroDivisionError("Bleu smoothing divided by zero. This is a known bug of sentence_bleu, \
 				usually caused when there is only one sample and the sample length is 1.")
 
+		self.hash_relevant_data(self.refs)
+		result["fw-bw-bleu hashvalue"] = self.hashvalue()
+		return result
 
 class MultiTurnBleuCorpusMetric(MetricBase):
 	'''Metric for calculating multi-turn BLEU.
@@ -661,10 +696,13 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 		'''Return a dict which contains:
 
 			* **bleu**: bleu value.
+			* **hashvalue**: hash value of reference data
 		'''
 		try:
+			self.hash_relevant_data(self.refs)
 			return {"bleu": \
-				corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction().method7)}
+				corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction().method7), \
+				"bleu hashvalue": self.hashvalue()}
 		except ZeroDivisionError as _:
 			raise ZeroDivisionError("Bleu smoothing divided by zero. This is a known bug of corpus_bleu, \
 				usually caused when there is only one sample and the sample length is 1.")

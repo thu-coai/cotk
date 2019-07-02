@@ -318,6 +318,37 @@ class TestBleuPrecisionRecallMetric():
 			bprm = BleuPrecisionRecallMetric(dataloader, ngram=1, sent_per_inst=3)
 			super(BleuPrecisionRecallMetric, bprm).score(gen, reference)
 
+	def test_hashvalue(self):
+		dataloader = FakeMultiDataloader()
+		reference_key, gen_key = ('resp_allvocabs', 'gen')
+		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
+								   to_list=True, pad=False, \
+								   ref_len='non-empty', gen_len='non-empty', test_prec_rec=True)
+		bprm = BleuPrecisionRecallMetric(dataloader, 4, 3)
+		bprm_shuffle = BleuPrecisionRecallMetric(dataloader, 4, 3)
+		bprm_unequal = BleuPrecisionRecallMetric(dataloader, 4, 3)
+
+		data_shuffle = copy.deepcopy(data)
+		for idx in range(len(data_shuffle[reference_key])):
+			np.random.shuffle(data_shuffle[reference_key][idx])
+		np.random.shuffle(data_shuffle[reference_key])
+
+		data_unequal = copy.deepcopy(data)
+		data_unequal[reference_key] = data_unequal[reference_key][1:]
+		data_unequal[gen_key] = data[gen_key][1:]
+
+		bprm.forward(data)
+		res = bprm.close()
+
+		bprm_shuffle.forward(data_shuffle)
+		res_shuffle = bprm_shuffle.close()
+
+		bprm_unequal.forward(data_unequal)
+		res_unequal = bprm_unequal.close()
+
+		assert res['BLEU-4 hashvalue'] == res_shuffle['BLEU-4 hashvalue']
+		assert res['BLEU-4 hashvalue'] != res_unequal['BLEU-4 hashvalue']
+
 	@pytest.mark.parametrize('argument, shape, type, batch_len, ref_len, gen_len, ngram', \
 		bleu_precision_recall_test_parameter)
 	def test_close(self, argument, shape, type, batch_len, ref_len, gen_len, ngram):
@@ -350,7 +381,7 @@ class TestBleuPrecisionRecallMetric():
 			bprm.forward(data)
 			ans = bprm.close()
 			prefix = 'BLEU-' + str(ngram)
-			assert sorted(ans.keys()) == [prefix + ' precision', prefix + ' recall']
+			assert sorted(ans.keys()) == [prefix + ' hashvalue', prefix + ' precision', prefix + ' recall']
 
 		assert same_dict(data, _data)
 
@@ -371,6 +402,46 @@ emb_similarity_precision_recall_test_parameter = generate_testcase( \
 
 
 class TestEmbSimilarityPrecisionRecallMetric():
+	def test_hashvalue(self):
+		dataloader = FakeMultiDataloader()
+		emb = []
+		for i in range(dataloader.vocab_size):
+			vec = []
+			for j in range(5):
+				vec.append(random.random())
+			emb.append(vec)
+		emb = np.array(emb)
+
+		reference_key, gen_key = ('resp_allvocabs', 'gen')
+		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
+								   to_list=True, pad=False, \
+								   ref_len='non-empty', gen_len='non-empty', \
+								   ref_vocab='valid_vocab', gen_vocab='valid_vocab', test_prec_rec=True)
+		espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, 'avg', 3)
+		espr_shuffle = EmbSimilarityPrecisionRecallMetric(dataloader, emb, 'avg', 3)
+		espr_unequal = EmbSimilarityPrecisionRecallMetric(dataloader, emb, 'avg', 3)
+
+		data_shuffle = copy.deepcopy(data)
+		for idx in range(len(data_shuffle[reference_key])):
+			np.random.shuffle(data_shuffle[reference_key][idx])
+		np.random.shuffle(data_shuffle[reference_key])
+
+		data_unequal = copy.deepcopy(data)
+		data_unequal[reference_key] = data_unequal[reference_key][1:]
+		data_unequal[gen_key] = data[gen_key][1:]
+
+		espr.forward(data)
+		res = espr.close()
+
+		espr_shuffle.forward(data_shuffle)
+		res_shuffle = espr_shuffle.close()
+
+		espr_unequal.forward(data_unequal)
+		res_unequal = espr_unequal.close()
+
+		assert res['avg-bow hashvalue'] == res_shuffle['avg-bow hashvalue']
+		assert res['avg-bow hashvalue'] != res_unequal['avg-bow hashvalue']
+
 	@pytest.mark.parametrize('argument, shape, type, batch_len, ref_len, gen_len, ' \
 							 'ref_vocab, gen_vocab, emb_mode, emb_type, emb_len', \
 							 emb_similarity_precision_recall_test_parameter)
@@ -432,7 +503,7 @@ class TestEmbSimilarityPrecisionRecallMetric():
 			espr.forward(data)
 			ans = espr.close()
 			prefix = emb_mode + '-bow'
-			assert sorted(ans.keys()) == [prefix + ' precision', prefix + ' recall']
+			assert sorted(ans.keys()) == [prefix + ' hashvalue', prefix + ' precision', prefix + ' recall']
 
 		assert same_dict(data, _data)
 
@@ -475,6 +546,43 @@ class TestPerplexityMetric():
 		# print('test_metric.word_loss: ', word_loss)
 		# print('test_metric.length_sum: ', 	length_sum)
 		return np.exp(word_loss / length_sum)
+
+	def test_hashvalue(self):
+		dataloader = FakeDataLoader()
+		reference_key, reference_len_key, gen_prob_key = ('resp_allvocabs', 'resp_length', 'gen_log_prob')
+		data = dataloader.get_data(reference_key=reference_key, \
+								   reference_len_key=reference_len_key, gen_prob_key=gen_prob_key, \
+								   to_list=True, pad=True, \
+								   gen_prob_check='no_check', ref_len='non-empty', \
+								   ref_vocab='non-empty', gen_prob_vocab='all_vocab', \
+								   resp_len='>=2')
+		pm = PerplexityMetric(dataloader, invalid_vocab=True, full_check=False)
+		pm_shuffle = PerplexityMetric(dataloader, invalid_vocab=True, full_check=False)
+		pm_unequal = PerplexityMetric(dataloader, invalid_vocab=True, full_check=False)
+
+		data_shuffle = copy.deepcopy(data)
+		indices = list(range(len(data_shuffle[reference_key])))
+		np.random.shuffle(indices)
+		data_shuffle[reference_key] = np.array(data_shuffle[reference_key])[indices]
+		data_shuffle[reference_len_key] = list(np.array(data_shuffle[reference_len_key])[indices])
+		data_shuffle[gen_prob_key] = np.array(data_shuffle[gen_prob_key])[indices]
+
+		data_unequal = copy.deepcopy(data)
+		data_unequal[reference_key] = data_unequal[reference_key][1:]
+		data_unequal[reference_len_key] = data_unequal[reference_len_key][1:]
+		data_unequal[gen_prob_key] = data_unequal[gen_prob_key][1:]
+
+		pm.forward(data)
+		res = pm.close()
+
+		pm_shuffle.forward(data_shuffle)
+		res_shuffle = pm_shuffle.close()
+
+		pm_unequal.forward(data_unequal)
+		res_unequal = pm_unequal.close()
+
+		assert res['perplexity hashvalue'] == res_shuffle['perplexity hashvalue']
+		assert res['perplexity hashvalue'] != res_unequal['perplexity hashvalue']
 
 	@pytest.mark.parametrize( \
 		'argument, shape, type, batch_len, check, ref_len, ref_vocab, gen_prob_vocab, resp_len, include_invalid', \
@@ -567,6 +675,42 @@ class TestMultiTurnPerplexityMetric:
 					length_sum += 1
 		return np.exp(word_loss / length_sum)
 
+	def test_hashvalue(self):
+		dataloader = FakeMultiDataloader()
+		reference_key, reference_len_key, gen_prob_key = ('sent_allvocabs', 'sent_length', 'gen_log_prob')
+		data = dataloader.get_data(reference_key=reference_key, \
+								   reference_len_key=reference_len_key, gen_prob_key=gen_prob_key, \
+								   to_list=True, pad=True, \
+								   gen_prob_check='no_check', ref_len='non-empty', \
+								   ref_vocab='non-empty', gen_prob_vocab='valid_vocab', \
+								   resp_len=">=2")
+
+		mtpm = MultiTurnPerplexityMetric(dataloader, invalid_vocab=False, full_check=False)
+		mtpm_shuffle = MultiTurnPerplexityMetric(dataloader, invalid_vocab=False, full_check=False)
+		mtpm_unequal = MultiTurnPerplexityMetric(dataloader, invalid_vocab=False, full_check=False)
+
+		data_shuffle = copy.deepcopy(data)
+		indices = list(range(len(data_shuffle[reference_key])))
+		np.random.shuffle(indices)
+		data_shuffle[reference_key] = np.array(data_shuffle[reference_key])[indices]
+		data_shuffle[reference_len_key] = list(np.array(data_shuffle[reference_len_key])[indices])
+		data_shuffle[gen_prob_key] = np.array(data_shuffle[gen_prob_key])[indices]
+
+		data_unequal = copy.deepcopy(data)
+		data_unequal[reference_len_key][0][0] -= 1
+
+		mtpm.forward(data)
+		res = mtpm.close()
+
+		mtpm_shuffle.forward(data_shuffle)
+		res_shuffle = mtpm_shuffle.close()
+
+		mtpm_unequal.forward(data_unequal)
+		res_unequal = mtpm_unequal.close()
+
+		assert res['perplexity hashvalue'] == res_shuffle['perplexity hashvalue']
+		assert res['perplexity hashvalue'] != res_unequal['perplexity hashvalue']
+
 	@pytest.mark.parametrize( \
 		'argument, shape, type, batch_len, check, ref_len, ref_vocab, gen_prob_vocab, resp_len, include_invalid', \
 		multiperplexity_test_parameter)
@@ -639,6 +783,35 @@ class TestBleuCorpusMetric:
 			refs.append([resp_sen_processed])
 			gens.append(gen_sen_processed)
 		return corpus_bleu(refs, gens, smoothing_function=SmoothingFunction().method7)
+
+	def test_hashvalue(self):
+		dataloader = FakeDataLoader()
+		reference_key, gen_key = ('resp_allvocabs', 'gen')
+		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
+								   to_list=True, pad=True, \
+								   gen_len='non-empty', ref_len='non-empty')
+		bcm = BleuCorpusMetric(dataloader)
+		bcm_shuffle = BleuCorpusMetric(dataloader)
+		bcm_unequal = BleuCorpusMetric(dataloader)
+
+		data_shuffle = copy.deepcopy(data)
+		np.random.shuffle(data[reference_key])
+
+		data_unequal = copy.deepcopy(data)
+		data_unequal[reference_key] = data_unequal[reference_key][1:]
+		data_unequal[gen_key] = data_unequal[gen_key][1:]
+
+		bcm.forward(data)
+		res = bcm.close()
+
+		bcm_shuffle.forward(data_shuffle)
+		res_shuffle = bcm_shuffle.close()
+
+		bcm_unequal.forward(data_unequal)
+		res_unequal = bcm_unequal.close()
+
+		assert res['bleu hashvalue'] == res_shuffle['bleu hashvalue']
+		assert res['bleu hashvalue'] != res_unequal['bleu hashvalue']
 
 	@pytest.mark.parametrize('argument, shape, type, batch_len, gen_len, ref_len', bleu_test_parameter)
 	def test_close(self, argument, shape, type, batch_len, gen_len, ref_len):
@@ -762,6 +935,37 @@ class TestFwBwBleuCorpusMetric:
 		bw_bleu = (1.0 * sum(bleu_irl_bw) / len(bleu_irl_bw))
 		return 2.0 * bw_bleu * fw_bleu / (fw_bleu + bw_bleu)
 
+	def test_hashvalue(self):
+		dataloader = FakeDataLoader()
+		reference_key, gen_key = ('resp_allvocabs', 'gen')
+		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
+								   to_list=True, pad=True, \
+								   gen_len='non-empty', ref_len='non-empty')
+		dataloader.data["test"][reference_key] = data[reference_key]
+
+		bcm = FwBwBleuCorpusMetric(dataloader, reference_key)
+		bcm_shuffle = FwBwBleuCorpusMetric(dataloader, reference_key)
+		bcm_unequal = FwBwBleuCorpusMetric(dataloader, reference_key)
+
+		data_shuffle = copy.deepcopy(data)
+		np.random.shuffle(data[reference_key])
+
+		data_unequal = copy.deepcopy(data)
+		data_unequal[reference_key] = data_unequal[reference_key][1:]
+		data_unequal[gen_key] = data_unequal[gen_key][1:]
+
+		bcm.forward(data)
+		res = bcm.close()
+
+		bcm_shuffle.forward(data_shuffle)
+		res_shuffle = bcm_shuffle.close()
+
+		bcm_unequal.forward(data_unequal)
+		res_unequal = bcm_unequal.close()
+
+		assert res['fw-bw-bleu hashvalue'] == res_shuffle['fw-bw-bleu hashvalue']
+		assert res['fw-bw-bleu hashvalue'] != res_unequal['fw-bw-bleu hashvalue']
+
 	@pytest.mark.parametrize('argument, shape, type, gen_len, ref_len', fwbw_bleu_test_parameter)
 	def test_close(self, argument, shape, type, gen_len, ref_len):
 		# 'default' or 'custom'
@@ -822,6 +1026,39 @@ class TestMultiTurnBleuCorpusMetric:
 				gens.append(gen_sen_processed)
 				refs.append([resp_sen_processed[1:]])
 		return corpus_bleu(refs, gens, smoothing_function=SmoothingFunction().method7)
+
+	def test_hashvalue(self):
+		dataloader = FakeMultiDataloader()
+		reference_key, turn_len_key, gen_key = ('reference_allvocabs', 'turn_length', 'gen')
+		data = dataloader.get_data(reference_key=reference_key, turn_len_key=turn_len_key, gen_key=gen_key, \
+								   to_list=True, pad=True, ref_len='non-empty', \
+								   ref_vocab='non-empty')
+
+		mtbcm = MultiTurnBleuCorpusMetric(dataloader)
+		mtbcm_shuffle = MultiTurnBleuCorpusMetric(dataloader)
+		mtbcm_unequal = MultiTurnBleuCorpusMetric(dataloader)
+
+		data_shuffle = copy.deepcopy(data)
+		indices = list(range(len(data_shuffle[reference_key])))
+		np.random.shuffle(indices)
+		data_shuffle[reference_key] = np.array(data_shuffle[reference_key])[indices]
+		data_shuffle[turn_len_key] = list(np.array(data_shuffle[turn_len_key])[indices])
+		data_shuffle[gen_key] = np.array(data_shuffle[gen_key])[indices]
+
+		data_unequal = copy.deepcopy(data)
+		data_unequal[turn_len_key][0] -= 1
+
+		mtbcm.forward(data)
+		res = mtbcm.close()
+
+		mtbcm_shuffle.forward(data_shuffle)
+		res_shuffle = mtbcm_shuffle.close()
+
+		mtbcm_unequal.forward(data_unequal)
+		res_unequal = mtbcm_unequal.close()
+
+		assert res['bleu hashvalue'] == res_shuffle['bleu hashvalue']
+		assert res['bleu hashvalue'] != res_unequal['bleu hashvalue']
 
 	@pytest.mark.parametrize('argument, shape, type, batch_len, gen_len, ref_len', multi_bleu_test_parameter)
 	def test_close(self, argument, shape, type, batch_len, gen_len, ref_len):

@@ -182,29 +182,6 @@ class TestSingleTurnDialog():
 	def base_test_multi_runs(self, dl_list):
 		assert all(x.vocab_list == dl_list[0].vocab_list for x in dl_list)
 
-	def base_test_hash(self, dl):
-		recorder1 = HashValueRecorder()
-		recorder2 = HashValueRecorder()
-		
-		for key in dl.key_name:
-			dl.restart(key, 7)
-			recorder1 = HashValueRecorder()
-			while True:
-				batch = dl.get_next_batch(key, needhash=True)
-				if not batch:
-					break
-				recorder1.forward(batch)
-
-			dl.restart(key, 7)
-			recorder2 = HashValueRecorder()
-			while True:
-				batch = dl.get_next_batch(key, needhash=True)
-				if not batch:
-					break
-				recorder2.forward(batch)
-
-			assert recorder1.close()['hashvalue'] == recorder2.close()['hashvalue'] 
-
 @pytest.fixture
 def load_opensubtitles():
 	def _load_opensubtitles(invalid_vocab_times=0):
@@ -242,6 +219,3 @@ class TestOpenSubtitles(TestSingleTurnDialog):
 	def test_init_multi_runs(self, load_opensubtitles):
 		super().base_test_multi_runs([load_opensubtitles() for i in range(3)])
 
-	@pytest.mark.dependency(depends=["TestOpenSubtitles::test_init"])
-	def test_hash(self, load_opensubtitles):
-		super().base_test_hash(load_opensubtitles())

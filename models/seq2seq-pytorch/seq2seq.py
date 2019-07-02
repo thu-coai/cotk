@@ -59,12 +59,12 @@ class Seq2seq(BaseModel):
 		data.resp = cuda(torch.LongTensor(data.resp.transpose(1, 0))) # length * batch_size
 		return incoming
 
-	def get_next_batch(self, dm, key, restart=True, needhash=False):
-		data = dm.get_next_batch(key, needhash=needhash)
+	def get_next_batch(self, dm, key, restart=True):
+		data = dm.get_next_batch(key)
 		if data is None:
 			if restart:
 				dm.restart(key)
-				return self.get_next_batch(dm, key, False, needhash=needhash)
+				return self.get_next_batch(dm, key, False)
 			else:
 				return None
 		return self._preprocess_batch(data)
@@ -157,7 +157,7 @@ class Seq2seq(BaseModel):
 		metric1 = dm.get_teacher_forcing_metric()
 
 		while True:
-			incoming = self.get_next_batch(dm, key, restart=False, needhash=True)
+			incoming = self.get_next_batch(dm, key, restart=False)
 			if incoming is None:
 				break
 			incoming.args = Storage()

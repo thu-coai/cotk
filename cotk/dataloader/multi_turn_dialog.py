@@ -8,7 +8,7 @@ import json
 
 import numpy as np
 
-from .._utils.unordered_hash import UnorderedSha256
+# from .._utils.unordered_hash import UnorderedSha256
 from .._utils.file_utils import get_resource_file_path
 from .dataloader import GenerationBase
 from ..metric import MetricChain, MultiTurnPerplexityMetric, MultiTurnBleuCorpusMetric, \
@@ -35,7 +35,7 @@ class MultiTurnDialog(GenerationBase):
 		ext_vocab = ext_vocab or ["<pad>", "<unk>", "<go>", "<eos>"]
 		super().__init__(ext_vocab, key_name)
 
-	def get_batch(self, key, index, needhash=False):
+	def get_batch(self, key, index):
 		'''Get a batch of specified `index`.
 
 		Arguments:
@@ -79,13 +79,6 @@ class MultiTurnDialog(GenerationBase):
 		for i, index_i in enumerate(index):
 			for j, sent in enumerate(self.data[key]['session'][index_i]):
 				res_sent[i, j, :len(sent)] = sent
-
-		if needhash:
-			unordered_hash = UnorderedSha256()
-			for j in index:
-				unordered_hash.update_data(repr((self.data[key]['session'][j], self.valid_vocab_len)).encode())
-			res["hashvalue"] = unordered_hash.digest()
-			# hashvalue must be unique for representing the whole batch
 
 		res["sent_allvocabs"] = res_sent.copy()
 		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
@@ -181,7 +174,7 @@ class MultiTurnDialog(GenerationBase):
 			gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerplexityMetric`
 		'''
 		metric = MetricChain()
-		metric.add_metric(HashValueRecorder(hash_key="teacher_forcing_hashvalue"))
+		# metric.add_metric(HashValueRecorder(hash_key="teacher_forcing_hashvalue"))
 		metric.add_metric(MultiTurnPerplexityMetric(self, gen_log_prob_key=gen_log_prob_key))
 		return metric
 
@@ -198,7 +191,7 @@ class MultiTurnDialog(GenerationBase):
 					   :class:`.metric.MultiTurnDialogRecorder`
 		'''
 		metric = MetricChain()
-		metric.add_metric(HashValueRecorder(hash_key="inference_hashvalue"))
+		# metric.add_metric(HashValueRecorder(hash_key="inference_hashvalue"))
 		metric.add_metric(MultiTurnBleuCorpusMetric(self, gen_key=gen_key))
 		metric.add_metric(MultiTurnDialogRecorder(self, gen_key=gen_key))
 		return metric
@@ -456,14 +449,12 @@ class SwitchboardCorpus(MultiTurnDialog):
 				   cut_word_num / vocab_num, max(turn_lens), cut_sent_num / np.sum(turn_lens)))
 		return vocab_list, len(valid_vocab_set), data, data_size
 
-	def get_batch(self, key, index, needhash=False):
+	def get_batch(self, key, index):
 		'''Get a batch of specified `index`.
 
 		Arguments:
 			key (str): must be contained in `key_name`
 			index (list): a list of specified index
-			needhash (bool): whether to return a hashvalue
-			  representing this batch of data. Default: False.
 
 		Returns:
 			(dict): A dict contains what is in the return of MultiTurnDialog.get_batch.
@@ -488,7 +479,6 @@ class SwitchboardCorpus(MultiTurnDialog):
 		for sub_key in self.data[key]:
 			if sub_key not in res:
 				res[sub_key] = gather(sub_key)
-		#TODO: add hashvalue for SwitchBoard
 		return res
 
 	def get_precision_recall_metric(self, sent_per_inst=20, embed=None):
