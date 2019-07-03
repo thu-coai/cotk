@@ -6,11 +6,9 @@ from itertools import chain
 
 import numpy as np
 
-# from .._utils.unordered_hash import UnorderedSha256
 from .._utils.file_utils import get_resource_file_path
 from .dataloader import GenerationBase
-from ..metric import MetricChain, PerplexityMetric, BleuCorpusMetric, SingleTurnDialogRecorder, \
-			HashValueRecorder
+from ..metric import MetricChain, PerplexityMetric, BleuCorpusMetric, SingleTurnDialogRecorder
 
 # pylint: disable=W0223
 class SingleTurnDialog(GenerationBase):
@@ -26,6 +24,7 @@ class SingleTurnDialog(GenerationBase):
 
 	def get_batch(self, key, index):
 		'''Get a batch of specified `index`.
+
 		Arguments:
 			key (str): must be contained in `key_name`
 			index (list): a list of specified index
@@ -33,43 +32,49 @@ class SingleTurnDialog(GenerationBase):
 		Returns:
 			(dict): A dict at least contains:
 
-			* post_length (list): A 1-d list, the length of post in each batch.
-			  Size: `[batch_size]`
-			* post (:class:`numpy.array`): A 2-d padding array containing id of words in posts.
-			  Only provide valid words. `unk_id` will be used if a word is not valid.
-			  Size: `[batch_size, max(sent_length)]`
-			* post_allvocabs (:class:`numpy.array`): A 2-d padding array containing id of words in posts.
-			  Provide both valid and invalid vocabs.
-			  Size: `[batch_size, max(sent_length)]`
-			* resp_length (list): A 1-d list, the length of response in each batch.
-			  Size: `[batch_size]`
-			* resp (:class:`numpy.array`): A 2-d padding array containing id of words in responses.
-			  Only provide valid vocabs. `unk_id` will be used if a word is not valid.
-			  Size: `[batch_size, max(sent_length)]`
-			* resp_allvocabs (:class:`numpy.array`): A 2-d padding array containing id of words in responses.
-			  Provide both valid and invalid vocabs.
-			  Size: `[batch_size, max(sent_length)]`
+				* post_length (:class:`numpy.array`): A 1-d array, the length of post in each batch.
+			  	  Size: `[batch_size]`
+				* post (:class:`numpy.array`): A 2-d padding array containing id of words in posts.
+			  	  Only provide valid words. `unk_id` will be used if a word is not valid.
+			  	  Size: `[batch_size, max(sent_length)]`
+				* post_allvocabs (:class:`numpy.array`): A 2-d padding array containing id of words in posts.
+			  	  Provide both valid and invalid vocabs.
+			  	  Size: `[batch_size, max(sent_length)]`
+				* resp_length (:class:`numpy.array`): A 1-d array, the length of response in each batch.
+			  	  Size: `[batch_size]`
+				* resp (:class:`numpy.array`): A 2-d padding array containing id of words in responses.
+			  	  Only provide valid vocabs. `unk_id` will be used if a word is not valid.
+			  	  Size: `[batch_size, max(sent_length)]`
+				* resp_allvocabs (:class:`numpy.array`): A 2-d padding array containing id of words in responses.
+			  	  Provide both valid and invalid vocabs.
+			  	  Size: `[batch_size, max(sent_length)]`
 
 		Examples:
-			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you",
+			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you",
 			>>> #	"hello", "i", "am", "fine"]
+			>>> # vocab_size = 9
+			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you", "hello", "i"]
 			>>> dataloader.get_batch('train', [0, 1])
 			{
-				"post": [
-					[2, 4, 5, 6, 3],   # first post: <go> how are you <eos>
+				"post_allvocabs": numpy.array([
+					[2, 5, 6, 10, 3],   # first post: <go> are you fine <eos>
 					[2, 7, 3, 0, 0],   # second post: <go> hello <eos> <pad> <pad>
-				],
-				"resp": [
+				]),
+				"post": numpy.array([
+					[2, 5, 6, 1, 3],   # first post: <go> are you <unk> <eos>
+					[2, 7, 3, 0, 0],   # second post: <go> hello <eos> <pad> <pad>
+				]),
+				"resp_allvocabs": numpy.array([
 					[2, 8, 9, 10, 3],  # first response: <go> i am fine <eos>
 					[2, 7, 3, 0, 0],   # second response: <go> hello <eos> <pad> <pad>
-				],
-				"post_length": [5, 3], # length of posts
-				"resp_length": [5, 3], # length of responses
+				]),
+				"resp": numpy.array([
+					[2, 8, 1, 1, 3],  # first response: <go> i <unk> <unk> <eos>
+					[2, 7, 3, 0, 0],   # second response: <go> hello <eos> <pad> <pad>
+				]),
+				"post_length": numpy.array([5, 3]), # length of posts
+				"resp_length": numpy.array([5, 3]), # length of responses
 			}
-
-		Todo:
-			* add invalid_vocab examples
-			* mark which is np.array
 		'''
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
@@ -102,7 +107,6 @@ class SingleTurnDialog(GenerationBase):
 			gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerplexityMetric`
 		'''
 		metric = MetricChain()
-		# metric.add_metric(HashValueRecorder(hash_key="teacher_forcing_hashvalue"))
 		metric.add_metric(PerplexityMetric(self, gen_log_prob_key=gen_log_prob_key))
 		return metric
 
@@ -119,7 +123,6 @@ class SingleTurnDialog(GenerationBase):
 			               :class:`.metric.SingleDialogRecorder`
 		'''
 		metric = MetricChain()
-		# metric.add_metric(HashValueRecorder(hash_key="inference_hashvalue"))
 		metric.add_metric(BleuCorpusMetric(self, gen_key=gen_key))
 		metric.add_metric(SingleTurnDialogRecorder(self, gen_key=gen_key))
 		return metric
@@ -145,7 +148,7 @@ class OpenSubtitles(SingleTurnDialog):
 		[1] http://opus.nlpl.eu/OpenSubtitles.php
 
 		[2] P. Lison and J. Tiedemann, OpenSubtitles2016: Extracting Large Parallel Corpora from
-		Movie and TV Subtitles.(LREC 2016)
+		Movie and TV Subtitles. LREC 2016.
 	'''
 	def __init__(self, file_id, min_vocab_times=10, \
 			max_sen_length=50, invalid_vocab_times=0):

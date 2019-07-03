@@ -32,7 +32,7 @@ class LanguageGeneration(GenerationBase):
 		Returns:
 			(dict): A dict at least contains:
 
-				* sent_length(list): A 1-d list, the length of sentence in each batch.
+				* sent_length(:class:`numpy.array`): A 1-d array, the length of sentence in each batch.
 				  Size: `[batch_size]`
 				* sent(:class:`numpy.array`): A 2-d padding array containing id of words.
 				  Only provide valid words. `unk_id` will be used if a word is not valid.
@@ -42,20 +42,24 @@ class LanguageGeneration(GenerationBase):
 				  Size: `[batch_size, max(sent_length)]`
 
 		Examples:
-			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you",
+			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you",
 			>>> #	"hello", "i", "am", "fine"]
-			>>> dataloader.get_batch('train', [0, 1])
+			>>> # vocab_size = 9
+			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you", "hello", "i"]
+			>>> dataloader.get_batch('train', [0, 1, 2])
 			{
-				"sent": [
-						[2, 4, 5, 6, 3],   # first sentence: <go> how are you <eos>
-						[2, 7, 3, 0, 0],   # second sentence:  <go> hello <eos> <pad> <pad>
-					],
-				"sent_length": [5, 3], # length of sentences
+				"sent": numpy.array([
+						[2, 4, 5, 6, 3, 0],   # first sentence: <go> how are you <eos> <pad>
+						[2, 7, 3, 0, 0, 0],   # second sentence:  <go> hello <eos> <pad> <pad> <pad>
+						[2, 7, 8, 1, 1, 3]    # third sentence: <go> hello i <unk> <unk> <eos>
+					]),
+				"sent_length": numpy.array([5, 3, 6]), # length of sentences
+				"sent_allvocabs": numpy.array([
+						[2, 4, 5, 6, 3, 0],   # first sentence: <go> how are you <eos> <pad>
+						[2, 7, 3, 0, 0, 0],   # second sentence:  <go> hello <eos> <pad> <pad> <pad>
+						[2, 7, 8, 9, 10, 3]    # third sentence: <go> hello i am fine <eos>
+					]),
 			}
-
-		Todo:
-			* add invalid_vocab examples
-			* mark which array is np.array
 		'''
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
@@ -84,7 +88,6 @@ class LanguageGeneration(GenerationBase):
 				gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerplexityMetric`
 		'''
 		metric = MetricChain()
-		# metric.add_metric(HashValueRecorder(hash_key="teacher_forcing_hashvalue"))
 		metric.add_metric(PerplexityMetric(self, \
 					reference_allvocabs_key='sent_allvocabs', \
 					reference_len_key='sent_length', \
@@ -109,7 +112,6 @@ class LanguageGeneration(GenerationBase):
 					gen_key=gen_key, \
 					sample=sample, \
 					seed=seed))
-		# metric.add_metric(HashValueRecorder(hash_key="inference_hashvalue"))
 		metric.add_metric(LanguageGenerationRecorder(self, gen_key=gen_key))
 		return metric
 

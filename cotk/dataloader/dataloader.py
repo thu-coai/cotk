@@ -205,14 +205,16 @@ class GenerationBase(Dataloader):
 					Default: `False`
 
 		Examples:
-			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
-			>>> #	"been", "to", "Sichuan"]
+			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
+			>>> #	"been", "to", "China"]
+			>>> # vocab_size = 7
+			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have", "been"]
 			>>> dataloader.sen_to_index(
-			...	["<go>", "I", "have", "been", "to", "Sichuan", "<eos>"])
+			...	["<go>", "I", "have", "been", "to", "China", "<eos>"], invalid_vocab = False)
+			>>> [2, 4, 5, 6, 1, 1, 3]
+			>>> dataloader.sen_to_index(
+			...	["<go>", "I", "have", "been", "to", "China", "<eos>"], invalid_vocab = True)
 			>>> [2, 4, 5, 6, 7 ,8 ,3]
-
-		TODO:
-			* add invalid vocab example
 		'''
 		if invalid_vocab:
 			return list(map(lambda word: self.word2id.get(word, self.unk_id), sen))
@@ -232,11 +234,11 @@ class GenerationBase(Dataloader):
 		Examples:
 
 			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
-			>>> #	"been", "to", "Sichuan"]
+			>>> #	"been", "to", "China"]
 			>>> dataloader.trim_index(
 			...	[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0])
-			... # <go> I have been to Sichuan <pad> <pad> <eos> I <eos> <pad>
-			>>> [2, 4, 5, 6, 7, 8] # <go> I have been to Sichuan
+			... # <go> I have been to China <pad> <pad> <eos> I <eos> <pad>
+			>>> [2, 4, 5, 6, 7, 8] # <go> I have been to China
 		'''
 
 		index = trim_before_target(list(index), self.eos_id)
@@ -255,13 +257,13 @@ class GenerationBase(Dataloader):
 
 		Examples:
 			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
-			>>> #	"been", "to", "Sichuan"]
+			>>> #	"been", "to", "China"]
 			>>> dataloader.index_to_sen(
 			...		[2, 4, 5, 6, 7, 8, 3, 0, 0], trim = True)
-			>>> ["<go>", "I", "have", "been", "to", "Sichuan"]
+			>>> ["<go>", "I", "have", "been", "to", "China"]
 			>>> dataloader.index_to_sen(
 			...		[2, 4, 5, 6, 7, 8, 3, 0, 0], trim = False)
-			>>> ["<go>", "I", "have", "been", "to", "Sichuan", "<eos>", "<pad>", "<pad>"]
+			>>> ["<go>", "I", "have", "been", "to", "China", "<eos>", "<pad>", "<pad>"]
 
 		'''
 		if trim:

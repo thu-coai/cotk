@@ -6,6 +6,7 @@ Word Vector
 
     .. automethod:: get_all_subclasses
     .. automethod:: load_class
+    .. automethod:: load
 
 .. autoclass:: Glove
     :members:
