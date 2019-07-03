@@ -355,7 +355,7 @@ class TestBleuPrecisionRecallMetric():
 		dataloader = FakeMultiDataloader()
 
 		if ngram not in range(1, 5):
-			with pytest.raises(ValueError, match="ngram should belong to \[1, 4\]"):
+			with pytest.raises(ValueError, match=r"ngram should belong to \[1, 4\]"):
 				bprm = BleuPrecisionRecallMetric(dataloader, ngram, 3)
 			return
 
@@ -624,6 +624,7 @@ class TestPerplexityMetric():
 			elif include_invalid != (gen_prob_vocab == 'all_vocab'):
 				with pytest.raises(ValueError):
 					pm.forward(data)
+					pm.close()
 			else:
 				pm.forward(data)
 				assert np.isclose(pm.close()['perplexity'], \
@@ -631,8 +632,9 @@ class TestPerplexityMetric():
 													  reference_key, reference_len_key, gen_prob_key))
 		else:
 			with pytest.raises(ValueError, \
-							   match='data\[gen_log_prob_key\] must be processed after log_softmax.'):
+							   match=r'data\[gen_log_prob_key\] must be processed after log_softmax.'):
 				pm.forward(data)
+				pm.close()
 		assert same_dict(data, _data)
 
 multiperplexity_test_parameter = generate_testcase(\
@@ -752,6 +754,7 @@ class TestMultiTurnPerplexityMetric:
 			elif include_invalid != (gen_prob_vocab == 'all_vocab'):
 				with pytest.raises(ValueError):
 					mtpm.forward(data)
+					mtpm.close()
 			else:
 				mtpm.forward(data)
 				assert np.isclose(mtpm.close()['perplexity'], \
@@ -759,8 +762,9 @@ class TestMultiTurnPerplexityMetric:
 													  reference_key, reference_len_key, gen_prob_key))
 		else:
 			with pytest.raises(ValueError, \
-							   match='data\[gen_log_prob_key\] must be processed after log_softmax.'):
+							   match=r'data\[gen_log_prob_key\] must be processed after log_softmax.'):
 				mtpm.forward(data)
+				mtpm.close()
 		assert same_dict(data, _data)
 
 
@@ -1246,7 +1250,7 @@ class TestMultiTurnDialogRecorder:
 		else:
 			if turn_len == 'unequal':
 				data[reference_key][0] = data[reference_key][0][1:]
-				with pytest.raises(ValueError, match="Reference turn num \d* != gen turn num \d*."):
+				with pytest.raises(ValueError, match=r"Reference turn num \d* != gen turn num \d*."):
 					mtbr.forward(data)
 				return
 			else:

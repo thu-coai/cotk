@@ -8,7 +8,7 @@ from cotk.wordvector import WordVector, Glove
 from utils import debug, try_cache, cuda_init, Storage
 from seq2seq import Seq2seq
 
-def main(args):
+def main(args, load_exclude_set, restoreCallback):
 	logging.basicConfig(\
 		filename=0,\
 		level=logging.DEBUG,\
@@ -22,20 +22,25 @@ def main(args):
 	cuda_init(0, args.cuda)
 
 	volatile = Storage()
+	volatile.load_exclude_set = load_exclude_set
+	volatile.restoreCallback = restoreCallback
+
 	data_class = SingleTurnDialog.load_class(args.dataset)
+	data_arg = Storage()
+	data_arg.file_id = args.datapath
 	wordvec_class = WordVector.load_class(args.wvclass)
 	if wordvec_class is None:
 		wordvec_class = Glove
+	def load_dataset(data_arg, wvpath, embedding_size):
+		wv = wordvec_class(wvpath)
+		dm = data_class(**data_arg)
+		return dm, wv.load(embedding_size, dm.vocab_list) 
+
 	if args.cache:
-		dm = try_cache(data_class, (args.datapath,), args.cache_dir)
-		volatile.wordvec = try_cache(\
-			lambda wv, ez, vl: wordvec_class(wv).load(ez, vl), \
-			(args.wvpath, args.embedding_size, dm.vocab_list), 
-			args.cache_dir, wordvec_class.__name__)
+		dm, volatile.wordvec = try_cache(load_dataset, (data_arg, args.wvpath, args.embedding_size),
+			args.cache_dir, data_class.__name__ + "_" + wordvec_class.__name__)
 	else:
-		dm = data_class(args.datapath)
-		wv = wordvec_class(args.wvpath)
-		volatile.wordvec = wv.load(args.embedding_size, dm.vocab_list)
+		dm, volatile.wordvec = load_dataset(data_arg, args.wvpath, args.embedding_size)
 
 	volatile.dm = dm
 

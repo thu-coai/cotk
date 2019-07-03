@@ -35,7 +35,7 @@ class CheckpointManager:
 		with open("%s/checkpoint_list" % self.model_dir, "w") as checkpoint_list_fp:
 			json.dump(dic, checkpoint_list_fp)
 
-	def update_best(self, value = None):
+	def update_best(self, value=None):
 		if value and self.best_mode:
 			if self.best_mode == "max":
 				if value > self.best_value:
@@ -114,7 +114,7 @@ class CheckpointManager:
 
 	def state_dict(self):
 		return {key: value for key, value in self.__dict__.items() if key not in \
-					{"log_dir", "model_dir", "checkpoint_steps", \
+					{"log_name", "model_dir", "checkpoint_steps", \
 					"checkpoint_max_to_keep", "checkpoint_list"}}
 
 	def load_state_dict(self, state_dict):

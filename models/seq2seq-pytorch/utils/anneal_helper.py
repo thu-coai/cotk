@@ -32,16 +32,16 @@ class AnnealParameter(tuple):
 	'''
 	@staticmethod
 	def create_set(value):
-		return AnnealParameter("set", {"value": value})
+		return AnnealParameter(("set", {"value": value}))
 
 	@staticmethod
 	def create_hold(value):
-		return AnnealParameter("hold", {"value": value})
+		return AnnealParameter(("hold", {"value": value}))
 
 	@staticmethod
 	def create_anneal(beginValue, startBatch, startValue, endValue, multi):
-		return AnnealParameter("anneal", {"beginValue": beginValue, "startBatch": startBatch, "startValue": startValue, "endValue":endValue, "multi":multi})
+		return AnnealParameter(("anneal", {"beginValue": beginValue, "startBatch": startBatch, "startValue": startValue, "endValue":endValue, "multi":multi}))
 
 	@staticmethod
 	def create_set_and_anneal(startValue, endValue, multi):
-		return AnnealParameter("set&anneal", {"startValue": startValue, "endValue":endValue, "multi":multi})
+		return AnnealParameter(("set&anneal", {"startValue": startValue, "endValue":endValue, "multi":multi}))

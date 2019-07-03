@@ -173,6 +173,27 @@ class GenerationBase(Dataloader):
 		self.batch_id[key] += 1
 		return res
 
+	def get_batches(self, key, batch_size=None, shuffle=True, ignore_left_samples=False):
+		'''An iterator of batches of data. It first call restart, and then get batches\
+			until no more data is available.
+
+		Arguments:
+				key (str): must be contained in `key_name`
+				batch_size (None or int): default (None): use last batch_size.
+				shuffle (bool): whether to shuffle the data. default: `True`
+				ignore_left_samples (bool): Ignore the last batch, whose sample num
+						is not equal to `batch_size`. Default: `False`
+
+		Returns:
+				An iterator where each element is like :func:`get_batch`
+		'''
+		self.restart(key, batch_size, shuffle)
+		while True:
+			res = self.get_next_batch(key, ignore_left_samples)
+			if res is None:
+				break
+			yield res
+
 	def sen_to_index(self, sen, invalid_vocab=False):
 		'''Convert a sentence from string to index representation.
 

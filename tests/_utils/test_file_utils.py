@@ -41,7 +41,7 @@ class TestFileUtils():
 		config_dir = './tests/_utils/dummy_coai'
 		res_path = get_resource_file_path('resources://MSCOCO#MSCOCO', cache_dir=cache_dir, config_dir=config_dir)
 
-		assert(res_path == os.path.join(cache_dir, '8a33092c80383e264dfbe3ab191b110f9d5a0b644f387ae910e0b441228bd8ff_unzip/mscoco'))
+		assert(res_path == os.path.join(cache_dir, '8a33092c80383e264dfbe3ab191b110f9d5a0b644f387ae910e0b441228bd8ff_unzip', 'mscoco'))
 		assert(os.path.exists(res_path))
 
 		meta_path = os.path.join(cache_dir, '8a33092c80383e264dfbe3ab191b110f9d5a0b644f387ae910e0b441228bd8ff.json')

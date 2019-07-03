@@ -6,7 +6,8 @@ def run():
 
 	from utils import Storage
 
-	parser = argparse.ArgumentParser(description='A seq2seq model')
+	parser = argparse.ArgumentParser(description='A seq2seq model with GRU encoder and decoder. Attention, beamsearch,\
+		dropout and batchnorm is supported.')
 	args = Storage()
 
 	parser.add_argument('--name', type=str, default=None,
@@ -20,6 +21,23 @@ def run():
 			Default: None (don\'t load anything)')
 	parser.add_argument('--mode', type=str, default="train",
 		help='"train" or "test". Default: train')
+
+	parser.add_argument('--eh_size', type=int, default=200,
+		help='Size of encoder GRU')
+	parser.add_argument('--dh_size', type=int, default=200,
+		help='Size of decoder GRU')
+	parser.add_argument('--droprate', type=float, default=0,
+		help='The probability to be zerod in dropout. 0 indicates for don\'t use dropout')
+	parser.add_argument('--batchnorm', action='store_true',
+		help='Use bathnorm')
+	parser.add_argument('--decode_mode', type=str, choices=['max', 'sample', 'gumbel', 'samplek', 'beam'], default='beam',
+		help='The decode strategy when freerun. Choices: max, sample, gumbel(=sample), \
+			samplek(sample from topk), beam(beamsearch). Default: beam')
+	parser.add_argument('--top_k', type=int, default=10,
+		help='The top_k when decode_mode == "beam" or "samplek"')
+	parser.add_argument('--length_penalty', type=float, default=0.7,
+		help='The beamsearch penalty for short sentences. The penalty will get larger when this becomes smaller.')
+
 	parser.add_argument('--dataset', type=str, default='OpenSubtitles',
 		help='Dataloader class. Default: OpenSubtitles')
 	parser.add_argument('--datapath', type=str, default='OpenSubtitles',
@@ -67,18 +85,27 @@ def run():
 
 	# The following arguments are not controlled by command line.
 	args.restore_optimizer = True
-	args.load_exclude_set = []
-	args.restoreCallback = None
+	load_exclude_set = []
+	restoreCallback = None
 
 	args.batch_per_epoch = 1500
 	args.embedding_size = 300
-	args.eh_size = 200
-	args.dh_size = 200
+	args.eh_size = cargs.eh_size
+	args.dh_size = cargs.dh_size
+
+	args.decode_mode = cargs.decode_mode
+	args.top_k = cargs.top_k
+	args.length_penalty = cargs.length_penalty
+
+	args.droprate = cargs.droprate
+	args.batchnorm = cargs.batchnorm
+
 	args.lr = 1e-3
-	args.batch_size = 30
+	args.batch_size = 64
+	args.batch_num_per_gradient = 4
 	args.grad_clip = 5
-	args.show_sample = [0]	# show which batch when evaluating at tensotboard
-	args.max_sen_length = 50
+	args.show_sample = [0]  # show which batch when evaluating at tensorboard
+	args.max_sent_length = 50
 	args.checkpoint_steps = 20
 	args.checkpoint_max_to_keep = 5
 
@@ -86,7 +113,7 @@ def run():
 	random.seed(0)
 
 	from main import main
-	main(args)
+	main(args, load_exclude_set, restoreCallback)
 
 if __name__ == '__main__':
 	run()

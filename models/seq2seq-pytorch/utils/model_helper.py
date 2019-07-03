@@ -9,12 +9,13 @@ import numpy as np
 
 from .cuda_helper import cuda, Tensor
 from .anneal_helper import AnnealHelper, AnnealParameter
+from .storage import Storage
 
 class BaseModel():
 	def __init__(self, param, net, optimizerList, checkpoint_manager, helperList=None):
 		self.param = param
 		self.args = args = param.args
-		self.param.other_weights = {}
+		self.param.other_weights = Storage()
 
 		self.net = net
 
@@ -23,7 +24,7 @@ class BaseModel():
 
 		self.now_batch = 0
 		self.now_epoch = 0
-		
+
 		self.checkpoint_manager = checkpoint_manager
 		self.helperList = helperList or {}
 		self.helperList["checkpoint_manager"] = self.checkpoint_manager
@@ -49,7 +50,7 @@ class BaseModel():
 				logging.info("Args differences\n%s", json.dumps(diff, indent=2))
 			self.now_batch = checkpoint['now_batch']
 			self.now_epoch = checkpoint['now_epoch']
-			self.net.load_state_dict(checkpoint['weights'], args.load_exclude_set)
+			self.net.load_state_dict(checkpoint['weights'], param.volatile.load_exclude_set)
 			self.param.other_weights = checkpoint['other_weights']
 			for name, optimizer in self.optimizerList.items():
 				if checkpoint[name]['state'] and self.param.args.restore_optimizer:
@@ -57,7 +58,7 @@ class BaseModel():
 					self.optimizerCuda(optimizer)
 			for name, helper in self.helperList.items():
 				helper.load_state_dict(checkpoint[name])
-			logging.info("loaded checkpoint at %d epochs, %d batchs", self.now_epoch, self.now_batch)
+			logging.info("loaded checkpoint at %d epochs, %d batches", self.now_epoch, self.now_batch)
 
 		for key, v in args.items():
 			if isinstance(v, AnnealParameter):
@@ -67,11 +68,8 @@ class BaseModel():
 					self.anneal_list.append(AnnealHelper(self, key, 0, 0, **v[1]))
 					self.param.other_weights[key] = v[1]["startValue"]
 
-		if args.restore is not None and args.restoreCallback:
-			args.restoreCallback(self)
-			del args['restoreCallback']
-
-		del args['load_exclude_set']
+		if args.restore is not None and param.volatile.restoreCallback:
+			param.volatile.restoreCallback(self)
 
 		cuda(self.net)
 
@@ -90,6 +88,12 @@ class BaseModel():
 			if not a.over():
 				return False
 		return True
+
+	def zero_grad(self):
+		for p in self.net.parameters():
+			if p.grad is not None:
+				p.grad.detach_()
+				p.grad.zero_()
 
 	def save_checkpoint(self, value=None, filename=None):
 		args = self.args

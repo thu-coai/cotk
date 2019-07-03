@@ -5,7 +5,7 @@ import torch
 from torch import nn
 
 from utils import zeros, LongTensor,\
-			BaseNetwork, MyGRU, Storage, gumbel_max, flattenSequence
+			BaseNetwork, MyGRU, Storage, gumbel_max, flattenSequence, SingleAttnGRU, SequenceBatchNorm
 
 # pylint: disable=W0221
 class Network(BaseNetwork):
@@ -68,10 +68,19 @@ class PostEncoder(nn.Module):
 		self.param = param
 
 		self.postGRU = MyGRU(args.embedding_size, args.eh_size, bidirectional=True)
+		self.drop = nn.Dropout(args.droprate)
+		if self.args.batchnorm:
+			self.seqnorm = SequenceBatchNorm(args.eh_size * 2)
+			self.batchnorm = nn.BatchNorm1d(args.eh_size * 2)
 
 	def forward(self, incoming):
 		incoming.hidden = hidden = Storage()
-		hidden.h_n = self.postGRU.forward(incoming.post.embedding, incoming.data.post_length)
+		hidden.h_n, hidden.h = self.postGRU.forward(incoming.post.embedding, incoming.data.post_length, need_h=True)
+		if self.args.batchnorm:
+			hidden.h = self.seqnorm(hidden.h, incoming.data.post_length)
+			hidden.h_n = self.batchnorm(hidden.h_n)
+		hidden.h = self.drop(hidden.h)
+		hidden.h_n = self.drop(hidden.h_n)
 
 class ConnectLayer(nn.Module):
 	def __init__(self, param):
@@ -90,59 +99,57 @@ class GenNetwork(nn.Module):
 		self.args = args = param.args
 		self.param = param
 
-		self.GRULayer = MyGRU(args.embedding_size, args.dh_size, initpara=False)
-		self.wLinearLayer = nn.Linear(args.dh_size, param.volatile.dm.vocab_size)
+		self.GRULayer = SingleAttnGRU(args.embedding_size, args.dh_size, args.eh_size * 2, initpara=False)
+		self.wLinearLayer = nn.Linear(args.dh_size + args.eh_size * 2, param.volatile.dm.vocab_size)
 		self.lossCE = nn.CrossEntropyLoss(ignore_index=param.volatile.dm.unk_id)
-		self.start_generate_id = 2
+		self.start_generate_id = param.volatile.dm.go_id
+
+		self.drop = nn.Dropout(args.droprate)
 
 	def teacherForcing(self, inp, gen):
 		embedding = inp.embedding
 		length = inp.resp_length
-		gen.h, _ = self.GRULayer.forward(embedding, length-1, h_init=inp.init_h, need_h=True)
+		embedding = self.drop(embedding)
+		_, gen.h, _ = self.GRULayer.forward(embedding, length-1, inp.post, inp.post_length, h_init=inp.init_h)
+		gen.h = torch.stack(gen.h, dim=0)
+		gen.h = self.drop(gen.h)
 		gen.w = self.wLinearLayer(gen.h)
 
-	def freerun(self, inp, gen, mode='max'):
-		batch_size = inp.batch_size
-		dm = self.param.volatile.dm
 
-		first_emb = inp.embLayer(LongTensor([dm.go_id])).repeat(batch_size, 1)
-		gen.w_pro = []
-		gen.w_o = []
-		gen.emb = []
-		flag = zeros(batch_size).byte()
-		EOSmet = []
+	def freerun(self, inp, gen):
+		#mode: beam = beamsearch; max = choose max; sample = random_sampling; sample10 = sample from max 10
 
-		next_emb = first_emb
-		gru_h = inp.init_h
-		for _ in range(self.args.max_sen_length):
-			now = next_emb
-			gru_h = self.GRULayer.cell_forward(now, gru_h)
+		def wLinearLayerCallback(gru_h):
+			gru_h = self.drop(gru_h)
 			w = self.wLinearLayer(gru_h)
-			gen.w_pro.append(w)
-			if mode == "max":
-				w_o = torch.argmax(w[:, self.start_generate_id:], dim=1) + self.start_generate_id
-				next_emb = inp.embLayer(w_o)
-			elif mode == "gumbel":
-				w_onehot, w_o = gumbel_max(w[:, self.start_generate_id:], 1, 1)
-				w_o = w_o + self.start_generate_id
-				next_emb = torch.sum(torch.unsqueeze(w_onehot, -1) * inp.embLayer.weight[2:], 1)
-			gen.w_o.append(w_o)
-			gen.emb.append(next_emb)
+			return w
 
-			EOSmet.append(flag)
-			flag = flag | (w_o == dm.eos_id)
-			if torch.sum(flag).detach().cpu().numpy() == batch_size:
-				break
+		def input_callback(i, now):
+			return self.drop(now)
 
-		EOSmet = 1-torch.stack(EOSmet)
-		gen.w_o = torch.stack(gen.w_o) * EOSmet.long()
-		gen.emb = torch.stack(gen.emb) * EOSmet.float().unsqueeze(-1)
-		gen.length = torch.sum(EOSmet, 0).detach().cpu().numpy()
+		if self.args.decode_mode == "beam":
+			new_gen = self.GRULayer.beamsearch(inp, self.args.top_k, wLinearLayerCallback, \
+				input_callback=input_callback, no_unk=True, length_penalty=self.args.length_penalty)
+			w_o = []
+			length = []
+			for i in range(inp.batch_size):
+				w_o.append(new_gen.w_o[:, i, 0])
+				length.append(new_gen.length[i][0])
+			gen.w_o = torch.stack(w_o).transpose(0, 1)
+			gen.length = length
+
+		else:
+			new_gen = self.GRULayer.freerun(inp, wLinearLayerCallback, self.args.decode_mode, \
+				input_callback=input_callback, no_unk=True, top_k=self.args.top_k)
+			gen.w_o = new_gen.w_o
+			gen.length = new_gen.length
 
 	def forward(self, incoming):
 		inp = Storage()
 		inp.resp_length = incoming.data.resp_length
 		inp.embedding = incoming.resp.embedding
+		inp.post = incoming.hidden.h
+		inp.post_length = incoming.data.post_length
 		inp.init_h = incoming.conn.init_h
 
 		incoming.gen = gen = Storage()
@@ -157,7 +164,11 @@ class GenNetwork(nn.Module):
 		inp = Storage()
 		batch_size = inp.batch_size = incoming.data.batch_size
 		inp.init_h = incoming.conn.init_h
+		inp.post = incoming.hidden.h
+		inp.post_length = incoming.data.post_length
 		inp.embLayer = incoming.resp.embLayer
+		inp.dm = self.param.volatile.dm
+		inp.max_sent_length = self.args.max_sent_length
 
 		incoming.gen = gen = Storage()
 		self.freerun(inp, gen)

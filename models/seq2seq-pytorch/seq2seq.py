@@ -6,6 +6,7 @@ import os
 import torch
 from torch import nn, optim
 import numpy as np
+import tqdm
 
 from utils import Storage, cuda, BaseModel, SummaryHelper, get_mean, storage_to_list, \
 	CheckpointManager
@@ -69,6 +70,10 @@ class Seq2seq(BaseModel):
 				return None
 		return self._preprocess_batch(data)
 
+	def get_batches(self, dm, key):
+		batches = list(dm.get_batches(key, batch_size=self.args.batch_size, shuffle=False))
+		return len(batches), (self._preprocess_batch(data) for data in batches)
+
 	def get_select_batch(self, dm, key, i):
 		data = dm.get_batch(key, i)
 		if data is None:
@@ -80,12 +85,13 @@ class Seq2seq(BaseModel):
 		dm = self.param.volatile.dm
 		datakey = 'train'
 
-		for _ in range(batch_num):
+		for i in range(batch_num):
 			self.now_batch += 1
 			incoming = self.get_next_batch(dm, datakey)
 			incoming.args = Storage()
 
-			self.optimizer.zero_grad()
+			if (i+1) % args.batch_num_per_gradient == 0:
+				self.zero_grad()
 			self.net.forward(incoming)
 
 			loss = incoming.result.loss
@@ -93,8 +99,10 @@ class Seq2seq(BaseModel):
 			logging.info("batch %d : gen loss=%f", self.now_batch, loss.detach().cpu().numpy())
 
 			loss.backward()
-			nn.utils.clip_grad_norm_(self.net.parameters(), args.grad_clip)
-			self.optimizer.step()
+
+			if (i+1) % args.batch_num_per_gradient == 0:
+				nn.utils.clip_grad_norm_(self.net.parameters(), args.grad_clip)
+				self.optimizer.step()
 
 	def evaluate(self, key):
 		args = self.param.args
@@ -153,30 +161,25 @@ class Seq2seq(BaseModel):
 		args = self.param.args
 		dm = self.param.volatile.dm
 
-		dm.restart(key, args.batch_size, shuffle=False)
 		metric1 = dm.get_teacher_forcing_metric()
-
-		while True:
-			incoming = self.get_next_batch(dm, key, restart=False)
-			if incoming is None:
-				break
+		batch_num, batches = self.get_batches(dm, key)
+		logging.info("eval teacher-forcing")
+		for incoming in tqdm.tqdm(batches, total=batch_num):
 			incoming.args = Storage()
 			with torch.no_grad():
 				self.net.forward(incoming)
-				gen_prob = nn.functional.log_softmax(incoming.gen.w, -1)
+				gen_log_prob = nn.functional.log_softmax(incoming.gen.w, -1)
 			data = incoming.data
 			data.resp = incoming.data.resp_allvocabs
 			data.resp_length = incoming.data.resp_length
-			data.gen_log_prob = gen_prob.detach().cpu().numpy().transpose(1, 0, 2)
+			data.gen_log_prob = gen_log_prob.transpose(1, 0).detach().cpu().numpy()
 			metric1.forward(data)
 		res = metric1.close()
 
-		dm.restart(key, args.batch_size, shuffle=False)
 		metric2 = dm.get_inference_metric()
-		while True:
-			incoming = self.get_next_batch(dm, key, restart=False)
-			if incoming is None:
-				break
+		batch_num, batches = self.get_batches(dm, key)
+		logging.info("eval free-run")
+		for incoming in tqdm.tqdm(batches, total=batch_num):
 			incoming.args = Storage()
 			with torch.no_grad():
 				self.net.detail_forward(incoming)

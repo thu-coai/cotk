@@ -31,7 +31,11 @@ class BaseNetwork(nn.Module):
 	def get_parameters_by_name(self, req=None):
 		logging.info("parameters with name: %s", req)
 		for name, param in self.named_parameters():
-			if req is None or ("_" + req in name and "exclude_" + req not in name):
+			if req is None:
+				if "exclude_" not in name:
+					logging.info("\t%s", name)
+					yield param
+			elif "_" + req in name and "exclude_" + req not in name:
 				logging.info("\t%s", name)
 				yield param
 
