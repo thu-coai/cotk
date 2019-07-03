@@ -7,6 +7,12 @@ Metric
 
 Metric class
 ---------------------------------
+.. autoclass:: BleuPrecisionRecallMetric
+    :members:
+
+.. autoclass:: EmbSimilarityPrecisionRecallMetric
+    :members:
+
 .. autoclass:: PerplexityMetric
     :members:
 
@@ -14,6 +20,12 @@ Metric class
     :members:
 
 .. autoclass:: BleuCorpusMetric
+    :members:
+
+.. autoclass:: SelfBleuCorpusMetric
+    :members:
+
+.. autoclass:: FwBwBleuCorpusMetric
     :members:
 
 .. autoclass:: MultiTurnBleuCorpusMetric
@@ -30,6 +42,9 @@ Metric-like class
 
 .. autoclass:: LanguageGenerationRecorder
     :members:
+	
+.. autoclass:: HashValueRecorder
+    :members:	
 
 .. autoclass:: MetricChain
     :members:
