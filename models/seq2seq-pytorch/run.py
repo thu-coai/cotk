@@ -22,14 +22,14 @@ def run():
 		help='"train" or "test". Default: train')
 	parser.add_argument('--dataset', type=str, default='OpenSubtitles',
 		help='Dataloader class. Default: OpenSubtitles')
-	parser.add_argument('--datapath', type=str, default='./data',
-		help='Directory for data set. Default: ./data')
+	parser.add_argument('--datapath', type=str, default='OpenSubtitles',
+		help='Directory for data set. Default: OpenSubtitles')
 	parser.add_argument('--epoch', type=int, default=100,
 		help="Epoch for trainning. Default: 100")
-	parser.add_argument('--wvclass', type=str, default=None,
-		help="Wordvector class, none for not using pretrained wordvec. Default: None")
-	parser.add_argument('--wvpath', type=str, default=None,
-		help="Directory for pretrained wordvector. Default: ./wordvec")
+	parser.add_argument('--wvclass', type=str, default='Glove',
+		help="Wordvector class, none for not using pretrained wordvec. Default: Glove")
+	parser.add_argument('--wvpath', type=str, default="resources://Glove300d",
+		help="Directory for pretrained wordvector. Default: resources://Glove300d")
 
 	parser.add_argument('--out_dir', type=str, default="./output",
 		help='Output directory for test output. Default: ./output')
@@ -77,7 +77,7 @@ def run():
 	args.lr = 1e-3
 	args.batch_size = 30
 	args.grad_clip = 5
-	args.show_sample = [0]  # show which batch when evaluating at tensotboard
+	args.show_sample = [0]	# show which batch when evaluating at tensotboard
 	args.max_sen_length = 50
 	args.checkpoint_steps = 20
 	args.checkpoint_max_to_keep = 5

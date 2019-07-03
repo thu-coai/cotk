@@ -51,6 +51,16 @@ class TestFileUtils():
 		for filename in filenames:
 			check(os.path.join(res_path, filename), os.path.join(data_dir, 'ubuntu_dataset', filename))
 
+	def test_SwitchboardCorpus_resource(self):
+		cache_dir = './tests/_utils/dataset_cache'
+		config_dir = './tests/_utils/dummy_coai'
+		data_dir = './tests/_utils/data'
+		res_path = get_resource_file_path('./tests/_utils/data/switchboard_corpus.zip#SwitchboardCorpus', cache_dir=cache_dir, config_dir=config_dir)
+		filenames = os.listdir(res_path)
+		assert(sorted(filenames) == sorted(os.listdir(os.path.join(data_dir, 'switchboard_corpus'))))
+		for filename in filenames:
+			check(os.path.join(res_path, filename), os.path.join(data_dir, 'switchboard_corpus', filename))
+
 	def test_glove50d_resource(self):
 		cache_dir = './tests/_utils/dataset_cache'
 		config_dir = './tests/_utils/dummy_coai'

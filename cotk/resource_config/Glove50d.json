@@ -1,1 +1,1 @@
-{"name": "Glove50d", "type": "Glove50d", "hashtag": "536755983fdee2eb1579eb1fd66b1f8ffdfae93349fde61bad134b8aebf0665a", "link": {"github": "http://nlp.stanford.edu/data/glove.6B.zip", "tsinghua": "http://nlp.stanford.edu/data/glove.6B.zip"}}
+{"name": "Glove50d", "type": "Glove50d", "hashtag": "617afb2fe6cbd085c235baf7a465b96f4112bd7f7ccb2b2cbd649fed9cbcf2fb", "link": {"default": "http://nlp.stanford.edu/data/glove.6B.zip", "tsinghua": "http://nlp.stanford.edu/data/glove.6B.zip"}}

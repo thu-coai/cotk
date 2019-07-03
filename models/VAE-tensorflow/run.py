@@ -17,14 +17,14 @@ def run():
 		help='"train" or "test". Default: train')
 	parser.add_argument('--dataset', type=str, default='MSCOCO',
 		help='Dataloader class. Default: MSCOCO')
-	parser.add_argument('--datapath', type=str, default='./data',
-		help='Directory for data set. Default: ./data')
+	parser.add_argument('--datapath', type=str, default='MSCOCO',
+		help='Directory for data set. Default: MSCOCO')
 	parser.add_argument('--epoch', type=int, default=10,
 		help="Epoch for trainning. Default: 10")
-	parser.add_argument('--wvclass', type=str, default=None,
-		help="Wordvector class, None for using Glove pretrained wordvec. Default: None")
-	parser.add_argument('--wvpath', type=str, default='wordvec',
-		help="Path for pretrained wordvector. Default: wordvec")
+	parser.add_argument('--wvclass', type=str, default='Glove',
+		help="Wordvector class, None for using Glove pretrained wordvec. Default: Glove")
+	parser.add_argument('--wvpath', type=str, default='resources://Glove300d',
+		help="Path for pretrained wordvector. Default: resources://Glove300d")
 
 	parser.add_argument('--out_dir', type=str, default="./output",
 		help='Output directory for test output. Default: ./output')

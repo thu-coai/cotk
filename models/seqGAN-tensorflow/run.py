@@ -10,36 +10,36 @@ def run():
     args = Storage()
 
     parser.add_argument('--name', type=str, default='seqGAN',
-        help='The name of your model, used for variable scope and tensorboard, etc. Default: runXXXXXX_XXXXXX (initialized by current time)')
+	help='The name of your model, used for variable scope and tensorboard, etc. Default: runXXXXXX_XXXXXX (initialized by current time)')
     parser.add_argument('--restore', type=str, default='last',
-        help='Checkpoints name to load. "last" for last checkpoints, "best" for best checkpoints on dev. Attention: "last" and "best" wiil cause unexpected behaviour when run 2 models in the same dir at the same time. Default: None (don\'t load anything)')
+	help='Checkpoints name to load. "last" for last checkpoints, "best" for best checkpoints on dev. Attention: "last" and "best" wiil cause unexpected behaviour when run 2 models in the same dir at the same time. Default: None (don\'t load anything)')
     parser.add_argument('--mode', type=str, default="train",
-        help='"train" or "test". Default: train')
+	help='"train" or "test". Default: train')
     parser.add_argument('--dataset', type=str, default='MSCOCO',
-        help='Dataloader class. Default: MSCOCO')
-    parser.add_argument('--datapath', type=str, default='./data',
-        help='Directory for data set. Default: ./data')
-    parser.add_argument('--wvclass', type=str, default=None,
-        help="Wordvector class, None for using Glove pretrained wordvec. Default: None")
-    parser.add_argument('--wvpath', type=str, default="wordvec/glove.6B.300d.txt",
-        help="Path for pretrained wordvector. Default: wordvec")
+	help='Dataloader class. Default: MSCOCO')
+    parser.add_argument('--datapath', type=str, default='MSCOCO',
+	help='Directory for data set. Default: MSCOCO')
+    parser.add_argument('--wvclass', type=str, default='Glove',
+	help="Wordvector class, None for using Glove pretrained wordvec. Default: Glove")
+    parser.add_argument('--wvpath', type=str, default="resources://Glove300d",
+	    help="Path for pretrained wordvector. Default: resources://Glove300d")
     parser.add_argument('--pre_train', type=str, default="True",
-        help='Pre-train the generator and discriminator. Default: True')
+	help='Pre-train the generator and discriminator. Default: True')
 
     parser.add_argument('--out_dir', type=str, default="./output",
-        help='Output directory for test output. Default: ./output')
+	help='Output directory for test output. Default: ./output')
     parser.add_argument('--log_dir', type=str, default="./tensorboard",
-        help='Log directory for tensorboard. Default: ./tensorboard')
+	help='Log directory for tensorboard. Default: ./tensorboard')
     parser.add_argument('--model_dir', type=str, default="./model",	
-        help='Checkpoints directory for model. Default: ./model')
+	help='Checkpoints directory for model. Default: ./model')
     parser.add_argument('--cache_dir', type=str, default="./cache",
-        help='Checkpoints directory for cache. Default: ./cache')
+	help='Checkpoints directory for cache. Default: ./cache')
     parser.add_argument('--cpu', action="store_true",
-        help='Use cpu.')
+	help='Use cpu.')
     parser.add_argument('--debug', action='store_true',
-        help='Enter debug mode (using ptvsd).')
+	help='Enter debug mode (using ptvsd).')
     parser.add_argument('--cache', action='store_true',
-        help='Use cache for speeding up load data and wordvec. (It may cause problems when you switch dataset.)')
+	help='Use cache for speeding up load data and wordvec. (It may cause problems when you switch dataset.)')
     
     cargs = parser.parse_args()
 
