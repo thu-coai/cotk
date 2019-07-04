@@ -3,7 +3,7 @@ import tensorflow as tf
 import time
 
 from tensorflow.python.ops.nn import dynamic_rnn
-from utils.output_projection import output_projection_layer, MyDense
+from utils.output_projection import output_projection_layer
 from utils import SummaryHelper
 
 class HredModel(object):
@@ -55,7 +55,7 @@ class HredModel(object):
 			_, self.context_state = cell_ctx(encoder_state, self.init_states)
 
 		# get output projection function
-		output_fn = MyDense(data.vocab_size, use_bias = True)
+		output_fn = tf.layers.Dense(data.vocab_size, use_bias = True)
 		sampled_sequence_loss = output_projection_layer(args.dh_size, data.vocab_size, args.softmax_samples)
 
 		# construct helper and attention
@@ -76,7 +76,7 @@ class HredModel(object):
 			self.decoder_distribution_teacher, self.decoder_loss = sampled_sequence_loss(self.decoder_output, self.responses_target, self.decoder_mask)
 
 		# build decoder (test)
-		with tf.variable_scope('decoder', reuse=True):
+		with tf.variable_scope('decoder', reuse=tf.AUTO_REUSE):
 			decoder_infer = tf.contrib.seq2seq.BasicDecoder(cell_dec_attn, infer_helper, dec_start, output_layer = output_fn)
 			infer_outputs, _, _ = tf.contrib.seq2seq.dynamic_decode(decoder_infer, impute_finished = True,
 					maximum_iterations=args.max_sen_length, scope = "decoder_rnn")
