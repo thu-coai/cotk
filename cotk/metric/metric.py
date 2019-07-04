@@ -257,66 +257,9 @@ class PerplexityMetric(MetricBase):
 		self.full_check = full_check
 
 		self.resp = []
-		self.resp_length = []
-		self.gen_log_prob = []
-		self.invalid_vocab_num = self.dataloader.all_vocab_size - self.dataloader.vocab_size
-
-	@classmethod
-	def run_f(cls, ele):
-		'''Auxiliary function for computing perplexity:
-
-		Returns:
-
-			* tuple: sum of log perplexity and sum of sentence length.
-		'''
-		gen_log_prob, resp_allvocabs, single_length, \
-				full_check, invalid_vocab, vocab_size, all_vocab_size, unk_id, invalid_vocab_num = ele
-
-
-		# perform full check to assert the probability is valid
-		if full_check:
-			expsum = np.sum(np.exp(gen_log_prob[:single_length-1]), -1)
-			if not np.allclose(expsum, [1] * (single_length - 1)):
-				raise ValueError("data[gen_log_prob_key] must be processed after log_softmax.")
-
-		resp_now = np.array(resp_allvocabs[1:single_length])
-		gen_log_prob_now = np.array(gen_log_prob)
-
-		if not invalid_vocab:
-			if gen_log_prob_now.shape[1] != vocab_size:
-				raise ValueError("The third dimension gen_log_prob should be equals to vocab_size when \
-					invalid_vocab = False, \
-					but %d != %d" % (gen_log_prob_now.shape[1], vocab_size))
-		else:
-			if gen_log_prob_now.shape[1] != all_vocab_size:
-				raise ValueError("The third dimension gen_log_prob should be equals to all_vocab_size \
-					when invalid_vocab = True, \
-					but %d != %d" % (gen_log_prob_now.shape[1], all_vocab_size))
-
-		word_loss = 0
-		length_sum = 0
-
-		# calc normal vocab
-		normal_idx = np.where(np.logical_and(resp_now != unk_id, \
-								resp_now < vocab_size))
-		word_loss += -np.sum(gen_log_prob_now[normal_idx, resp_now[normal_idx]])
-		length_sum += np.array(normal_idx).shape[1]
-		# calc invalid vocab
-		# smoothing from unk
-		invalid_idx = np.where(resp_now >= vocab_size)
-		invalid_log_prob = gen_log_prob_now[\
-								invalid_idx, [unk_id] * len(invalid_idx) \
-							] - np.log(invalid_vocab_num)
-		if invalid_vocab:
-			extra_invalid_log_prob = gen_log_prob_now[invalid_idx, resp_now[invalid_idx]]
-			word_loss -= np.sum(np.log( \
-					np.exp(invalid_log_prob) + np.exp(extra_invalid_log_prob) \
-				))
-		else:
-			word_loss -= np.sum(invalid_log_prob)
-		length_sum += np.array(invalid_idx).shape[1]
-
-		return word_loss, length_sum
+		#self.resp_length = []
+		self.gen_valid_log_prob = []
+		self.gen_unk_log_prob = []
 
 	def forward(self, data):
 		'''Processing a batch of data. Smoothing will be performed for invalid vocabs.
@@ -363,18 +306,81 @@ class PerplexityMetric(MetricBase):
 				gen_log_prob[%d][%d] exp sum is equal to %f." % (checkid, checkrow, \
 				np.sum(np.exp(gen_log_prob[checkid][checkrow]))))
 
-		if not isinstance(resp_allvocabs, np.ndarray):
-			resp_allvocabs = np.array(resp_allvocabs)
-		if not isinstance(gen_log_prob, np.ndarray):
-			gen_log_prob = np.array(gen_log_prob)
+		#if not isinstance(resp_allvocabs, np.ndarray):
+		#	resp_allvocabs = np.array(resp_allvocabs)
+		#if not isinstance(gen_log_prob, np.ndarray):
+		#	gen_log_prob = np.array(gen_log_prob)
 
+		relevant_data = []
 		for i, resp_len in enumerate(resp_length):
-			self.resp.append(resp_allvocabs[i][:resp_len])
-			self.resp_length.append(resp_len)
-			self.gen_log_prob.append(gen_log_prob[i])
+			resp_now = np.array(resp_allvocabs[i][1:resp_len])
+			gen_now = np.array(gen_log_prob[i])
 
-		#resp = resp_allvocabs.copy()
-		#resp[resp >= self.dataloader.vocab_size] = self.dataloader.unk_id
+			relevant_data.append(resp_now)
+
+			# perform full check to assert the probability is valid
+			if self.full_check:
+				expsum = np.sum(np.exp(gen_now[:resp_len-1]), -1)
+				if not np.allclose(expsum, [1] * (resp_len - 1)):
+					raise ValueError("data[gen_log_prob_key] must be processed after log_softmax.")
+
+			if not self.invalid_vocab:
+				if gen_now.shape[1] != self.dataloader.vocab_size:
+					raise ValueError("The third dimension gen_log_prob should be equals to vocab_size when \
+						invalid_vocab = False, \
+						but %d != %d" % (gen_now.shape[1], self.dataloader.vocab_size))
+			else:
+				if gen_now.shape[1] != self.dataloader.all_vocab_size:
+					raise ValueError("The third dimension gen_log_prob should be equals to all_vocab_size \
+						when invalid_vocab = True, \
+						but %d != %d" % (gen_now.shape[1], self.dataloader.all_vocab_size))
+
+			resp = resp_now
+			self.resp.append(resp)
+			#self.resp_length.append(resp_len)
+
+			resp_known = resp.copy()
+			if not self.invalid_vocab:
+				resp_known[resp_known >= self.dataloader.vocab_size] = self.dataloader.unk_id
+
+			self.gen_valid_log_prob.append(gen_now[list(range(resp_len-1)), resp_known])
+			self.gen_unk_log_prob.append(gen_now[:resp_len-1, self.dataloader.unk_id])
+
+		self.hash_relevant_data(relevant_data)
+
+	@classmethod
+	def run_f(cls, ele):
+		'''Auxiliary function for computing perplexity:
+
+		Returns:
+
+			* tuple: sum of log perplexity and sum of sentence length.
+		'''
+		valid_log_prob, unk_log_prob, resp_now, \
+				invalid_vocab, vocab_size, all_vocab_size, unk_id = ele
+
+		word_loss = 0
+		length_sum = 0
+
+		# calc normal vocab
+		normal_idx = np.where(np.logical_and(resp_now != unk_id, \
+								resp_now < vocab_size))
+		word_loss += -np.sum(valid_log_prob[normal_idx])
+		length_sum += np.array(normal_idx).shape[1]
+		# calc invalid vocab
+		# smoothing from unk
+		invalid_idx = np.where(resp_now >= vocab_size)
+		invalid_log_prob = unk_log_prob[invalid_idx] - np.log(all_vocab_size - vocab_size)
+		if invalid_vocab:
+			extra_invalid_log_prob = valid_log_prob[invalid_idx]
+			word_loss -= np.sum(np.log( \
+					np.exp(invalid_log_prob) + np.exp(extra_invalid_log_prob) \
+				))
+		else:
+			word_loss -= np.sum(invalid_log_prob)
+		length_sum += np.array(invalid_idx).shape[1]
+
+		return word_loss, length_sum
 
 	def close(self):
 		'''Return a dict which contains:
@@ -383,27 +389,27 @@ class PerplexityMetric(MetricBase):
 			* **perplexity hashvalue**: hash value of reference data.
 		'''
 		loader = self.dataloader
-		tasks = [(self.gen_log_prob[i], self.resp[i], single_length, \
-						self.full_check, self.invalid_vocab, loader.vocab_size, \
-						loader.all_vocab_size, loader.unk_id, self.invalid_vocab_num) \
-						for i, single_length in enumerate(self.resp_length)]
+		tasks = ((self.gen_valid_log_prob[i], self.gen_unk_log_prob[i], self.resp[i], \
+		 				self.invalid_vocab, loader.vocab_size, loader.all_vocab_size, loader.unk_id) \
+		 				for i, _ in enumerate(self.gen_valid_log_prob))
 
-		if len(self.resp_length) > 100:
-			pool = Pool(multiprocessing.cpu_count())
-			for ans in tqdm.tqdm(pool.imap_unordered(self.run_f, tasks, chunksize=20), total=len(tasks)):
-				self.word_loss += ans[0]
-				self.length_sum += ans[1]
-			pool.close()
-			pool.join()
-		else:
-			for ans in map(self.run_f, tasks):
-				self.word_loss += ans[0]
-				self.length_sum += ans[1]
+		# if len(self.gen_valid_log_prob) > 100:
+		# 	pool = Pool(multiprocessing.cpu_count())
+		# 	for ans in tqdm.tqdm(pool.imap_unordered(self.run_f, tasks, chunksize=20), \
+		# 		total=len(self.gen_valid_log_prob)):
+		# 		self.word_loss += ans[0]
+		# 		self.length_sum += ans[1]
+		# 	pool.close()
+		# 	pool.join()
+		# else:
+		for ans in map(self.run_f, tasks):
+			self.word_loss += ans[0]
+			self.length_sum += ans[1]
 
 		self.hash_relevant_data(self.resp)
-		self.gen_log_prob = []
 		self.resp = []
-		self.resp_length = []
+		self.gen_valid_log_prob = []
+		self.gen_unk_log_prob = []
 
 		return {"perplexity": np.exp(self.word_loss / self.length_sum), \
 				"perplexity hashvalue": self.hashvalue()}
