@@ -12,6 +12,7 @@ import hashlib
 import logging
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 import requests
 
 from tqdm import tqdm
@@ -227,16 +228,20 @@ def get_resource_file_path(file_id, cache_dir=CACHE_DIR, config_dir=CONFIG_DIR):
 		return _load_local_data(local_path)
 
 def import_local_resources(file_id, local_path, cache_dir=CACHE_DIR, \
-	config_dir=CONFIG_DIR):
+	config_dir=CONFIG_DIR, ignore_exist_error=False):
 	'''Import benchmark from local, if hashtag checked, save to cache.'''
+	os.makedirs(cache_dir, exist_ok=True)
+
 	if not file_id.startswith('resources://'):
 		raise ValueError("file_id must startswith \'resources://\'")
 
-	res_name = file_id[12:]
+	res_name, _, _ = _parse_file_id(file_id[12:])
 	config = _get_config(res_name, config_dir)
 
-	meta_path = os.path.join(cache_dir, res_name) + '.json'
+	meta_path = os.path.join(cache_dir, _url_to_filename(res_name)) + '.json'
 	if os.path.exists(meta_path):
+		if ignore_exist_error:
+			return
 		raise ValueError("resources existed. If you want to delete the existing resources. \
 			Use `rm %s`." % meta_path)
 
@@ -253,12 +258,41 @@ def import_local_resources(file_id, local_path, cache_dir=CACHE_DIR, \
 			raise RuntimeError("No resources type named %sResourcePreprocessor" % res_type)
 
 		cache_path = resource_processor.preprocess(cache_path)
-		meta = {'local_path': local_path}
-		meta_path = os.path.join(cache_dir, res_name) + '.json'
+		meta = {'local_path': cache_path, 'hashtag': local_hashtag}
 
 		with open(meta_path, 'w') as meta_file:
 			json.dump(meta, meta_file)
 
-		return local_path
+		cache_path = resource_processor.postprocess(cache_path)
+		LOGGER.info('resource cached at %s', cache_path)
+		return cache_path
 	else:
 		raise ValueError("bad hashtag of {}".format(res_name))
+
+def load_model_from_url(url, cache_dir=CACHE_DIR):
+	'''Download model at the given URL and save it in CACHE_DIR.
+	return: str, the local path of downloaded model
+	Example:
+		>>> load_model_from_url('https://s3.amazonaws.com/pytorch/models/resnet18-5c106cde.pth')
+		>>> {CACHE_DIR}/resnet18-5c106cde.pth
+	'''
+	parts = urlparse(url)
+	filename = os.path.basename(parts.path)
+
+	cache_dir = os.path.join(cache_dir, 'models')
+	os.makedirs(cache_dir, exist_ok=True)
+	cache_path = os.path.join(cache_dir, filename)
+	if os.path.exists(cache_path):
+		raise ValueError("model existed. If you want to delete the existing model. \
+			Use `rm %s`." % cache_path)
+
+	with tempfile.NamedTemporaryFile() as temp_file:
+		_http_get(url, temp_file)
+		temp_file.flush() # flush to avoid truncation
+		temp_file.seek(0) # shutil.copyfileobj() starts at the current position
+
+		with open(cache_path, 'wb') as cache_file:
+			shutil.copyfileobj(temp_file, cache_file)
+
+	LOGGER.info('model cached at %s', cache_path)
+	return cache_path

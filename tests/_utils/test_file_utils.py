@@ -4,9 +4,10 @@ import requests_mock
 import os
 import hashlib
 import json
+import shutil
 from checksumdir import dirhash
 
-from cotk._utils.file_utils import get_resource_file_path
+from cotk._utils.file_utils import get_resource_file_path, import_local_resources
 
 @pytest.fixture
 def r_mock():
@@ -35,18 +36,55 @@ class TestFileUtils():
 		with open(meta_path, 'r') as meta_file:
 			meta = json.load(meta_file)
 			assert(meta['local_path'] == res_path)
+		
+		shutil.rmtree(cache_dir)
 
 	def test_download_resource(self):
 		cache_dir = './tests/_utils/dataset_cache'
 		config_dir = './tests/_utils/dummy_coai'
-		res_path = get_resource_file_path('resources://MSCOCO#MSCOCO', cache_dir=cache_dir, config_dir=config_dir)
+		res_path = get_resource_file_path('resources://test@amazon', cache_dir=cache_dir, config_dir=config_dir)
+		res_path = get_resource_file_path('resources://test', cache_dir=cache_dir, config_dir=config_dir)
 
-		assert(res_path == os.path.join(cache_dir, '8a33092c80383e264dfbe3ab191b110f9d5a0b644f387ae910e0b441228bd8ff_unzip', 'mscoco'))
+		assert(res_path == os.path.join(cache_dir, '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08'))
 		assert(os.path.exists(res_path))
 
-		meta_path = os.path.join(cache_dir, '8a33092c80383e264dfbe3ab191b110f9d5a0b644f387ae910e0b441228bd8ff.json')
+		meta_path = os.path.join(cache_dir, '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08.json')
 		assert(os.path.exists(meta_path))
 		with open(meta_path, 'r') as meta_file:
 			meta = json.load(meta_file)
 			assert(meta['local_path'] == res_path)
+		
+		shutil.rmtree(cache_dir)
 
+	def test_download_data(self):
+		cache_dir = './tests/_utils/dataset_cache'
+		config_dir = './tests/_utils/dummy_coai'
+		res_path = get_resource_file_path('https://cotk-data.s3-ap-northeast-1.amazonaws.com/test.zip', cache_dir=cache_dir)
+
+		assert(res_path == os.path.join(cache_dir, 'f1043836933af4b8b28973d259c0c77f5049de2dff8d0d1f305c65f3c497b3b1'))
+		assert(os.path.exists(res_path))
+
+		meta_path = os.path.join(cache_dir, 'f1043836933af4b8b28973d259c0c77f5049de2dff8d0d1f305c65f3c497b3b1.json')
+		assert(os.path.exists(meta_path))
+		with open(meta_path, 'r') as meta_file:
+			meta = json.load(meta_file)
+			assert(meta['local_path'] == res_path)
+		
+		shutil.rmtree(cache_dir)
+
+	def test_import_local_resource(self):
+		cache_dir = './tests/_utils/dataset_cache'
+		config_dir = './tests/_utils/dummy_coai'
+		data_dir = './tests/_utils/data'
+		res_path = import_local_resources('resources://test', local_path=os.path.join(data_dir, 'test.zip'), cache_dir=cache_dir, config_dir=config_dir)
+
+		assert(res_path == os.path.join(cache_dir, '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08'))
+		assert(os.path.exists(res_path))
+
+		meta_path = os.path.join(cache_dir, '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08.json')
+		assert(os.path.exists(meta_path))
+		with open(meta_path, 'r') as meta_file:
+			meta = json.load(meta_file)
+			assert(meta['local_path'] == res_path)
+		
+		shutil.rmtree(cache_dir)

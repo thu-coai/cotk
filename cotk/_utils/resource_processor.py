@@ -114,7 +114,7 @@ class GloveResourceProcessor(ResourceProcessor):
 		'''
 		from .file_utils import import_local_resources
 		for glove in self.other_gloves:
-			import_local_resources(*glove)
+			import_local_resources(*glove, ignore_exist_error=True)
 		self.other_gloves = []
 		return os.path.join(local_path, name)
 
