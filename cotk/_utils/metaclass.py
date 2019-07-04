@@ -14,7 +14,8 @@ class DocStringInheritor(type):
 			return clsdict[matched.group(1)]
 		def replace_for(obj):
 			def replace(matched):
-				return obj.__getattr__(matched.group(1))
+				#return obj.__getattr__(matched.group(1))
+				return getattr(obj, matched.group(1))
 			return replace
 
 		if not('__doc__' in clsdict and clsdict['__doc__']):
@@ -41,14 +42,14 @@ class DocStringInheritor(type):
 							attribute.__doc__ = doc
 						break
 			else:
-				doc = re.sub(r'(\{[A-Z]+?\})', replace_for(attribute), attribute.__doc__)
+				doc = re.sub(r'\{([A-Z]+?)\}', replace_for(attribute), attribute.__doc__)
 				if doc == attribute.__doc__:
 					continue
 				if isinstance(attribute, property):
 					clsdict[attr] = property(attribute.fget, attribute.fset, \
 											 attribute.fdel, doc)
 				else:
-					print(attr, attribute, doc)
+					#print(attr, attribute, doc)
 					attribute.__doc__ = doc
 		return type.__new__(cls, name, bases, clsdict)
 

@@ -57,7 +57,7 @@ class LanguageGeneration(GenerationBase):
 				"sent_allvocabs": numpy.array([
 						[2, 4, 5, 6, 3, 0],   # first sentence: <go> how are you <eos> <pad>
 						[2, 7, 3, 0, 0, 0],   # second sentence:  <go> hello <eos> <pad> <pad> <pad>
-						[2, 7, 8, 9, 10, 3]    # third sentence: <go> hello i am fine <eos>
+						[2, 7, 8, 9, 10, 3]   # third sentence: <go> hello i am fine <eos>
 					]),
 			}
 		'''
