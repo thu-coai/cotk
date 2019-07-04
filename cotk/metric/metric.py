@@ -98,8 +98,6 @@ class _PrecisionRecallMetric(MetricBase):
 					Does not contain start token (eg: ``<go>``) and end token (eg: ``<eos>``).
 					Size: `[batch_size, ~sentence_num, ~word_num]`, where "~" means different sizes
 					in this dimension is allowed.
-					Examples:
-						>>> data[reference_allvocabs_key] = [[[1],[2,3]],[[4,5],[6],[7]]].
 				* data[gen_key] (list of list of list):
 					Sentence generations model outputs, similar to data[reference_allvocabs_key].
 		'''
@@ -132,7 +130,7 @@ class _PrecisionRecallMetric(MetricBase):
 			* **hashvalue**: hash value of reference data.
 		'''
 		return {'{} precision'.format(self.res_prefix): np.average(self.prec_list), \
-				'{} recall'.format(self.res_prefix): np.average(self.rec_list),
+				'{} recall'.format(self.res_prefix): np.average(self.rec_list), \
 				'{} hashvalue'.format(self.res_prefix): self.hashvalue()}
 
 class BleuPrecisionRecallMetric(_PrecisionRecallMetric):

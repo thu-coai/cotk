@@ -28,6 +28,13 @@ new models fairly with baselines.
    wordvector
    metric
 
+.. toctree::
+   :glob:
+   :maxdepth: 1
+   :caption: Model Tutorial
+
+   seq2seq_tf_link
+
 Indices and tables
 ==================
 

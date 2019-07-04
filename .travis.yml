@@ -9,6 +9,7 @@ cache: pip
 install:
   - pip install -e .[develop]
   - pip install sphinx
+  - pip install m2r
 
 script:
   - python setup.py test

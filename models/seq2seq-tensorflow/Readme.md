@@ -1,4 +1,4 @@
-## Seq2Seq -- a tensorflow implementation
+## Seq2Seq (TensorFlow)
 
 Seq2seq is a basic model for single turn dialog. Here, we implement seq2seq with attention mechanism. You can refer to the following papers for details:
 
@@ -33,19 +33,19 @@ Bahdanau, D., Cho, K., & Bengio, Y. (2015). Neural machine translation by jointl
                   [--wvclass WVCLASS] [--wvpath WVPATH] [--out_dir OUT_DIR]
                   [--log_dir LOG_DIR] [--model_dir MODEL_DIR]
                   [--cache_dir CACHE_DIR] [--cpu] [--debug] [--cache]
-    
+
     optional arguments:
       -h, --help            show this help message and exit
-      
+
     useful arguments:
-      --name NAME           The name of your model, used for variable scope and 
+      --name NAME           The name of your model, used for variable scope and
                             tensorboard, etc.
                             Default: runXXXXXX_XXXXXX (initialized by current time)
       --restore RESTORE     Checkpoints name to load. "last" for last checkpoints,
                             "best" for best checkpoints on dev. Attention: "last"
                             and "best" wiil cause unexpected behaviour when run 2
                             models in the same dir at the same time. Default: None
-                            (don't load anything)
+                            (do not load anything)
       --mode MODE           "train" or "test". Default: train
       --dataset DATASET     Dataloader class. Default: OpenSubtitles
       --datapath DATAPATH   Directory for data set. Default: ./data
@@ -54,7 +54,7 @@ Bahdanau, D., Cho, K., & Bengio, Y. (2015). Neural machine translation by jointl
                             wordvec. Default: None
       --wvpath WVPATH       Directory for pretrained wordvector. Default:
                             ./wordvec
-    
+
     advanced arguments:
       --out_dir OUT_DIR     Output directory for test output. Default: ./output
       --log_dir LOG_DIR     Log directory for tensorboard. Default: ./tensorboard
@@ -65,25 +65,18 @@ Bahdanau, D., Cho, K., & Bengio, Y. (2015). Neural machine translation by jointl
       --cpu                 Use cpu.
       --debug               Enter debug mode (using ptvsd).
       --cache               Use cache for speeding up load data and wordvec. (It
-                       	    may cause problems when you switch dataset.)
-#### For developer
+                               may cause problems when you switch dataset.)
 
-* Arguments above (except ``cache``\\``debug``) are required. You should remain the same behavior (not for implementation).
-
-* You can add more arguments if you want.
-
-### An example of tensorboard
+### TensorBoard Example
 
 Execute ``tensorboard --logdir=./tensorboard``, you will see the plot in tensorboard pages:
 
-![tensorboard_plot_example](images/tensorflow-plot-example.png)
+![tensorboard_plot_example](../../models/seq2seq-tensorflow/images/tensorflow-plot-example.png)
 
 Following plot are shown in this model:
 
 * train/loss
-
 * train/perplexity
-
 * dev/loss
 * dev/perplexity
 * test/loss
@@ -91,35 +84,31 @@ Following plot are shown in this model:
 
 And text output:
 
-![tensorboard_text_example](images/tensorflow-text-example.png)
+![tensorboard_text_example](../../models/seq2seq-tensorflow/images/tensorflow-text-example.png)
 
 Following text are shown in this model:
 
 * args
 
-### An example of test output
+### Case Study of Model Results
 
 Execute ``python run.py --mode test --restore best``
 
 The following output will be in `./output/[name]_[dev|test].txt`:
 
 ```
-bleu:	0.186838
-perplexity:	40.417562
-post:	if it were anyone but <unk> s son .
-resp:	<unk> is a great fighter .
-gen:	i don' t know what to do .
-post:	in the fortress , you will face more than the <unk> .
-resp:	you will face the beast , who is their leader .
-gen:	the ss s going to be crushed .
-post:	in a cave on the highest peak .
-resp:	without the <unk> , you will never be able to reach <unk> .
-gen:	when the boys s out , then we started .
+bleu:  0.186838
+perplexity:    40.417562
+post:  if it were anyone but <unk> s son .
+resp:  <unk> is a great fighter .
+gen:   i dont know what to do .
+post:  in the fortress , you will face more than the <unk> .
+resp:  you will face the beast , who is their leader .
+gen:   the ss s going to be crushed .
+post:  in a cave on the highest peak .
+resp:  without the <unk> , you will never be able to reach <unk> .
+gen:   when the boys s out , then we started .
 ```
-
-#### For developer
-
-- You should remain similar output in this task.
 
 ### Performance
 
