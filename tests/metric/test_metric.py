@@ -4,6 +4,7 @@ import random
 
 import numpy as np
 import pytest
+import torch
 
 from cotk.metric import MetricBase, \
 	BleuPrecisionRecallMetric, EmbSimilarityPrecisionRecallMetric, \
@@ -602,6 +603,12 @@ perplexity_test_parameter = generate_testcase(\
 	(zip(test_include_invalid), "multi")
 )
 
+
+perplexity_test_engine_parameter = generate_testcase(\
+	(zip(test_ref_vocab), "multi"),
+	(zip(test_gen_prob_vocab), "multi"),
+)
+
 class TestPerplexityMetric():
 	def get_perplexity(self, input, dataloader, invalid_vocab=False, \
 					   reference_key='resp_allvocabs', reference_len_key='resp_length', \
@@ -669,6 +676,35 @@ class TestPerplexityMetric():
 
 			assert res['perplexity hashvalue'] != res_unequal['perplexity hashvalue']
 
+	@pytest.mark.parametrize("ref_vocab, gen_prob_vocab", perplexity_test_engine_parameter)
+	def test_same_result_with_pytorch_engine(self, ref_vocab, gen_prob_vocab):
+		dataloader = FakeDataLoader()
+		reference_key, reference_len_key, gen_prob_key = ('resp_allvocabs', 'resp_length', 'gen_log_prob')
+		data = dataloader.get_data(reference_key=reference_key, \
+								   reference_len_key=reference_len_key, gen_prob_key=gen_prob_key, \
+								   to_list=True, pad=True, \
+								   gen_prob_check='no_check', ref_len='non-empty', \
+								   ref_vocab=ref_vocab, gen_prob_vocab=gen_prob_vocab, \
+								   resp_len='>=2')
+		pm = PerplexityMetric(dataloader, invalid_vocab=gen_prob_vocab == "all_vocab", full_check=False)
+		pm_shuffle = PerplexityMetric(dataloader, invalid_vocab=gen_prob_vocab == "all_vocab", full_check=False)
+
+		data_shuffle = copy.deepcopy(data)
+		indices = list(range(len(data_shuffle[reference_key])))
+		np.random.shuffle(indices)
+		data_shuffle[reference_key] = torch.LongTensor(np.array(data_shuffle[reference_key])[indices])
+		data_shuffle[reference_len_key] = list(np.array(data_shuffle[reference_len_key])[indices])
+		data_shuffle[gen_prob_key] = torch.Tensor(np.array(data_shuffle[gen_prob_key])[indices])
+
+		pm.forward(data)
+		res = pm.close()
+
+		pm_shuffle.forward(data_shuffle)
+		res_shuffle = pm_shuffle.close()
+
+		assert res['perplexity hashvalue'] == res_shuffle['perplexity hashvalue']
+		assert np.isclose(res['perplexity'], res_shuffle['perplexity'])
+
 	@pytest.mark.parametrize( \
 		'argument, shape, type, batch_len, check, ref_len, ref_vocab, gen_prob_vocab, resp_len, include_invalid', \
 		perplexity_test_parameter)
@@ -699,7 +735,7 @@ class TestPerplexityMetric():
 		if batch_len == 'unequal':
 			data[reference_key] = data[reference_key][1:]
 			_data = copy.deepcopy(data)
-			with pytest.raises(ValueError, match='Batch num is not matched.'):
+			with pytest.raises(ValueError, match='Batch num'):
 				pm.forward(data)
 		elif check == 'no_check':
 			if resp_len == '<2':

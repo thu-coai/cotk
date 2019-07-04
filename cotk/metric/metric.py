@@ -9,7 +9,14 @@ from multiprocessing import Pool
 import numpy as np
 from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunction
 from .._utils.unordered_hash import UnorderedSha256
-from .._utils.metaclass import DocStringInheritor, LoadClassInterface
+from .._utils.imports import DummyObject
+from .._utils.metaclass import LoadClassInterface, DocStringInheritor
+
+try:
+	import torch
+except ImportError as err:
+	torch = DummyObject(err)
+	torch.Tensor = DummyObject(err)
 
 class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 	'''Base class for metrics.
@@ -89,8 +96,8 @@ class _PrecisionRecallMetric(MetricBase):
 				* data[reference_allvocabs_key] (list of list of list):
 					Reference sentences.
 					Does not contain start token (eg: ``<go>``) and end token (eg: ``<eos>``).
-					Size: `[batch_size, ~sentence_num, ~word_num]`, where "~" means different sizes allowed.
-
+					Size: `[batch_size, ~sentence_num, ~word_num]`, where "~" means different sizes
+					in this dimension is allowed.
 					Examples:
 						>>> data[reference_allvocabs_key] = [[[1],[2,3]],[[4,5],[6],[7]]].
 				* data[gen_key] (list of list of list):
@@ -248,6 +255,7 @@ class PerplexityMetric(MetricBase):
 		invalid_vocab (bool): whether ``gen_log_prob`` contains invalid vocab. Default: ``False``.
 		full_check (bool): whether perform full checks on ``gen_log_prob`` to make sure the sum
 			of probability is 1. Otherwise, a random check will be performed for efficiency.
+			If pytorch is used, full_check is always performed and this argument will be ignored.
 			Default: ``False``.
 	'''
 	def __init__(self, dataloader, \
@@ -266,6 +274,7 @@ class PerplexityMetric(MetricBase):
 		self.length_sum = 0
 		self.invalid_vocab = invalid_vocab
 		self.full_check = full_check
+		self.engine_version = "unknown" # can be 'default', 'pytorch' when first forward time
 
 		self.resp = []
 		#self.resp_length = []
@@ -283,20 +292,22 @@ class PerplexityMetric(MetricBase):
 		Arguments:
 			data (dict): A dict at least contains the following keys:
 
-				* data[reference_allvocabs_key] (list or :class:`numpy.array`):
+				* data[reference_allvocabs_key] (list or :class:`numpy.ndarray` or :class:`torch.FloatTensor`):
 					Reference sentences with all vocabs
 					with all vocabs. Contains start token (eg: ``<go>``) and end token (eg: ``<eos>``).
 					Size: `[batch_size, max_sentence_length]`.
+					If torch.FloatTensor is used, the following data should also be torch.FloatTensor.
 				* data[reference_len_key] (list):
 					Length of Reference sentences. Contains start token (eg:``<go>``)
 					and end token (eg:``<eos>``). Size: `[batch_size]`.
-				* data[gen_log_prob_key] (list or :class:`numpy.array`):
+				* data[gen_log_prob_key] (list or :class:`numpy.ndarray` or :class:`torch.FloatTensor`):
 					Sentence generations model outputs of
 					**log softmax** probability. Contains end token (eg:``<eos>``), but without start token
 					(eg: ``<go>``).
 					Size: `[batch_size, ~gen_sentence_length, vocab_size]` for ``invalid_vocab = False``, or
 					`[batch_size, ~gen_sentence_length, all_vocab_size]` for ``invalid_vocab = True``,
-					where "~" means different sizes allowed.
+					where "~" means different sizes in this dimension is allowed.
+					If torch.FloatTensor is used, the following data should also be torch.FloatTensor.
 
 		Warning:
 			``data[gen_log_prob_key]`` must be processed after log_softmax. That means,
@@ -305,30 +316,60 @@ class PerplexityMetric(MetricBase):
 		resp_allvocabs = data[self.reference_allvocabs_key]
 		resp_length = data[self.reference_len_key]
 		gen_log_prob = data[self.gen_log_prob_key]
+
+		if not isinstance(resp_allvocabs, (torch.Tensor, np.ndarray, list)):
+			raise TypeError("Unkown type for resp_allvocabs")
+		if not isinstance(gen_log_prob, (torch.Tensor, np.ndarray, list)):
+			raise TypeError("Unkown type for gen_log_prob")
+		if not isinstance(resp_length, (list, np.ndarray)):
+			raise TypeError("Unkown type for resp_length")
+
+		if self.engine_version == "unknown":
+			if isinstance(resp_allvocabs, torch.Tensor):
+				self.engine_version = "pytorch"
+			else:
+				self.engine_version = "normal"
+
+		if (not (self.engine_version == "pytorch") == isinstance(resp_allvocabs, torch.Tensor)) or\
+			(not (self.engine_version == "pytorch") == isinstance(gen_log_prob, torch.Tensor)):
+			raise TypeError("If you want to use pytorch, `resp_allvocabs` and `gen_log_prob` \
+				should be torch.Tensor. It can't mix with list or numpy.ndarray.")
+
+		if self.engine_version == "pytorch":
+			with torch.no_grad():
+				self._pytorch_forward(resp_allvocabs, resp_length, gen_log_prob)
+		else:
+			self._normal_forward(resp_allvocabs, resp_length, gen_log_prob)
+
+	def _normal_forward(self, resp_allvocabs, resp_length, gen_log_prob):
 		if len(resp_allvocabs) != len(resp_length) or len(resp_allvocabs) != len(gen_log_prob):
-			raise ValueError("Batch num is not matched.")
+			raise ValueError("Batch num of arguments is not matched.")
 
 		# perform random check to assert the probability is valid
 		checkid = random.randint(0, len(resp_length)-1)
 		if resp_length[checkid] < 2:
 			raise ValueError("resp_length must no less than 2, because <go> and <eos> are always included.")
 		checkrow = random.randint(0, resp_length[checkid]-2)
-		if not np.isclose(np.sum(np.exp(gen_log_prob[checkid][checkrow])), 1):
+
+		random_check_expsum = np.sum(np.exp(gen_log_prob[checkid][checkrow]))
+		if not np.isclose(random_check_expsum, 1):
 			raise ValueError("data[gen_log_prob_key] must be processed after log_softmax. \
 				gen_log_prob[%d][%d] exp sum is equal to %f." % (checkid, checkrow, \
-				np.sum(np.exp(gen_log_prob[checkid][checkrow]))))
-
-		#if not isinstance(resp_allvocabs, np.ndarray):
-		#	resp_allvocabs = np.array(resp_allvocabs)
-		#if not isinstance(gen_log_prob, np.ndarray):
-		#	gen_log_prob = np.array(gen_log_prob)
+				random_check_expsum))
 
 		relevant_data = []
 		for i, resp_len in enumerate(resp_length):
+			if resp_len < 2:
+				raise ValueError("resp_length must no less than 2, because <go> and <eos> are always included.")
+
 			resp_now = np.array(resp_allvocabs[i][1:resp_len])
 			gen_now = np.array(gen_log_prob[i])
+			relevant_data.append(resp_now.tolist())
 
-			relevant_data.append(list(resp_now))
+			if len(resp_now.shape) != 1:
+				raise ValueError("resp_allvocabs need to be 2 dimension")
+			if len(gen_now.shape) != 2:
+				raise ValueError("gen_log_prob need to be 3 dimension")
 
 			# perform full check to assert the probability is valid
 			if self.full_check:
@@ -360,6 +401,71 @@ class PerplexityMetric(MetricBase):
 
 		self.hash_relevant_data(relevant_data)
 
+	def _pytorch_forward(self, resp_allvocabs, resp_length, gen_log_prob):
+		if len(resp_allvocabs) != len(resp_length) or len(resp_allvocabs) != len(gen_log_prob):
+			raise ValueError("Batch num of arguments is not matched.")
+		if len(resp_allvocabs.shape) != 2:
+			raise ValueError("resp_allvocabs need to be 2 dimension")
+		if len(gen_log_prob.shape) != 3:
+			raise ValueError("gen_log_prob need to be 3 dimension")
+
+		relevant_data = []
+		for i, resp_len in enumerate(resp_length):
+			if resp_len < 2:
+				raise ValueError("resp_length must no less than 2, because <go> and <eos> are always included.")
+
+			resp_now = resp_allvocabs[i, 1:resp_len]
+			gen_now = gen_log_prob[i, :resp_len - 1]
+			relevant_data.append(resp_now.tolist())
+
+			# perform full check to assert the probability is valid
+			expsum = gen_now.exp().sum(-1)
+			if not expsum.allclose(torch.ones_like(expsum)):
+				raise ValueError("data[gen_log_prob_key] must be processed after log_softmax.")
+
+			if not self.invalid_vocab:
+				if gen_now.shape[1] != self.dataloader.vocab_size:
+					raise ValueError("The third dimension gen_log_prob should be equals to vocab_size when \
+						invalid_vocab = False, \
+						but %d != %d" % (gen_now.shape[1], self.dataloader.vocab_size))
+			else:
+				if gen_now.shape[1] != self.dataloader.all_vocab_size:
+					raise ValueError("The third dimension gen_log_prob should be equals to all_vocab_size \
+						when invalid_vocab = True, \
+						but %d != %d" % (gen_now.shape[1], self.dataloader.all_vocab_size))
+
+			resp_known = resp_now.clone()
+			if not self.invalid_vocab:
+				resp_known[resp_known >= self.dataloader.vocab_size] = self.dataloader.unk_id
+
+			unk_id = self.dataloader.unk_id
+			vocab_size = self.dataloader.vocab_size
+			invalid_vocab_size = self.dataloader.all_vocab_size - vocab_size
+
+			# calc normal vocab
+			normal_mask = ((resp_now != unk_id) & (resp_now < vocab_size)).float()
+			word_loss = -(gen_now.gather(-1, resp_known.unsqueeze(1))[:, 0] * normal_mask).sum()
+			length_sum = normal_mask.sum()
+			# calc invalid vocab
+			# smoothing from unk
+			invalid_mask = (resp_now >= vocab_size).float()
+			invalid_log_prob = (gen_now[:, unk_id] - \
+						(torch.ones_like(gen_now[:, unk_id]) * invalid_vocab_size).log()) * invalid_mask
+
+			if self.invalid_vocab:
+				extra_invalid_log_prob = gen_now.gather(-1, resp_now.unsqueeze(1))[:, 0] * invalid_mask
+				word_loss -= ((invalid_log_prob.exp() + extra_invalid_log_prob.exp()).log() \
+						* invalid_mask).sum()
+			else:
+				word_loss -= invalid_log_prob.sum()
+
+			length_sum += invalid_mask.sum()
+
+			self.word_loss += word_loss.tolist()
+			self.length_sum += length_sum.tolist()
+
+		self.hash_relevant_data(relevant_data)
+
 	@classmethod
 	def run_f(cls, ele):
 		'''Auxiliary function for computing perplexity:
@@ -371,14 +477,11 @@ class PerplexityMetric(MetricBase):
 		valid_log_prob, unk_log_prob, resp_now, \
 				invalid_vocab, vocab_size, all_vocab_size, unk_id = ele
 
-		word_loss = 0
-		length_sum = 0
-
 		# calc normal vocab
 		normal_idx = np.where(np.logical_and(resp_now != unk_id, \
 								resp_now < vocab_size))
-		word_loss += -np.sum(valid_log_prob[normal_idx])
-		length_sum += np.array(normal_idx).shape[1]
+		word_loss = -np.sum(valid_log_prob[normal_idx])
+		length_sum = np.array(normal_idx).shape[1]
 		# calc invalid vocab
 		# smoothing from unk
 		invalid_idx = np.where(resp_now >= vocab_size)
@@ -400,28 +503,35 @@ class PerplexityMetric(MetricBase):
 			* **perplexity**: perplexity value.
 			* **perplexity hashvalue**: hash value of reference data.
 		'''
-		loader = self.dataloader
-		tasks = ((self.gen_valid_log_prob[i], self.gen_unk_log_prob[i], self.resp[i], \
-		 				self.invalid_vocab, loader.vocab_size, loader.all_vocab_size, loader.unk_id) \
-		 				for i, _ in enumerate(self.gen_valid_log_prob))
 
-		# if len(self.gen_valid_log_prob) > 100:
-		# 	pool = Pool(multiprocessing.cpu_count())
-		# 	for ans in tqdm.tqdm(pool.imap_unordered(self.run_f, tasks, chunksize=20), \
-		# 		total=len(self.gen_valid_log_prob)):
-		# 		self.word_loss += ans[0]
-		# 		self.length_sum += ans[1]
-		# 	pool.close()
-		# 	pool.join()
-		# else:
-		for ans in map(self.run_f, tasks):
-			self.word_loss += ans[0]
-			self.length_sum += ans[1]
+		if self.engine_version == "pytorch":
+			# pytorch is finished when forward
+			pass
+		else:
+			loader = self.dataloader
+			tasks = ((self.gen_valid_log_prob[i], self.gen_unk_log_prob[i], self.resp[i], \
+							self.invalid_vocab, loader.vocab_size, loader.all_vocab_size, loader.unk_id) \
+							for i, _ in enumerate(self.gen_valid_log_prob))
 
-		self.hash_relevant_data(self.resp)
-		self.resp = []
-		self.gen_valid_log_prob = []
-		self.gen_unk_log_prob = []
+			# if len(self.gen_valid_log_prob) > 100:
+			# 	pool = Pool(multiprocessing.cpu_count())
+			# 	for ans in tqdm.tqdm(pool.imap_unordered(self.run_f, tasks, chunksize=20), \
+			# 		total=len(self.gen_valid_log_prob)):
+			# 		self.word_loss += ans[0]
+			# 		self.length_sum += ans[1]
+			# 	pool.close()
+			# 	pool.join()
+			# else:
+			for ans in map(self.run_f, tasks):
+				self.word_loss += ans[0]
+				self.length_sum += ans[1]
+
+			self.resp = []
+			self.gen_valid_log_prob = []
+			self.gen_unk_log_prob = []
+
+		print(self.word_loss)
+		print(self.length_sum)
 
 
 		return {"perplexity": np.exp(self.word_loss / self.length_sum), \
@@ -469,7 +579,7 @@ class MultiTurnPerplexityMetric(MetricBase):
 		Arguments:
 			data (dict): A dict at least contains the following keys:
 
-				* data[reference_allvocabs_key] (list or :class:`numpy.array`):
+				* data[reference_allvocabs_key] (list or :class:`numpy.ndarray`):
 					Reference sentences	with all vocabs.
 					Contains start token (eg: ``<go>``) and end token (eg: ``<eos>``).
 					Size: `[batch_size, max_turn_length, max_sentence_length]`
@@ -478,12 +588,12 @@ class MultiTurnPerplexityMetric(MetricBase):
 					end token (eg:``<eos>``). It must **NOT** be padded,
 					which means the inner lists may have different length.
 					Length of outer list: `batch_size`.
-				* data[gen_log_prob_key] (list or :class:`numpy.array`):
+				* data[gen_log_prob_key] (list or :class:`numpy.ndarray`):
 					Sentence generations model outputs of **log softmax** probability.
 					Contains end token (eg:``<eos>``), but without start token
 					(eg: ``<go>``).
 					size: `[batch_size, ~max_turn_length, ~gen_sentence_length, vocab_size]`,
-					where "~" means different sizes allowed.
+					where "~" means different sizes in this dimension is allowed.
 
 		Warning:
 			``data[gen_log_prob_key]`` must be processed after log_softmax. That means,
@@ -537,11 +647,11 @@ class BleuCorpusMetric(MetricBase):
 		Arguments:
 			data (dict): A dict at least contains the following keys:
 
-				* data[reference_allvocabs_key] (list or :class:`numpy.array` of `int`):
+				* data[reference_allvocabs_key] (list or :class:`numpy.ndarray` of `int`):
 					reference_allvocabs sentences.
 					Contains start token (eg: ``<go>``) and end token (eg: ``<eos>``).
 					Size: `[batch_size, max_sentence_length]`.
-				* data[gen_key] (list or :class:`numpy.array` of `int`):
+				* data[gen_key] (list or :class:`numpy.ndarray` of `int`):
 					Sentences generated by model. Contains end token (eg: ``<eos>``),
 					but without start token (eg: ``<go>``).
 					Size: `[batch_size, gen_sentence_length]`.
@@ -600,7 +710,7 @@ class SelfBleuCorpusMetric(MetricBase):
 		Arguments:
 			data (dict): A dict at least contains the following keys:
 
-				* data[gen_key] (list or :class:`numpy.array` of `int`):
+				* data[gen_key] (list or :class:`numpy.ndarray` of `int`):
 					Sentences generated by model. Contains end token (eg: ``<eos>``),
 					but without start token (eg: ``<go>``).
 					Size: `[batch_size, gen_sentence_length]`.
@@ -676,7 +786,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 		Arguments:
 			data (dict): A dict at least contains the following keys:
 
-				* data[gen_key] (list or :class:`numpy.array` of `int`):
+				* data[gen_key] (list or :class:`numpy.ndarray` of `int`):
 					Sentences generated by model. Contains end token (eg: ``<eos>``),
 					but without start token (eg: ``<go>``).
 					Size: `[batch_size, gen_sentence_length]`.
@@ -774,16 +884,16 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 		Arguments:
 			data (dict): A dict at least contains the following keys:
 
-				* data[reference_allvocabs_key] (list or :class:`numpy.array`):
+				* data[reference_allvocabs_key] (list or :class:`numpy.ndarray`):
 					Reference sentences with all vocabs.
 					Contains start token (eg: ``<go>``) and end token (eg: ``<eos>``).
 					Size: `[batch_size, max_turn_length, max_sentence_length]`
-				* data[gen_key] (list or :class:`numpy.array`):
+				* data[gen_key] (list or :class:`numpy.ndarray`):
 					3-d array of int. Sentences generated by model.
 					Contains end token (eg: ``<eos>``), but without start token (eg: ``<go>``).
 					Size: `[batch_size, ~max_turn_length, ~gen_sentence_length]`,
-					where "~" means different sizes allowed.
-				* data[turn_len_key] (list or :class:`numpy.array`):
+					where "~" means different sizes in this dimension is allowed.
+				* data[turn_len_key] (list or :class:`numpy.ndarray`):
 					Length of turns in each sample.
 					Size: `[batch_size]`.
 		'''
@@ -846,15 +956,15 @@ class SingleTurnDialogRecorder(MetricBase):
 		Arguments:
 			data (dict): A dict at least contains the following keys:
 
-				* data[post_allvocabs_key] (list or :class:`numpy.array` of `int`):
+				* data[post_allvocabs_key] (list or :class:`numpy.ndarray` of `int`):
 					Dialog posts with all vocabs.
 					Contains start token (eg: ``<go>``) and end token (eg: ``<eos>``).
 					Size: `[batch_size, max_sentence_length]`.
-				* data[resp_allvocabs_key] (list or :class:`numpy.array` of `int`):
+				* data[resp_allvocabs_key] (list or :class:`numpy.ndarray` of `int`):
 					Dialog responses with all vocabs.
 					Contains start token (eg: ``<go>``) and end token (eg: ``<eos>``).
 					Size: `[batch_size, max_sentence_length]`.
-				* data[gen_key] (list or :class:`numpy.array` of `int`):
+				* data[gen_key] (list or :class:`numpy.ndarray` of `int`):
 					Sentences generated by model. Contains end token (eg: ``<eos>``)`,
 					but without start token (eg: ``<go>``).
 					Size: `[batch_size, gen_sentence_length]`.
@@ -912,21 +1022,21 @@ class MultiTurnDialogRecorder(MetricBase):
 		Arguments:
 			data (dict): A dict at least contains the following keys:
 
-				* data[context_allvocabs_key] (list or :class:`numpy.array` of `int`):
+				* data[context_allvocabs_key] (list or :class:`numpy.ndarray` of `int`):
 					Dialog post.
 					A 3-d padded array containing id of words.
 					Contains start token (eg: ``<go>``) and end token (eg: ``<eos>``).
 					Size: `[batch_size, _turn_length, max_sentence_length]`.
-				* data[reference_allvocabs_key] (list or :class:`numpy.array` of `int`):
+				* data[reference_allvocabs_key] (list or :class:`numpy.ndarray` of `int`):
 					Dialog responses with all vocabs. A 3-d padded array containing id of words.
 					Contains start token (eg: ``<go>``) and end token (eg: ``<eos>``).
 					Size: `[batch_size, max_turn_length, max_sentence_length]`.
-				* data[gen_key] (list or :class:`numpy.array` of `int`):
+				* data[gen_key] (list or :class:`numpy.ndarray` of `int`):
 					Sentences generated by model.
 					A 3-d padded array containing id of words.
 					Contains  end token (eg: ``<eos>``), but without start token (eg: ``<go>``).
 					Size: `[batch_size, max_turn_length, gen_sentence_length]`.
-				* data[turn_len_key] (list or :class:`numpy.array`):
+				* data[turn_len_key] (list or :class:`numpy.ndarray`):
 					Length of turns in each sample.
 					Size: `[batch_size]`.
 		'''
@@ -979,7 +1089,7 @@ class LanguageGenerationRecorder(MetricBase):
 		Arguments:
 			data (dict): A dict at least contains the following keys:
 
-				* data[gen_key] (list or :class:`numpy.array` of `int`):
+				* data[gen_key] (list or :class:`numpy.ndarray` of `int`):
 					Sentences generated by model.
 					Contains end token (eg: ``<eos>``), but without start token (eg: ``<go>``).
 					Size: `[batch_size, gen_sentence_length]`.

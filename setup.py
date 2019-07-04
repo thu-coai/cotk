@@ -37,6 +37,7 @@ setup(
 	],
 	extras_require={
 		'develop':  [
+			"torch==1.0.0",
 			"python-coveralls",
 			"pytest-dependency",
 			"pytest-mock",
