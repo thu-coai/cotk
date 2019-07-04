@@ -8,10 +8,10 @@ Metric
 Metric class
 ---------------------------------
 .. autoclass:: BleuPrecisionRecallMetric
-    :members:
+    :members: forward,score,close
 
 .. autoclass:: EmbSimilarityPrecisionRecallMetric
-    :members:
+    :members: forward,score,close
 
 .. autoclass:: PerplexityMetric
     :members:
@@ -42,9 +42,9 @@ Metric-like class
 
 .. autoclass:: LanguageGenerationRecorder
     :members:
-	
+
 .. autoclass:: HashValueRecorder
-    :members:	
+    :members:
 
 .. autoclass:: MetricChain
     :members:
