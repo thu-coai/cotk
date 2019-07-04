@@ -253,24 +253,26 @@ test_hash_data = ['has_key', 'no_key']
 ## test_gen_len: 'empty' means all length are 1 (eos), 'non-empty' means all length are > 1, 'random' means length are random
 ## test_ref_len: 'empty' means all length are 2 (eos), 'non-empty' means all length are > 2, 'both' means length are random
 
-def same_data(A, B):
+def same_data(A, B, exact_equal=True):
 	if type(A) != type(B):
 		return False
 	try:
 		if len(A) != len(B):
 			return False
 	except TypeError:
+		if not exact_equal and isinstance(A, float):
+			return np.isclose(A, B)
 		return A == B
 	for i, x in enumerate(A):
 		if not same_data(x, B[i]):
 			return False
 	return True
 
-def same_dict(A, B):
+def same_dict(A, B, exact_equal=True):
 	if A.keys() != B.keys():
 		return False
 	for x in A.keys():
-		if not same_data(A[x], B[x]):
+		if not same_data(A[x], B[x], exact_equal):
 			return False
 	return True
 
@@ -308,6 +310,78 @@ bleu_precision_recall_test_parameter = generate_testcase(\
 	(zip(test_ngram), "add")
 )
 
+def shuffle_instances(data, key_list):
+	indices = list(range(len(data[key_list[0]])))
+	np.random.shuffle(indices)
+	data_shuffle = copy.deepcopy(data)
+	for key in key_list:
+		if isinstance(data_shuffle[key], list):
+			data_shuffle[key] = [data_shuffle[key][idx] for idx in indices]
+		else:
+			data_shuffle[key] = data_shuffle[key][indices]
+	return data_shuffle
+
+def split_batch(data, key_list, \
+				less_pad=False, to_list=False, reference_key=None, reference_is_3D=False):
+	'''Split one batch into two
+
+	Arguments:
+		* less_pad (bool): if `True`, the length of padding in the two batches are different
+						   if `False`, the length of padding in the two batches are the same
+
+	'''
+	batches = []
+	for idx in range(2):
+		tmp = {}
+		for key in key_list:
+			if idx == 0:
+				tmp[key] = data[key][:1]
+			else:
+				tmp[key] = data[key][1:]
+		batches.append(tmp)
+	if less_pad:
+		if not reference_is_3D:
+			if to_list:
+				batches[0][reference_key][0] = batches[0][reference_key][0][:-1]
+			else:
+				batches[0][reference_key] = np.array(batches[0][reference_key].tolist())[:, :-1]
+		else:
+			if to_list:
+				tmp = []
+				for lst in batches[0][reference_key][0]:
+					tmp.append(lst[:-1])
+				batches[0][reference_key][0] = tmp
+			else:
+				batches[0][reference_key] = np.array(batches[0][reference_key].tolist())[:, :, :-1]
+	return batches
+
+def generate_unequal_data(data, key_list, pad_id, reference_key, \
+						  reference_len_key=None, reference_is_3D=False):
+	res = []
+	for unequal_type in ['less_inst', 'less_word', 'change_word', 'shuffle_words']:
+		data_unequal = copy.deepcopy(data)
+		if unequal_type == 'less_inst':
+			for key in key_list:
+				data_unequal[key] = data_unequal[key][1:]
+		elif unequal_type == 'less_word':
+			if reference_len_key is None:
+				continue
+			if reference_is_3D:
+				data_unequal[reference_len_key][0][0] -= 1
+			else:
+				data_unequal[reference_len_key][0] -= 1
+		elif unequal_type == 'change_word':
+			if reference_is_3D:
+				data_unequal[reference_key][0][0][1] = pad_id
+			else:
+				data_unequal[reference_key][0][1] = pad_id
+		else:
+			if reference_is_3D:
+				np.random.shuffle(data_unequal[reference_key][0][0])
+			else:
+				np.random.shuffle(data_unequal[reference_key][0])
+		res.append(data_unequal)
+	return res
 
 class TestBleuPrecisionRecallMetric():
 	def test_base_class(self):
@@ -321,33 +395,37 @@ class TestBleuPrecisionRecallMetric():
 	def test_hashvalue(self):
 		dataloader = FakeMultiDataloader()
 		reference_key, gen_key = ('resp_allvocabs', 'gen')
+		key_list = [reference_key, gen_key]
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 								   to_list=True, pad=False, \
 								   ref_len='non-empty', gen_len='non-empty', test_prec_rec=True)
 		bprm = BleuPrecisionRecallMetric(dataloader, 4, 3)
 		bprm_shuffle = BleuPrecisionRecallMetric(dataloader, 4, 3)
-		bprm_unequal = BleuPrecisionRecallMetric(dataloader, 4, 3)
 
-		data_shuffle = copy.deepcopy(data)
+		data_shuffle = shuffle_instances(data, key_list)
 		for idx in range(len(data_shuffle[reference_key])):
 			np.random.shuffle(data_shuffle[reference_key][idx])
-		np.random.shuffle(data_shuffle[reference_key])
-
-		data_unequal = copy.deepcopy(data)
-		data_unequal[reference_key] = data_unequal[reference_key][1:]
-		data_unequal[gen_key] = data[gen_key][1:]
+		batches_shuffle = split_batch(data_shuffle, key_list)
 
 		bprm.forward(data)
 		res = bprm.close()
 
-		bprm_shuffle.forward(data_shuffle)
+		for batch in batches_shuffle:
+			bprm_shuffle.forward(batch)
 		res_shuffle = bprm_shuffle.close()
+		assert same_dict(res, res_shuffle, False)
 
-		bprm_unequal.forward(data_unequal)
-		res_unequal = bprm_unequal.close()
+		data_less_word = copy.deepcopy(data)
+		data_less_word[reference_key][0][0] = data_less_word[reference_key][0][0][:-1]
+		for data_unequal in [data_less_word] + generate_unequal_data(data, key_list, \
+												  dataloader.pad_id, \
+												  reference_key, reference_is_3D=True):
+			bprm_unequal = BleuPrecisionRecallMetric(dataloader, 4, 3)
 
-		assert res['BLEU-4 hashvalue'] == res_shuffle['BLEU-4 hashvalue']
-		assert res['BLEU-4 hashvalue'] != res_unequal['BLEU-4 hashvalue']
+			bprm_unequal.forward(data_unequal)
+			res_unequal = bprm_unequal.close()
+
+			assert res['BLEU-4 hashvalue'] != res_unequal['BLEU-4 hashvalue']
 
 	@pytest.mark.parametrize('argument, shape, type, batch_len, ref_len, gen_len, ngram', \
 		bleu_precision_recall_test_parameter)
@@ -413,34 +491,39 @@ class TestEmbSimilarityPrecisionRecallMetric():
 		emb = np.array(emb)
 
 		reference_key, gen_key = ('resp_allvocabs', 'gen')
+		key_list = [reference_key, gen_key]
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 								   to_list=True, pad=False, \
 								   ref_len='non-empty', gen_len='non-empty', \
 								   ref_vocab='valid_vocab', gen_vocab='valid_vocab', test_prec_rec=True)
 		espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, 'avg', 3)
 		espr_shuffle = EmbSimilarityPrecisionRecallMetric(dataloader, emb, 'avg', 3)
-		espr_unequal = EmbSimilarityPrecisionRecallMetric(dataloader, emb, 'avg', 3)
 
-		data_shuffle = copy.deepcopy(data)
+		data_shuffle = shuffle_instances(data, key_list)
 		for idx in range(len(data_shuffle[reference_key])):
 			np.random.shuffle(data_shuffle[reference_key][idx])
-		np.random.shuffle(data_shuffle[reference_key])
-
-		data_unequal = copy.deepcopy(data)
-		data_unequal[reference_key] = data_unequal[reference_key][1:]
-		data_unequal[gen_key] = data[gen_key][1:]
+		batches_shuffle = split_batch(data_shuffle, key_list)
 
 		espr.forward(data)
 		res = espr.close()
 
-		espr_shuffle.forward(data_shuffle)
+		for batch in batches_shuffle:
+			espr_shuffle.forward(batch)
 		res_shuffle = espr_shuffle.close()
 
-		espr_unequal.forward(data_unequal)
-		res_unequal = espr_unequal.close()
+		assert same_dict(res, res_shuffle, False)
 
-		assert res['avg-bow hashvalue'] == res_shuffle['avg-bow hashvalue']
-		assert res['avg-bow hashvalue'] != res_unequal['avg-bow hashvalue']
+		data_less_word = copy.deepcopy(data)
+		data_less_word[reference_key][0][0] = data_less_word[reference_key][0][0][:-1]
+		for data_unequal in [data_less_word] + generate_unequal_data(data, key_list, \
+												dataloader.pad_id, \
+												reference_key, reference_is_3D=True):
+			espr_unequal = EmbSimilarityPrecisionRecallMetric(dataloader, emb, 'avg', 3)
+
+			espr_unequal.forward(data_unequal)
+			res_unequal = espr_unequal.close()
+
+			assert res['avg-bow hashvalue'] != res_unequal['avg-bow hashvalue']
 
 	@pytest.mark.parametrize('argument, shape, type, batch_len, ref_len, gen_len, ' \
 							 'ref_vocab, gen_vocab, emb_mode, emb_type, emb_len', \
@@ -547,42 +630,44 @@ class TestPerplexityMetric():
 		# print('test_metric.length_sum: ', 	length_sum)
 		return np.exp(word_loss / length_sum)
 
-	def test_hashvalue(self):
+	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
+	def test_hashvalue(self, to_list, pad):
 		dataloader = FakeDataLoader()
 		reference_key, reference_len_key, gen_prob_key = ('resp_allvocabs', 'resp_length', 'gen_log_prob')
+		key_list = [reference_key, reference_len_key, gen_prob_key]
 		data = dataloader.get_data(reference_key=reference_key, \
 								   reference_len_key=reference_len_key, gen_prob_key=gen_prob_key, \
-								   to_list=True, pad=True, \
+								   to_list=to_list, pad=pad, \
 								   gen_prob_check='no_check', ref_len='non-empty', \
 								   ref_vocab='non-empty', gen_prob_vocab='all_vocab', \
 								   resp_len='>=2')
 		pm = PerplexityMetric(dataloader, invalid_vocab=True, full_check=False)
 		pm_shuffle = PerplexityMetric(dataloader, invalid_vocab=True, full_check=False)
-		pm_unequal = PerplexityMetric(dataloader, invalid_vocab=True, full_check=False)
 
-		data_shuffle = copy.deepcopy(data)
-		indices = list(range(len(data_shuffle[reference_key])))
-		np.random.shuffle(indices)
-		data_shuffle[reference_key] = np.array(data_shuffle[reference_key])[indices]
-		data_shuffle[reference_len_key] = list(np.array(data_shuffle[reference_len_key])[indices])
-		data_shuffle[gen_prob_key] = np.array(data_shuffle[gen_prob_key])[indices]
+		data_shuffle = shuffle_instances(data, key_list)
 
-		data_unequal = copy.deepcopy(data)
-		data_unequal[reference_key] = data_unequal[reference_key][1:]
-		data_unequal[reference_len_key] = data_unequal[reference_len_key][1:]
-		data_unequal[gen_prob_key] = data_unequal[gen_prob_key][1:]
+		batches_shuffle = split_batch(data_shuffle, key_list, \
+									  to_list=to_list, less_pad=pad, \
+									  reference_key=reference_key, reference_is_3D=False)
 
 		pm.forward(data)
 		res = pm.close()
 
-		pm_shuffle.forward(data_shuffle)
+		for batch in batches_shuffle:
+			pm_shuffle.forward(batch)
 		res_shuffle = pm_shuffle.close()
 
-		pm_unequal.forward(data_unequal)
-		res_unequal = pm_unequal.close()
+		assert same_dict(res, res_shuffle, False)
 
-		assert res['perplexity hashvalue'] == res_shuffle['perplexity hashvalue']
-		assert res['perplexity hashvalue'] != res_unequal['perplexity hashvalue']
+		for data_unequal in generate_unequal_data(data, key_list, dataloader.pad_id, \
+												  reference_key, reference_len_key, \
+												  reference_is_3D=False):
+			pm_unequal = PerplexityMetric(dataloader, invalid_vocab=True, full_check=False)
+
+			pm_unequal.forward(data_unequal)
+			res_unequal = pm_unequal.close()
+
+			assert res['perplexity hashvalue'] != res_unequal['perplexity hashvalue']
 
 	@pytest.mark.parametrize( \
 		'argument, shape, type, batch_len, check, ref_len, ref_vocab, gen_prob_vocab, resp_len, include_invalid', \
@@ -624,7 +709,6 @@ class TestPerplexityMetric():
 			elif include_invalid != (gen_prob_vocab == 'all_vocab'):
 				with pytest.raises(ValueError):
 					pm.forward(data)
-					pm.close()
 			else:
 				pm.forward(data)
 				assert np.isclose(pm.close()['perplexity'], \
@@ -634,7 +718,6 @@ class TestPerplexityMetric():
 			with pytest.raises(ValueError, \
 							   match=r'data\[gen_log_prob_key\] must be processed after log_softmax.'):
 				pm.forward(data)
-				pm.close()
 		assert same_dict(data, _data)
 
 multiperplexity_test_parameter = generate_testcase(\
@@ -677,41 +760,45 @@ class TestMultiTurnPerplexityMetric:
 					length_sum += 1
 		return np.exp(word_loss / length_sum)
 
-	def test_hashvalue(self):
+	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
+	def test_hashvalue(self, to_list, pad):
 		dataloader = FakeMultiDataloader()
 		reference_key, reference_len_key, gen_prob_key = ('sent_allvocabs', 'sent_length', 'gen_log_prob')
+		key_list = [reference_key, reference_len_key, gen_prob_key]
 		data = dataloader.get_data(reference_key=reference_key, \
 								   reference_len_key=reference_len_key, gen_prob_key=gen_prob_key, \
-								   to_list=True, pad=True, \
+								   to_list=to_list, pad=pad, \
 								   gen_prob_check='no_check', ref_len='non-empty', \
 								   ref_vocab='non-empty', gen_prob_vocab='valid_vocab', \
 								   resp_len=">=2")
 
 		mtpm = MultiTurnPerplexityMetric(dataloader, invalid_vocab=False, full_check=False)
 		mtpm_shuffle = MultiTurnPerplexityMetric(dataloader, invalid_vocab=False, full_check=False)
-		mtpm_unequal = MultiTurnPerplexityMetric(dataloader, invalid_vocab=False, full_check=False)
 
-		data_shuffle = copy.deepcopy(data)
-		indices = list(range(len(data_shuffle[reference_key])))
-		np.random.shuffle(indices)
-		data_shuffle[reference_key] = np.array(data_shuffle[reference_key])[indices]
-		data_shuffle[reference_len_key] = list(np.array(data_shuffle[reference_len_key])[indices])
-		data_shuffle[gen_prob_key] = np.array(data_shuffle[gen_prob_key])[indices]
+		data_shuffle = shuffle_instances(data, key_list)
 
-		data_unequal = copy.deepcopy(data)
-		data_unequal[reference_len_key][0][0] -= 1
+		batches_shuffle = split_batch(data_shuffle, key_list, \
+									  less_pad=pad, to_list=to_list, \
+									  reference_key=reference_key, reference_is_3D=True)
 
 		mtpm.forward(data)
 		res = mtpm.close()
 
-		mtpm_shuffle.forward(data_shuffle)
+		for batch in batches_shuffle:
+			mtpm_shuffle.forward(batch)
 		res_shuffle = mtpm_shuffle.close()
 
-		mtpm_unequal.forward(data_unequal)
-		res_unequal = mtpm_unequal.close()
+		assert same_dict(res, res_shuffle, False)
 
-		assert res['perplexity hashvalue'] == res_shuffle['perplexity hashvalue']
-		assert res['perplexity hashvalue'] != res_unequal['perplexity hashvalue']
+		for data_unequal in generate_unequal_data(data, key_list, dataloader.pad_id, \
+												  reference_key, reference_len_key, \
+												  reference_is_3D=True):
+			mtpm_unequal = MultiTurnPerplexityMetric(dataloader, invalid_vocab=False, full_check=False)
+
+			mtpm_unequal.forward(data_unequal)
+			res_unequal = mtpm_unequal.close()
+
+			assert res['perplexity hashvalue'] != res_unequal['perplexity hashvalue']
 
 	@pytest.mark.parametrize( \
 		'argument, shape, type, batch_len, check, ref_len, ref_vocab, gen_prob_vocab, resp_len, include_invalid', \
@@ -754,7 +841,6 @@ class TestMultiTurnPerplexityMetric:
 			elif include_invalid != (gen_prob_vocab == 'all_vocab'):
 				with pytest.raises(ValueError):
 					mtpm.forward(data)
-					mtpm.close()
 			else:
 				mtpm.forward(data)
 				assert np.isclose(mtpm.close()['perplexity'], \
@@ -764,7 +850,6 @@ class TestMultiTurnPerplexityMetric:
 			with pytest.raises(ValueError, \
 							   match=r'data\[gen_log_prob_key\] must be processed after log_softmax.'):
 				mtpm.forward(data)
-				mtpm.close()
 		assert same_dict(data, _data)
 
 
@@ -788,34 +873,39 @@ class TestBleuCorpusMetric:
 			gens.append(gen_sen_processed)
 		return corpus_bleu(refs, gens, smoothing_function=SmoothingFunction().method7)
 
-	def test_hashvalue(self):
+	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
+	def test_hashvalue(self, to_list, pad):
 		dataloader = FakeDataLoader()
 		reference_key, gen_key = ('resp_allvocabs', 'gen')
+		key_list = [reference_key, gen_key]
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
-								   to_list=True, pad=True, \
+								   to_list=to_list, pad=pad, \
 								   gen_len='non-empty', ref_len='non-empty')
 		bcm = BleuCorpusMetric(dataloader)
 		bcm_shuffle = BleuCorpusMetric(dataloader)
-		bcm_unequal = BleuCorpusMetric(dataloader)
 
-		data_shuffle = copy.deepcopy(data)
-		np.random.shuffle(data[reference_key])
-
-		data_unequal = copy.deepcopy(data)
-		data_unequal[reference_key] = data_unequal[reference_key][1:]
-		data_unequal[gen_key] = data_unequal[gen_key][1:]
+		data_shuffle = shuffle_instances(data, key_list)
+		batches_shuffle = split_batch(data_shuffle, key_list, \
+									  less_pad=pad, to_list=to_list, \
+									  reference_key=reference_key, reference_is_3D=False)
 
 		bcm.forward(data)
 		res = bcm.close()
 
-		bcm_shuffle.forward(data_shuffle)
+		for batch in batches_shuffle:
+			bcm_shuffle.forward(batch)
 		res_shuffle = bcm_shuffle.close()
 
-		bcm_unequal.forward(data_unequal)
-		res_unequal = bcm_unequal.close()
+		assert same_dict(res, res_shuffle, False)
 
-		assert res['bleu hashvalue'] == res_shuffle['bleu hashvalue']
-		assert res['bleu hashvalue'] != res_unequal['bleu hashvalue']
+		for data_unequal in generate_unequal_data(data, key_list, dataloader.pad_id, \
+												  reference_key, reference_is_3D=False):
+			bcm_unequal = BleuCorpusMetric(dataloader)
+
+			bcm_unequal.forward(data_unequal)
+			res_unequal = bcm_unequal.close()
+
+			assert res['bleu hashvalue'] != res_unequal['bleu hashvalue']
 
 	@pytest.mark.parametrize('argument, shape, type, batch_len, gen_len, ref_len', bleu_test_parameter)
 	def test_close(self, argument, shape, type, batch_len, gen_len, ref_len):
@@ -939,36 +1029,36 @@ class TestFwBwBleuCorpusMetric:
 		bw_bleu = (1.0 * sum(bleu_irl_bw) / len(bleu_irl_bw))
 		return 2.0 * bw_bleu * fw_bleu / (fw_bleu + bw_bleu)
 
-	def test_hashvalue(self):
+	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
+	def test_hashvalue(self, to_list, pad):
 		dataloader = FakeDataLoader()
 		reference_key, gen_key = ('resp_allvocabs', 'gen')
+		key_list = [gen_key]
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
-								   to_list=True, pad=True, \
+								   to_list=to_list, pad=pad, \
 								   gen_len='non-empty', ref_len='non-empty')
+
 		dataloader.data["test"][reference_key] = data[reference_key]
-
 		bcm = FwBwBleuCorpusMetric(dataloader, reference_key)
-		bcm_shuffle = FwBwBleuCorpusMetric(dataloader, reference_key)
-		bcm_unequal = FwBwBleuCorpusMetric(dataloader, reference_key)
-
-		data_shuffle = copy.deepcopy(data)
-		np.random.shuffle(data[reference_key])
-
-		data_unequal = copy.deepcopy(data)
-		data_unequal[reference_key] = data_unequal[reference_key][1:]
-		data_unequal[gen_key] = data_unequal[gen_key][1:]
-
 		bcm.forward(data)
 		res = bcm.close()
 
+		data_shuffle = shuffle_instances(data, key_list)
+		dataloader.data["test"][reference_key] = data_shuffle[reference_key]
+		bcm_shuffle = FwBwBleuCorpusMetric(dataloader, reference_key)
 		bcm_shuffle.forward(data_shuffle)
 		res_shuffle = bcm_shuffle.close()
 
-		bcm_unequal.forward(data_unequal)
-		res_unequal = bcm_unequal.close()
+		assert same_dict(res, res_shuffle, False)
 
-		assert res['fw-bw-bleu hashvalue'] == res_shuffle['fw-bw-bleu hashvalue']
-		assert res['fw-bw-bleu hashvalue'] != res_unequal['fw-bw-bleu hashvalue']
+		for data_unequal in generate_unequal_data(data, key_list, dataloader.pad_id, \
+												  reference_key, reference_is_3D=False):
+			dataloader.data["test"][reference_key] = data_unequal[reference_key]
+			bcm_unequal = FwBwBleuCorpusMetric(dataloader, reference_key)
+
+			bcm_unequal.forward(data_unequal)
+			res_unequal = bcm_unequal.close()
+			assert res['fw-bw-bleu hashvalue'] != res_unequal['fw-bw-bleu hashvalue']
 
 	@pytest.mark.parametrize('argument, shape, type, gen_len, ref_len', fwbw_bleu_test_parameter)
 	def test_close(self, argument, shape, type, gen_len, ref_len):
@@ -1031,38 +1121,44 @@ class TestMultiTurnBleuCorpusMetric:
 				refs.append([resp_sen_processed[1:]])
 		return corpus_bleu(refs, gens, smoothing_function=SmoothingFunction().method7)
 
-	def test_hashvalue(self):
+	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
+	def test_hashvalue(self, to_list, pad):
 		dataloader = FakeMultiDataloader()
 		reference_key, turn_len_key, gen_key = ('reference_allvocabs', 'turn_length', 'gen')
+		key_list = [reference_key, turn_len_key, gen_key]
 		data = dataloader.get_data(reference_key=reference_key, turn_len_key=turn_len_key, gen_key=gen_key, \
-								   to_list=True, pad=True, ref_len='non-empty', \
+								   to_list=to_list, pad=pad, ref_len='non-empty', \
 								   ref_vocab='non-empty')
 
 		mtbcm = MultiTurnBleuCorpusMetric(dataloader)
 		mtbcm_shuffle = MultiTurnBleuCorpusMetric(dataloader)
-		mtbcm_unequal = MultiTurnBleuCorpusMetric(dataloader)
 
-		data_shuffle = copy.deepcopy(data)
-		indices = list(range(len(data_shuffle[reference_key])))
-		np.random.shuffle(indices)
-		data_shuffle[reference_key] = np.array(data_shuffle[reference_key])[indices]
-		data_shuffle[turn_len_key] = list(np.array(data_shuffle[turn_len_key])[indices])
-		data_shuffle[gen_key] = np.array(data_shuffle[gen_key])[indices]
-
-		data_unequal = copy.deepcopy(data)
-		data_unequal[turn_len_key][0] -= 1
+		data_shuffle = shuffle_instances(data, key_list)
+		batches_shuffle = split_batch(data_shuffle, key_list, \
+									  less_pad=pad, to_list=to_list, \
+									  reference_key=reference_key, reference_is_3D=True)
 
 		mtbcm.forward(data)
 		res = mtbcm.close()
 
-		mtbcm_shuffle.forward(data_shuffle)
+		for batch in batches_shuffle:
+			mtbcm_shuffle.forward(batch)
 		res_shuffle = mtbcm_shuffle.close()
 
-		mtbcm_unequal.forward(data_unequal)
-		res_unequal = mtbcm_unequal.close()
+		assert same_dict(res, res_shuffle, False)
 
-		assert res['bleu hashvalue'] == res_shuffle['bleu hashvalue']
-		assert res['bleu hashvalue'] != res_unequal['bleu hashvalue']
+		data_less_word = copy.deepcopy(data)
+		for idx, turn_len in enumerate(data_less_word[turn_len_key]):
+			if turn_len > 1:
+				data_less_word[turn_len_key][idx] -= 1
+		for data_unequal in [data_less_word] + generate_unequal_data(data, key_list, dataloader.pad_id, \
+												  reference_key=reference_key, reference_is_3D=True):
+			mtbcm_unequal = MultiTurnBleuCorpusMetric(dataloader)
+
+			mtbcm_unequal.forward(data_unequal)
+			res_unequal = mtbcm_unequal.close()
+
+			assert res['bleu hashvalue'] != res_unequal['bleu hashvalue']
 
 	@pytest.mark.parametrize('argument, shape, type, batch_len, gen_len, ref_len', multi_bleu_test_parameter)
 	def test_close(self, argument, shape, type, batch_len, gen_len, ref_len):

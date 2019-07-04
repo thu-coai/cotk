@@ -6,11 +6,8 @@ import random
 from itertools import chain
 import multiprocessing
 from multiprocessing import Pool
-
 import numpy as np
 from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunction
-import tqdm
-
 from .._utils.unordered_hash import UnorderedSha256
 
 class MetricBase:
@@ -107,7 +104,7 @@ class _PrecisionRecallMetric(MetricBase):
 				for j, single_gen in enumerate(gen):
 					matrix[i][j] = self.score(single_gen, single_ref)
 			self.prec_list.append(float(np.sum(np.max(matrix, 0))) / len(gen))
-			self.rec_list.append(float(np.sum(np.max(matrix, 1))) / len(references))
+			self.rec_list.append(float(np.sum(np.max(matrix, 1))) / len(reference))
 
 	def close(self):
 		'''Return a dict which contains:
@@ -316,7 +313,7 @@ class PerplexityMetric(MetricBase):
 			resp_now = np.array(resp_allvocabs[i][1:resp_len])
 			gen_now = np.array(gen_log_prob[i])
 
-			relevant_data.append(resp_now)
+			relevant_data.append(list(resp_now))
 
 			# perform full check to assert the probability is valid
 			if self.full_check:
@@ -541,7 +538,7 @@ class BleuCorpusMetric(MetricBase):
 		relevant_data = []
 		for gen_sen, resp_sen in zip(gen, resp):
 			self.hyps.append(self.dataloader.trim_index(gen_sen))
-			reference = self.dataloader.trim_index(resp_sen[1:])
+			reference = list(self.dataloader.trim_index(resp_sen[1:]))
 			relevant_data.append(reference)
 			self.refs.append([reference])
 		self.hash_relevant_data(relevant_data)
@@ -671,8 +668,8 @@ class FwBwBleuCorpusMetric(MetricBase):
 		gen = data[self.gen_key]
 		resp = self.dataloader.data["test"][self.reference_test_key]
 		for gen_sen, resp_sen in zip(gen, resp):
-			self.hyps.append(self.dataloader.trim_index(gen_sen))
-			self.refs.append(self.dataloader.trim_index(resp_sen[1:]))
+			self.hyps.append(list(self.dataloader.trim_index(gen_sen)))
+			self.refs.append(list(self.dataloader.trim_index(resp_sen[1:])))
 
 	def run_f(self, ele):
 		'''Auxiliary function for computing sentence bleu:
@@ -784,8 +781,8 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 			gen_session = gen[i]
 			ref_session = reference_allvocabs[i]
 			for j in range(turn_length):
-				self.hyps.append(self.dataloader.trim_index(gen_session[j]))
-				self.refs.append([self.dataloader.trim_index(ref_session[j])[1:]])
+				self.hyps.append(list(self.dataloader.trim_index(gen_session[j])))
+				self.refs.append([list(self.dataloader.trim_index(ref_session[j])[1:])])
 
 	def close(self):
 		'''Return a dict which contains:
@@ -930,6 +927,8 @@ class MultiTurnDialogRecorder(MetricBase):
 				np.array(reference_allvocabs[i]), turn_length=turn_length[i], ignore_first_token=True))
 			self.gen_list.append(self.dataloader.multi_turn_index_to_sen( \
 				np.array(gen[i]), turn_length=turn_length[i]))
+			print(turn_length[i])
+			print(len(self.reference_list[-1]))
 
 			if len(self.reference_list[-1]) != len(self.gen_list[-1]):
 				raise ValueError("Reference turn num %d != gen turn num %d." % \
