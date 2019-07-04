@@ -41,7 +41,9 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 
 class _PrecisionRecallMetric(MetricBase):
 	r"""Base class for precision recall metrics. This is an abstract class.
+	
 	Arguments:{ARGUMENTS}
+	
 	Attributes:{ATTRIBUTES}
 	"""
 
