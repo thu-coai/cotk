@@ -49,7 +49,7 @@ setup(
 	cmdclass={'test': LibTest},
 	entry_points={
 		'console_scripts': [
-			"cotk-report=cotk.scripts:report"
+			"cotk=cotk.scripts:main",
 		]
 	},
 	include_package_data=True,

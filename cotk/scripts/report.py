@@ -29,6 +29,7 @@ LOGGER.addHandler(SH)
 DASHBOARD_URL = os.getenv("COTK_DASHBOARD_URL", None) #TODO: add a online dash board url
 REPORT_URL = DASHBOARD_URL + "/upload"
 SHOW_URL = DASHBOARD_URL + "/show?id=%d"
+QUERY_URL = DASHBOARD_URL + "/get?id=%d"
 
 def assert_repo_exist():
 	'''Assert cwd is in a git repo.'''
@@ -99,7 +100,7 @@ def assert_commit_exist(git_user, git_repo, git_commit):
 	url = "https://github.com/{}/{}/archive/{}.zip".format(git_user, git_repo, git_commit)
 	res = requests.head(url)
 	if not res.ok:
-		raise RuntimeError("Commit {} is not existed on github:{}/{}. \
+		raise RuntimeError("Commit {} does not exist on github:{}/{}. \
 Have you pushed your commit? Or make it public?".format( \
 			git_commit, git_repo, git_user \
 		))
@@ -123,7 +124,7 @@ def run_model(entry, args):
 
 def upload_report(result_path, entry, args, \
 	git_user, git_repo, git_commit, \
-	cotk_record_information):
+	cotk_record_information, token):
 	'''Upload report to dashboard. Return id of the new record.'''
 	# check result file existence
 	# get git link
@@ -150,27 +151,41 @@ def upload_report(result_path, entry, args, \
 	LOGGER.info("Save your report locally at .cotk_upload_backup")
 	json.dump(upload_information, open(".cotk_upload_backup", 'w'))
 	LOGGER.info("Uploading your report...")
-	res = requests.post(REPORT_URL, upload_information)
+	res = requests.post(REPORT_URL, {"data": upload_information, "token": token})
 	res = json.loads(res.text)
 	if res['code'] != "ok":
 		raise RuntimeError("upload error. %s" % json.loads(res['err']))
 	return res['id']
 
+def get_local_token():
+	'''Read locally-saved token'''
+	if os.path.exists('.cotk_config'):
+		return json.load(open('.cotk_config', 'r'))['token']
+	else:
+		raise RuntimeError("Please config your token, \n" + \
+						   "either by setting it temporarily in cotk\n" + \
+						   "or by calling ^cotk config^")
+
 def report(args):
 	'''Entrance of report'''
-	parser = argparse.ArgumentParser(prog="cotk-report", \
+	parser = argparse.ArgumentParser(prog="cotk report", \
 		description='Report model performance to cotk model dashboard.')
-	parser.add_argument('--result', type=str, default="result.json", \
+	parser.add_argument('--token', type=str, default="")
+	parser.add_argument('--upload_result', type=str, default="result.json", \
 		help='Path to result file. Default: result.json')
 	parser.add_argument('--only-upload', action="store_true", \
 		help="Don't run your model, just upload the existing result. \
 		(Some information will be missing and this option is not recommended.)")
-	parser.add_argument('entry', type=str, default="main", nargs='?',\
+	parser.add_argument('--entry', type=str, default="main", nargs='?',\
 		help="Entry of your model. Default: main")
-	parser.add_argument('args', nargs=argparse.REMAINDER)
+	parser.add_argument('--args', nargs=argparse.REMAINDER)
 
 	cargs = parser.parse_args(args)
 
+	if cargs.token:
+		token = cargs.token
+	else:
+		token = get_local_token()
 	assert_repo_exist()
 	git_user, git_repo = get_repo_remote()
 	git_commit = get_repo_commit()
@@ -189,21 +204,103 @@ to check your changes.")
 		cotk_record_information = run_model(cargs.entry, cargs.args)
 
 	LOGGER.info("Collecting info for update...")
-	upload_id = upload_report(cargs.result, cargs.entry, cargs.args, \
+	upload_id = upload_report(cargs.upload_result, cargs.entry, cargs.args, \
 		git_user, git_repo, git_commit, \
-		cotk_record_information)
+		cotk_record_information, token)
 	LOGGER.info("Upload complete. Check %s for your report.", SHOW_URL % upload_id)
+
+def download(args):
+	'''Entrance of download'''
+	parser = argparse.ArgumentParser(prog="cotk download", \
+		description='Download model information from cotk model dashboard.')
+	parser.add_argument("--query_id", type=int, default=-1, help="query id")
+	parser.add_argument("--query_result", type=str, default="result.json", \
+						help="Path to dump query result.")
+	cargs = parser.parse_args(args)
+
+	LOGGER.info("Collecting info from id %d...", cargs.query_id)
+	info = get_result_from_id(cargs.query_id)
+	json.dump(info, open(cargs.query_result, "w"))
+	LOGGER.info("Info from id %d saved to %s.", cargs.query_id, cargs.query_result)
+	clone_codes_from_commit(cargs.query_id, info['git_user'], info['git_repo'], info['git_commit'])
+	LOGGER.info("Codes from id %d fetched.")
+
+	pwd = subprocess.run(['pwd'], stdout=PIPE, stderr=PIPE)
+	cmd = "cd {}/codes_from_{}/*/{} && python {}.py".format(pwd.stdout.decode().strip(), \
+															cargs.query_id, \
+															info['working_dir'], \
+															info['entry'])
+	if not info['args']:
+		cmd += " {}".format(" ".join(info['args']))
+	with open("run_model.sh", "w") as file:
+		file.write(cmd)
+	LOGGER.info("Model running cmd written in {}".format("run_model.sh"))
+	print("Model running cmd: \t{}".format(cmd))
+
+def get_result_from_id(query_id):
+	'''Query uploaded info from id'''
+	query = requests.get(QUERY_URL % query_id)
+	if not query.ok:
+		raise RuntimeError("Cannot fetch result from id %d" % query_id)
+	else:
+		return json.loads(query.text)
+
+def clone_codes_from_commit(query_id, git_user, git_repo, git_commit):
+	'''Download codes from commit'''
+	url = "https://github.com/{}/{}/archive/{}.zip".format(git_user, git_repo, git_commit)
+	download_res = subprocess.run(["wget", url], stdout=PIPE, stderr=PIPE)
+	if re.search(r'ERROR 404: Not Found', download_res.stderr.decode()):
+		raise RuntimeError("Commit {} does not exist on github:{}/{}.".format(git_commit, \
+																	git_repo, git_user))
+	unzip_res = subprocess.run(["unzip", "{}.zip".format(git_commit), \
+								"-d", "codes_from_{}".format(query_id)], \
+							   stdout=PIPE, stderr=PIPE)
+	err = unzip_res.stderr.decode()
+	if not err:
+		raise RuntimeError("Fail to unzip file {}.zip.\nError:\n{}".format(git_commit, err))
+
+def config(args):
+	'''Entrance of configuration'''
+	parser = argparse.ArgumentParser(prog="cotk config", \
+		description='Configuration (e.g. token)')
+	parser.add_argument('--token', type=str, default="")
+	cargs = parser.parse_args(args)
+
+	if cargs.token:
+		save_token(cargs.token)
+	else:
+		raise RuntimeError("Token cannot be empty.")
+
+def save_token(token):
+	'''Save token locally'''
+	json.dump({'token': token}, open(".cotk_config", "w"))
+	LOGGER.info("Save your configuration locally at .cotk_config")
 
 def main():
 	'''Entry of command line'''
 	sys.path.append(".")
-	if len(sys.argv) > 1 and sys.argv[1] == "debug":
-		report(sys.argv[2:])
-	else:
+	if len(sys.argv) > 2 and sys.argv[1] == "debug":
+		if sys.argv[2] == 'report':
+			report(sys.argv[3:])
+		elif sys.argv[2] == 'download':
+			download(sys.argv[3:])
+		elif sys.argv[2] == 'config':
+			config(sys.argv[3:])
+	elif len(sys.argv) > 1:
 		try:
-			report(sys.argv[1:])
+			if sys.argv[1] == 'report':
+				report(sys.argv[2:])
+			elif sys.argv[1] == 'download':
+				download(sys.argv[2:])
+			elif sys.argv[1] == 'config':
+				config(sys.argv[2:])
 		except Exception as err: #pylint: disable=broad-except
 			print("%s: %s" % (type(err).__name__, err))
 
 if __name__ == "__main__":
-	report(sys.argv[1:])
+	if sys.argv[1] == 'report':
+		report(sys.argv[2:])
+	elif sys.argv[1] == 'download':
+		download(sys.argv[2:])
+	elif sys.argv[1] == 'config':
+		config(sys.argv[2:])

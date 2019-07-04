@@ -11,7 +11,7 @@ import numpy as np
 from .._utils.file_utils import get_resource_file_path
 from .dataloader import GenerationBase
 from ..metric import MetricChain, MultiTurnPerplexityMetric, MultiTurnBleuCorpusMetric, \
-	MultiTurnDialogRecorder, HashValueRecorder
+	MultiTurnDialogRecorder
 from ..metric import BleuPrecisionRecallMetric, EmbSimilarityPrecisionRecallMetric
 from ..wordvector import Glove
 
@@ -143,7 +143,7 @@ class MultiTurnDialog(GenerationBase):
 			...	[[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0],
 			... [2, 4, 5, 6, 7, 9, 3, 0, 3, 4, 3, 0],
 			... [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-			... [2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0]], 
+			... [2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0]],
 			... turn_length = None, ignore_first_token = True)
 			>>> [[4, 5, 6, 7, 8], [4, 5, 6, 7, 9]]
 		'''

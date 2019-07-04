@@ -8,7 +8,7 @@ import numpy as np
 from .._utils.file_utils import get_resource_file_path
 from .dataloader import GenerationBase
 from ..metric import MetricChain, PerplexityMetric, LanguageGenerationRecorder, \
-	FwBwBleuCorpusMetric, SelfBleuCorpusMetric, HashValueRecorder
+	FwBwBleuCorpusMetric, SelfBleuCorpusMetric
 
 # pylint: disable=W0223
 class LanguageGeneration(GenerationBase):
