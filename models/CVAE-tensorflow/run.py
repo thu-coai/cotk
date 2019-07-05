@@ -1,6 +1,6 @@
 # coding:utf-8
 
-def run():
+def run(argv):
 	import argparse
 	import time
 
@@ -17,7 +17,7 @@ def run():
 		help='"train" or "test". Default: train')
 	parser.add_argument('--dataset', type=str, default='SwitchboardCorpus',
 		help='Dataloader class. Default: SwitchboardCorpus')
-	parser.add_argument('--datapath', type=str, default='SwitchboardCorpus',
+	parser.add_argument('--datapath', type=str, default='resources://SwitchboardCorpus',
 		help='Directory for data set. Default: SwitchboardCorpus')
 	parser.add_argument('--epoch', type=int, default=100,
 		help="Epoch for trainning. Default: 100")
@@ -40,7 +40,7 @@ def run():
 		help='Enter debug mode (using ptvsd).')
 	parser.add_argument('--cache', action='store_true',
 		help='Use cache for speeding up load data and wordvec. (It may cause problems when you switch dataset.)')
-	cargs = parser.parse_args()
+	cargs = parser.parse_args(argv)
 
 	# Editing following arguments to bypass command line.
 	args.name = cargs.name or time.strftime("run%Y%m%d_%H%M%S", time.localtime())
@@ -67,7 +67,7 @@ def run():
 	args.da_embedding_size = 30
 	args.word_embedding_size = 200
 	args.session_window = 10
-	args.repeat_N = 20
+	args.repeat_N = 2
 	args.eh_size = 300
 	args.ch_size = 600
 	args.dh_size = 400
@@ -86,7 +86,13 @@ def run():
 	random.seed(0)
 
 	from main import main
+
+	if args.mode == 'test':
+		import json
+		json.dump({'working_dir': './', 'entry': 'run', 'args': argv}, \
+				  open("result.json", "w"))
 	main(args)
 
 if __name__ == '__main__':
-	run()
+	import sys
+	run(sys.argv[1:])

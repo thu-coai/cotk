@@ -97,14 +97,16 @@ class _PrecisionRecallMetric(MetricBase):
 
 				* data[reference_allvocabs_key] (list of list of list):
 					Reference sentences.
-					Does not contain start token (eg: ``<go>``) and end token (eg: ``<eos>``).
+					Contains start token (eg: ``<go>``) and end token (eg: ``<eos>``).
 					Size: `[batch_size, ~sentence_num, ~word_num]`, where "~" means different sizes
 					in this dimension is allowed.
 				* data[gen_key] (list of list of list):
-					Sentence generations model outputs, similar to data[reference_allvocabs_key].
+					Sentence generations model outputs, similar to data[reference_allvocabs_key]
+					But does not contain start token.
 		'''
-		references = data[self.reference_allvocabs_key]
-		gens = data[self.gen_key]
+		references = [[self.dataloader.trim_index(cand[1:]) for cand in inst] \
+					  for inst in data[self.reference_allvocabs_key]]
+		gens = [[self.dataloader.trim_index(cand) for cand in inst] for inst in data[self.gen_key]]
 
 		if len(references) != len(gens):
 			raise ValueError("Batch num is not matched.")

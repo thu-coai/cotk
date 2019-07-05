@@ -488,7 +488,7 @@ class CVAEModel(object):
 		with open(test_file, 'a') as f:
 			print("Test Result:")
 			for key, value in res.items():
-				if isinstance(value, float):
+				if isinstance(value, float) or isinstance(value, int):
 					print("\t%s:\t%f" % (key, value))
 					f.write("%s:\t%f\n" % (key, value))
 			for i, context in enumerate(res['context']):
@@ -500,6 +500,7 @@ class CVAEModel(object):
 				f.write("\n")
 
 		print("result output to %s" % test_file)
+		return {key: val for key, val in res.items() if key not in ['context', 'reference', 'gen']}
 
 	def test_multi_ref(self, sess, data, embed, args):
 		def process_cands(candidates):
@@ -507,7 +508,8 @@ class CVAEModel(object):
 			for cands in candidates:
 				tmp = []
 				for sent in cands:
-					tmp.append([wid if wid < data.vocab_size else data.unk_id for wid in sent])
+					tmp.append([data.go_id] + \
+						[wid if wid < data.vocab_size else data.unk_id for wid in sent] + [data.eos_id])
 				res.append(tmp)
 			return res
 		prec_rec_metrics = data.get_precision_recall_metric(sent_per_inst=args.repeat_N, embed=embed)
@@ -519,11 +521,12 @@ class CVAEModel(object):
 					resp = list(resp)
 					if rid == len(responses):
 						responses.append([])
-					if data.eos_id in resp:
-						resp = resp[:resp.index(data.eos_id)]
+					# if data.eos_id in resp:
+					# 	resp = resp[:resp.index(data.eos_id)]
+					resp = data.trim_index(resp)
 					if len(resp) == 0:
 						resp = [data.unk_id]
-					responses[rid].append(resp)
+					responses[rid].append(resp + [data.eos_id])
 			metric_data = {'resp_allvocabs': process_cands(batch_data['candidate_allvocabs']), 'gen': responses}
 			prec_rec_metrics.forward(metric_data)
 
@@ -534,6 +537,8 @@ class CVAEModel(object):
 			print("Test Multi Reference Result:")
 			f.write("Test Multi Reference Result:\n")
 			for key, val in res.items():
-				print("\t{}\t{}".format(key, val))
-				f.write("\t{}\t{}".format(key, val) + "\n")
+				if isinstance(val, float) or isinstance(val, int):
+					print("\t{}\t{}".format(key, val))
+					f.write("\t{}\t{}".format(key, val) + "\n")
 			f.write("\n")
+		return res

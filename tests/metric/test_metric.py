@@ -173,7 +173,7 @@ class FakeMultiDataloader(MultiTurnDialog):
 				if resp_len == '<2':
 					ref_nowlen = 1
 				elif ref_len == "random":
-					ref_nowlen = random.randrange(2, 5)
+					ref_nowlen = random.randrange(3 if test_prec_rec else 2, 5)
 				elif ref_len == "non-empty":
 					ref_nowlen = 8
 				elif ref_len == 'empty':
@@ -183,7 +183,7 @@ class FakeMultiDataloader(MultiTurnDialog):
 
 				turn_context.append(self.get_sen(max_len, ref_nowlen, pad=pad, all_vocab=ref_vocab=='all_vocab'))
 				if gen_len == "random":
-					gen_nowlen = random.randrange(1, 4) if i != 0 else 3 # for BLEU not empty
+					gen_nowlen = random.randrange(1, 4) if i != 0 and not test_prec_rec else 3 # for BLEU not empty
 				elif gen_len == "non-empty":
 					gen_nowlen = 7
 				elif gen_len == "empty":
@@ -368,9 +368,9 @@ def generate_unequal_data(data, key_list, pad_id, reference_key, \
 			if reference_len_key is None:
 				continue
 			if reference_is_3D:
-				data_unequal[reference_len_key][0][0] -= 1
+				data_unequal[reference_len_key][0][0] -= 2
 			else:
-				data_unequal[reference_len_key][0] -= 1
+				data_unequal[reference_len_key][0] -= 2
 		elif unequal_type == 'change_word':
 			if reference_is_3D:
 				data_unequal[reference_key][0][0][1] = pad_id
@@ -417,7 +417,7 @@ class TestBleuPrecisionRecallMetric():
 		assert same_dict(res, res_shuffle, False)
 
 		data_less_word = copy.deepcopy(data)
-		data_less_word[reference_key][0][0] = data_less_word[reference_key][0][0][:-1]
+		data_less_word[reference_key][0][0] = data_less_word[reference_key][0][0][:-2]
 		for data_unequal in [data_less_word] + generate_unequal_data(data, key_list, \
 												  dataloader.pad_id, \
 												  reference_key, reference_is_3D=True):
@@ -515,7 +515,7 @@ class TestEmbSimilarityPrecisionRecallMetric():
 		assert same_dict(res, res_shuffle, False)
 
 		data_less_word = copy.deepcopy(data)
-		data_less_word[reference_key][0][0] = data_less_word[reference_key][0][0][:-1]
+		data_less_word[reference_key][0][0] = data_less_word[reference_key][0][0][:-2]
 		for data_unequal in [data_less_word] + generate_unequal_data(data, key_list, \
 												dataloader.pad_id, \
 												reference_key, reference_is_3D=True):
