@@ -204,10 +204,12 @@ class Seq2seq(BaseModel):
 				f.write("gen:\t%s\n" % " ".join(res['gen'][i]))
 			f.flush()
 		logging.info("result output to %s.", filename)
+		return {key: val for key, val in res.items() if type(val) in [bytes, int, float]}
 
 	def test_process(self):
 		logging.info("Test Start.")
 		self.net.eval()
 		self.test("dev")
-		self.test("test")
+		test_res = self.test("test")
 		logging.info("Test Finish.")
+		return test_res

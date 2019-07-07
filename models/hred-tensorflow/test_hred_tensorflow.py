@@ -4,6 +4,7 @@ import tensorflow as tf
 from run import run
 from main import main
 import os
+import json
 import shutil
 cwd = os.path.abspath(os.path.dirname(__file__))
 path = os.path.split(cwd)[0]
@@ -74,13 +75,13 @@ def test_train(mocker):
 		args.cache = True
 		main(args)
 	mock = mocker.patch('main.main', side_effect=side_effect_train)
-	run()
+	run([])
 	tf.reset_default_graph()
 	mock.side_effect = side_effect_restore
-	run()
+	run([])
 	tf.reset_default_graph()
 	mock.side_effect = side_effect_cache
-	run()
+	run([])
 	tf.reset_default_graph()
 
 def test_test(mocker):
@@ -89,5 +90,12 @@ def test_test(mocker):
 		args.mode = 'test'
 		main(args)
 	mock = mocker.patch('main.main', side_effect=side_effect_test)
-	run()
+	run([])
+	old_res = json.load(open("./result.json", "r"))
+	tf.reset_default_graph()
+	run([])
+	new_res = json.load(open("./result.json", "r"))
+	for key in old_res:
+		if key[-9:] == 'hashvalue':
+			assert old_res[key] == new_res[key]
 	tf.reset_default_graph()

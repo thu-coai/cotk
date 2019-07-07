@@ -321,6 +321,7 @@ class Generator(object):
                 f.write("%s\n" % " ".join(res['gen'][i]))
 
         print("result output to %s." % test_file)
+        return {key: val for key, val in res.items() if type(val) in [bytes, int, float]}
 
 
     def adv_train_process(self, sess, data, rollout_gen, discriminator):

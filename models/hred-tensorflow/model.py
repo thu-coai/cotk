@@ -373,3 +373,4 @@ class HredModel(object):
 						f.write("gen:\n")
 
 		print("result output to %s" % test_file)
+		return {key: val for key, val in res.items() if type(val) in [bytes, int, float]}

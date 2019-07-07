@@ -1,5 +1,6 @@
 import os
 
+import json
 import numpy as np
 import tensorflow as tf
 from cotk.dataloader import LanguageGeneration
@@ -144,4 +145,8 @@ def main(args):
                 discriminator.train_process(generator, data, sess, args.dis_adv_epoch_num)
         else:
             print("Start testing...")
-            generator.test_process(sess, data) 
+            test_res = generator.test_process(sess, data)
+            for key, val in test_res.items():
+                if isinstance(val, bytes):
+                    test_res[key] = str(val)
+            json.dump(test_res, open("./result.json", "w"))

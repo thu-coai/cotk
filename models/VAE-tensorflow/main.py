@@ -1,5 +1,6 @@
 import os
 
+import json
 import numpy as np
 import tensorflow as tf
 from cotk.dataloader import LanguageGeneration, Dataloader
@@ -63,4 +64,8 @@ def main(args):
 		if args.mode == "train":
 			model.train_process(sess, data, args)
 		else:
-			model.test_process(sess, data, args)
+			test_res = model.test_process(sess, data, args)
+			for key, val in test_res.items():
+				if isinstance(val, bytes):
+					test_res[key] = str(val)
+			json.dump(test_res, open("./result.json", "w"))

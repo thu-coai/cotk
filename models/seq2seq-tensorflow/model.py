@@ -248,3 +248,4 @@ class Seq2SeqModel(object):
 				f.write("gen:\t%s\n" % " ".join(res['gen'][i]))
 
 		print("result output to %s.", test_file)
+		return {key: val for key, val in res.items() if type(val) in [bytes, int, float]}

@@ -87,10 +87,6 @@ def run(argv):
 
 	from main import main
 
-	if args.mode == 'test':
-		import json
-		json.dump({'working_dir': './', 'entry': 'run', 'args': argv}, \
-				  open("result.json", "w"))
 	main(args)
 
 if __name__ == '__main__':

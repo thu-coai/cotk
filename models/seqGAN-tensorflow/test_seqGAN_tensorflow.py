@@ -1,4 +1,5 @@
 import pytest
+import json
 import random
 from main import main
 import tensorflow as tf
@@ -89,12 +90,12 @@ def default_args():
     args.rollout_num = 5  #Rollout number for reward estimation
     args.dis_adv_epoch_num = 1 #5 #update times of discriminator in adversarial training
     args.dis_dropout_keep_prob = 0.75 # dropout rate of discriminator
-    args.num_classes = 2 #number of class (real and fake)	
+    args.num_classes = 2 #number of class (real and fake)    
     args.dis_filter_sizes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20] #convolutional kernel size of discriminator
     args.dis_num_filters = [100, 200, 200, 200, 200, 100, 100, 100, 100, 100, 160, 160] #number of filters of each conv. kernel
     args.dis_dropout_keep_prob = 0.75 # dropout rate of discriminator
     args.dis_l2_reg_lambda = 0.2 #L2 regularization strength
-    args.dis_lr = 1e-4 #Learning rate of discriminator	
+    args.dis_lr = 1e-4 #Learning rate of discriminator    
 
     return args
 
@@ -137,6 +138,13 @@ def test_test():
     args = my_args()
     args.mode = 'test'
     main(args)
+    old_res = json.load(open("./result.json", "r"))
+    tf.reset_default_graph()
+    main(args)
+    new_res = json.load(open("./result.json", "r"))
+    for key in old_res:
+        if key[-9:] == 'hashvalue':
+            assert old_res[key] == new_res[key]
     tf.reset_default_graph()
 
 def test_restore():

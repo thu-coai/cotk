@@ -1,6 +1,6 @@
 # coding:utf-8
 
-def run():
+def run(argv):
 	import argparse
 	import time
 
@@ -63,7 +63,7 @@ def run():
 		help='Enter debug mode (using ptvsd).')
 	parser.add_argument('--cache', action='store_true',
 		help='Use cache for speeding up load data and wordvec. (It may cause problems when you switch dataset.)')
-	cargs = parser.parse_args()
+	cargs = parser.parse_args(argv)
 
 
 	# Editing following arguments to bypass command line.
@@ -113,7 +113,9 @@ def run():
 	random.seed(0)
 
 	from main import main
+
 	main(args, load_exclude_set, restoreCallback)
 
 if __name__ == '__main__':
-	run()
+	import sys
+	run(sys.argv[1:])
