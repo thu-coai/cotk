@@ -1,3 +1,4 @@
 include LICENSE.txt
 include README.md
+include cotk/resource_config/*
 prune cotk/*/__pycache__

@@ -219,16 +219,18 @@ def download(args):
 	parser.add_argument("--id", type=int, default=-1, help="query id")
 	parser.add_argument("--result", type=str, default="result.json", \
 						help="Path to dump query result.")
-	parser.add_argument("--model_url", required=True, type=str, help="Model url")
+	parser.add_argument("--model_url", type=str, default="", help="Model url")
 	cargs = parser.parse_args(args)
 
-	try:
-		model_dir = file_utils.load_model_from_url(cargs.model_url)
-	except ValueError as err:
-		LOGGER.warning(str(err))
-		model_dir = re.match(r'.*`rm (\S+)`\.', str(err)).groups()[0]
+	if cargs.model_url:
+		try:
+			model_dir = file_utils.load_model_from_url(cargs.model_url)
+		except ValueError as err:
+			LOGGER.warning(str(err))
+			model_dir = re.match(r'.*`rm (\S+)`\.', str(err)).groups()[0]
 
 	if cargs.zip_url:
+		# download from online git repo
 		match_res = re.match(r'https?://github.com/(\S+)/(\S+)/archive/(\S+).zip', cargs.zip_url)
 		if match_res:
 			git_user, git_repo, git_commit = match_res.groups()
@@ -236,23 +238,24 @@ def download(args):
 			extract_dir = '{}_{}'.format(git_repo, git_commit)
 			code_dir = clone_codes_from_commit(git_user, git_repo, git_commit, extract_dir)
 			LOGGER.info("Codes from {}/{}/{} fetched.".format(git_commit, git_repo, git_user))
-			result_path = "{}/result.json".format(code_dir)
-			if not os.path.isfile(result_path):
-				raise ValueError("Result file ({}) is not found.".format(result_path))
+			config_path = "{}/config.json".format(code_dir)
+			if not os.path.isfile(config_path):
+				raise FileNotFoundError("Config file ({}) is not found.".format(config_path))
 			try:
-				info = json.load(open(result_path, "r"))
+				info = json.load(open(config_path, "r"))
 			except json.JSONDecodeError as err:
-				raise json.JSONDecodeError("{} is not a valid json. {}".format(result_path, err.msg), \
+				raise json.JSONDecodeError("{} is not a valid json. {}".format(config_path, err.msg), \
 										   err.doc, err.pos)
 			undefined_keys = []
 			for key in ['working_dir', 'entry', 'args']:
 				if key not in info:
 					undefined_keys.append(key)
 			if undefined_keys:
-				raise RuntimeError("Undefined keys in `result.json`: {}".format(", ".format(undefined_keys)))
+				raise RuntimeError("Undefined keys in `config.json`: {}".format(", ".join(undefined_keys)))
 		else:
-			raise RuntimeError("Invalid zip url.")
+			raise ValueError("Invalid zip url.")
 	else:
+		# download from dashboard
 		LOGGER.info("Collecting info from id %d...", cargs.id)
 		info = get_result_from_id(cargs.id)
 		json.dump(info, open(cargs.result, "w"))
@@ -263,23 +266,35 @@ def download(args):
 												  info['git_commit'], extract_dir)
 		LOGGER.info("Codes from id %d fetched.")
 
+	# cmd construction
 	cmd = "cd {}/{} && python {}.py".format(code_dir, info['working_dir'], info['entry'])
 	if not info['args']:
 		info['args'] = []
 	else:
 		if not isinstance(info['args'], list):
-			raise RuntimeError("`args` in `result.json` should be of type `list`.")
-	try:
-		idx = info['args'].index('--model_dir')
-		info['args'] = info['args'][:idx] + ['--model_dir', model_dir] + info['args'][idx + 2:]
-	except:
-		info['args'] = ['--model_dir', model_dir] + info['args']
+			raise ValueError("`args` in `config.json` should be of type `list`.")
+	if cargs.model_url:
+		try:
+			idx = info['args'].index('--model_dir')
+			info['args'] = info['args'][:idx] + ['--model_dir', model_dir] + info['args'][idx + 2:]
+		except:
+			info['args'] = ['--model_dir', model_dir] + info['args']
 	cmd += " {}".format(" ".join(info['args']))
 	with open("{}/run_model.sh".format(extract_dir), "w") as file:
 		file.write(cmd)
 	LOGGER.info("Model running cmd written in {}".format("run_model.sh"))
 	print("Model running cmd: \t{}".format(cmd))
+
+	# run model
+	result_path = "{}/result.json".format(code_dir)
+	old_time_stamp = 0
+	if os.path.exists(result_path):
+		old_time_stamp = os.path.getmtime(result_path)
+
 	os.system("bash {}/run_model.sh".format(extract_dir))
+	if not os.path.exists(result_path) or \
+		os.path.getmtime('{}/result.json'.format(code_dir)) <= old_time_stamp:
+		raise FileNotFoundError("New result file not found.")
 	print(json.load(open("{}/result.json".format(code_dir), "r")))
 
 def get_result_from_id(query_id):
@@ -331,14 +346,11 @@ def import_local_resources(args):
 	'''Entrance of importing local resources'''
 	parser = argparse.ArgumentParser(prog="cotk import", \
 		description="Import local resources")
-	parser.add_argument("--file_id", type=str, help="Name of resource")
-	parser.add_argument("--file_path", type=str, help="Path to resource")
+	parser.add_argument("--file_id", type=str, required=True, help="Name of resource")
+	parser.add_argument("--file_path", type=str, required=True, help="Path to resource")
 	cargs = parser.parse_args(args)
 
-	if cargs.file_id and cargs.file_path:
-		file_utils.import_local_resources(cargs.file_id, cargs.file_path)
-	elif cargs.file_id or cargs.file_path:
-		raise RuntimeError("You should specify both the name and the path to the resource.")
+	file_utils.import_local_resources(cargs.file_id, cargs.file_path)
 	LOGGER.info("Successfully import local resource {}.".format(cargs.file_id))
 
 def dispatch(sub_entrance, args):
