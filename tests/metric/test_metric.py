@@ -1093,7 +1093,7 @@ class TestFwBwBleuCorpusMetric:
 	def test_hashvalue(self, to_list, pad):
 		dataloader = FakeDataLoader()
 		reference_key, gen_key = ('resp_allvocabs', 'gen')
-		key_list = [gen_key]
+		key_list = [reference_key, gen_key]
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 								   to_list=to_list, pad=pad, \
 								   gen_len='non-empty', ref_len='non-empty')

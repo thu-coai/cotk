@@ -7,11 +7,11 @@ from itertools import chain
 import multiprocessing
 from multiprocessing import Pool
 import numpy as np
+import tqdm
 from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunction
 from .._utils.unordered_hash import UnorderedSha256
 from .._utils.imports import DummyObject
 from .._utils.metaclass import LoadClassInterface, DocStringInheritor
-
 try:
 	import torch
 except ImportError as err:
@@ -875,9 +875,10 @@ class SelfBleuCorpusMetric(MetricBase):
 
 		bleu_irl = []
 		if self.sample >= 1000:
+			tasks = ((ref[:i]+ref[i+1:self.sample], ref[i]) for i in range(self.sample))
 			pool = Pool(multiprocessing.cpu_count())
-			bleu_irl = pool.map(self._run_f, [(ref[:i]+ref[i+1:self.sample], ref[i]) \
-								for i in range(self.sample)])
+			for ans in tqdm.tqdm(pool.imap_unordered(self._run_f, tasks, chunksize=20), total=self.sample):
+				bleu_irl.append(ans)
 			pool.close()
 			pool.join()
 		elif self.sample > 1:
@@ -921,10 +922,8 @@ class FwBwBleuCorpusMetric(MetricBase):
 				{MetricBase.FORWARD_GEN_ARGUMENTS}
 		'''
 		gen = data[self.gen_key]
-		resp = self.dataloader.data["test"][self.reference_test_key]
-		for gen_sen, resp_sen in zip(gen, resp):
+		for gen_sen in gen:
 			self.hyps.append(list(self.dataloader.trim_index(gen_sen)))
-			self.refs.append(list(self.dataloader.trim_index(resp_sen[1:])))
 
 	def _run_f(self, ele):
 		'''Auxiliary function for computing sentence bleu:
@@ -947,46 +946,56 @@ class FwBwBleuCorpusMetric(MetricBase):
 			* **fw-bw-bleu hashvalue**: hash value for fwbwbleu metric, same hash value stands
 			  for same evaluation settings.
 		'''
+		res = super().close()
+
+		resp = self.dataloader.data["test"][self.reference_test_key]
+		for resp_sen in resp:
+			self.refs.append(list(self.dataloader.trim_index(resp_sen[1:])))
+
 		sample_hyps = self.sample if self.sample < len(self.hyps) else len(self.hyps)
 		sample_refs = self.sample if self.sample < len(self.refs) else len(self.refs)
 
 		random.seed(self.seed)
 		random.shuffle(self.hyps)
 		random.shuffle(self.refs)
-		result = {}
+
+		bleu_irl_fw, bleu_irl_bw = [], []
 		if sample_hyps >= 1000:
+			tasks = ((self.refs, self.hyps[i]) for i in range(sample_hyps))
 			pool = Pool(multiprocessing.cpu_count())
-			bleu_irl_fw = pool.map(self._run_f, \
-					[(self.refs, self.hyps[i]) for i in range(sample_hyps)])
+			for ans in tqdm.tqdm(pool.imap_unordered(self._run_f, tasks, chunksize=20), total=sample_hyps):
+				bleu_irl_fw.append(ans)
 			pool.close()
 			pool.join()
 		else:
-			bleu_irl_fw = []
 			for i in range(sample_hyps):
 				bleu_irl_fw.append(self._run_f((self.refs, self.hyps[i])))
 
 		if sample_refs >= 1000:
+			tasks = ((self.hyps, self.refs[i]) for i in range(sample_refs))
 			pool = Pool(multiprocessing.cpu_count())
-			bleu_irl_bw = pool.map(self._run_f, \
-					[(self.hyps, self.refs[i]) for i in range(sample_refs)])
+			for ans in tqdm.tqdm(pool.imap_unordered(self._run_f, tasks, chunksize=20), total=sample_refs):
+				bleu_irl_bw.append(ans)
 			pool.close()
 			pool.join()
 		else:
-			bleu_irl_bw = []
 			for i in range(sample_refs):
 				bleu_irl_bw.append(self._run_f((self.hyps, self.refs[i])))
 		fw_bleu = (1.0 * sum(bleu_irl_fw) / len(bleu_irl_fw))
 		bw_bleu = (1.0 * sum(bleu_irl_bw) / len(bleu_irl_bw))
-		result["fw-bleu"] = fw_bleu
-		result["bw-bleu"] = bw_bleu
 		if fw_bleu + bw_bleu > 0:
-			result["fw-bw-bleu"] = 2.0 * bw_bleu * fw_bleu / (fw_bleu + bw_bleu)
+			fw_bw_bleu = 2.0 * bw_bleu * fw_bleu / (fw_bleu + bw_bleu)
 		else:
-			result["fw-bw-bleu"] = 0
+			fw_bw_bleu = 0
+
+		res.update({"fw-bleu" : fw_bleu, \
+			"bw-bleu" : bw_bleu, \
+			"fw-bw-bleu" : fw_bw_bleu \
+		})
 
 		self._hash_relevant_data(self.refs)
-		result["fw-bw-bleu hashvalue"] = self._hashvalue()
-		return result
+		res.update({"fw-bw-bleu hashvalue" : self._hashvalue()})
+		return res
 
 class MultiTurnBleuCorpusMetric(MetricBase):
 	'''Metric for calculating multi-turn BLEU.
