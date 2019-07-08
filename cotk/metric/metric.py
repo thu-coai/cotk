@@ -675,7 +675,7 @@ class MultiTurnPerplexityMetric(MetricBase):
 			Default: ``False``.
 	'''
 
-	def __init__(self, dataloader, reference_allvocabs_key="multi_turn_ref_allvocabs", \
+	def __init__(self, dataloader, multi_turn_reference_allvocabs_key="multi_turn_ref_allvocabs", \
 					   multi_turn_reference_len_key="multi_turn_ref_length", \
 					   multi_turn_gen_log_prob_key="multi_turn_gen_log_prob", \
 					   invalid_vocab=False, \
@@ -683,7 +683,7 @@ class MultiTurnPerplexityMetric(MetricBase):
 			  ):
 		super().__init__()
 		self.dataloader = dataloader
-		self.reference_allvocabs_key = reference_allvocabs_key
+		self.multi_turn_reference_allvocabs_key = multi_turn_reference_allvocabs_key
 		self.multi_turn_reference_len_key = multi_turn_reference_len_key
 		self.multi_turn_gen_log_prob_key = multi_turn_gen_log_prob_key
 		self.invalid_vocab = invalid_vocab
@@ -717,7 +717,7 @@ class MultiTurnPerplexityMetric(MetricBase):
 			``np.sum(np.exp(gen_log_prob), -1)`` equals ``np.ones((batch_size, gen_sentence_length))``
 		'''
 		super().forward(data)
-		reference_allvocabs = data[self.reference_allvocabs_key]
+		reference_allvocabs = data[self.multi_turn_reference_allvocabs_key]
 		length = data[self.multi_turn_reference_len_key]
 		gen_log_prob = data[self.multi_turn_gen_log_prob_key]
 		if len(length) != len(reference_allvocabs) or len(length) != len(gen_log_prob):

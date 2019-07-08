@@ -262,7 +262,7 @@ class MultiTurnDialog(GenerationBase):
 			list(map(lambda word: self.all_vocab_list[word], sent)), \
 			index))
 
-	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob"):
+	def get_teacher_forcing_metric(self, multi_turn_gen_log_prob_key="multi_turn_gen_log_prob"):
 		'''Get metric for teacher-forcing.
 
 		It contains:
@@ -277,11 +277,13 @@ class MultiTurnDialog(GenerationBase):
 			A :class:`.metric.MetricChain` object.
 		'''
 		metric = MetricChain()
-		metric.add_metric(MultiTurnPerplexityMetric(self, multi_turn_gen_log_prob_key=gen_log_prob_key, \
-			multi_turn_reference_len_key="sent_allvocabs"))
+		metric.add_metric(MultiTurnPerplexityMetric(self, \
+			multi_turn_gen_log_prob_key=multi_turn_gen_log_prob_key, \
+			multi_turn_reference_len_key="sent_length", \
+			multi_turn_reference_allvocabs_key="sent_allvocabs"))
 		return metric
 
-	def get_inference_metric(self, multi_turn_gen_key="gen"):
+	def get_inference_metric(self, multi_turn_gen_key="multi_turn_gen"):
 		'''Get metric for inference.
 
 		It contains:

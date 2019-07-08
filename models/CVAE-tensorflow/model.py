@@ -454,7 +454,7 @@ class CVAEModel(object):
 				metric1_data = {
 						'sent_allvocabs': np.expand_dims(cut_batch_data['responses'], 1),
 						'sent_length': np.expand_dims(responses_length, 1),
-						'gen_log_prob': np.expand_dims(cut_batch_data['gen_prob'], 1)
+						'multi_turn_gen_log_prob': np.expand_dims(cut_batch_data['gen_prob'], 1)
 						}
 				metric1.forward(metric1_data)
 				valid_index = [idx for idx, length in 
@@ -473,10 +473,10 @@ class CVAEModel(object):
 
 			for conv in conv_data:
 				metric2_data = {
-						'context_allvocabs': np.array(padding(conv['contexts'])),
+						#'context_allvocabs': np.array(padding(conv['contexts'])),
 						'turn_length': np.array([len(conv['contexts'])], dtype=np.int32),
-						'reference_allvocabs':np.array(padding(conv['responses'])),
-						'gen': np.array(padding(conv['generations'], pad_go_id=True))
+						'sent_allvocabs':np.array(padding(conv['responses'])),
+						'multi_turn_gen': np.array(padding(conv['generations'], pad_go_id=True))
 						}
 				metric2.forward(metric2_data)
 			batched_data = data.get_next_batch("test")
@@ -512,7 +512,7 @@ class CVAEModel(object):
 						[wid if wid < data.vocab_size else data.unk_id for wid in sent] + [data.eos_id])
 				res.append(tmp)
 			return res
-		prec_rec_metrics = data.get_multi_ref_metric(sent_per_inst=args.repeat_N, embed=embed)
+		prec_rec_metrics = data.get_multi_ref_metric(generated_num_per_context=args.repeat_N, embed=embed)
 		for batch_data in self.multi_reference_batches(data, args.batch_size):
 			responses = []
 			for _ in range(args.repeat_N):
@@ -527,7 +527,7 @@ class CVAEModel(object):
 					if len(resp) == 0:
 						resp = [data.unk_id]
 					responses[rid].append(resp + [data.eos_id])
-			metric_data = {'resp_allvocabs': process_cands(batch_data['candidate_allvocabs']), 'gen': responses}
+			metric_data = {'candidate_allvocabs': process_cands(batch_data['candidate_allvocabs']), 'multiple_gen_key': responses}
 			prec_rec_metrics.forward(metric_data)
 
 		res = prec_rec_metrics.close()

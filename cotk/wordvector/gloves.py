@@ -57,10 +57,11 @@ class Glove(WordVector):
 					have_warned = True
 					if len(tmp) > n_dims:
 						print("Warning: Dimension of loaded wordvec is %d, but ``n_dims`` is set to %d. \
-							The redundant dimension is trimmed.")
+							The redundant dimension is trimmed." % (len(tmp), n_dims))
 					else:
 						print("Warning: Dimension of loaded wordvec is %d, but ``n_dims`` is set to %d. \
-							The extra dimension is initialized by normal distribution (mean=0, std=0.1).")
+							The extra dimension is initialized by normal distribution (mean=0, std=0.1)."\
+							% (len(tmp), n_dims))
 				now_dims = min(len(tmp), n_dims)
 				vec[:now_dims] = tmp[:now_dims]
 			wordvec.append(vec)

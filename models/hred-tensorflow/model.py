@@ -338,14 +338,14 @@ class HredModel(object):
 			metric1_data = {
 					'sent_allvocabs': batched_data['sent_allvocabs'],
 					'sent_length': batched_data['sent_length'],
-					'gen_log_prob': batched_gen_prob,
+					'multi_turn_gen_log_prob': batched_gen_prob,
 					}
 			metric1.forward(metric1_data)
 			metric2_data = {
 					'context_allvocabs': [],
-					'reference_allvocabs': batched_data['sent_allvocabs'],
+					'sent_allvocabs': batched_data['sent_allvocabs'],
 					'turn_length': batched_data['turn_length'],
-					'gen': batched_gen,
+					'multi_turn_gen': batched_gen,
 					}
 			metric2.forward(metric2_data)
 			batched_data = data.get_next_batch("test")

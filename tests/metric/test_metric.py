@@ -450,7 +450,7 @@ class TestBleuPrecisionRecallMetric():
 			bprm = BleuPrecisionRecallMetric(dataloader, ngram, 3, reference_key, gen_key)
 
 		# TODO: might need adaptation of dataloader.get_data for test_prec_rec
-		# turn_length is not sent_per_inst conceptually
+		# turn_length is not generated_num_per_context conceptually
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 								   to_list=(type == 'list'), pad=(shape == 'pad'), \
 								   ref_len=ref_len, gen_len=gen_len, test_prec_rec=True)
@@ -574,7 +574,7 @@ class TestEmbSimilarityPrecisionRecallMetric():
 													  reference_key, gen_key)
 
 		# TODO: might need adaptation of dataloader.get_data for test_prec_rec
-		# turn_length is not sent_per_inst conceptually
+		# turn_length is not generated_num_per_context conceptually
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 								   to_list=(type == 'list'), pad=(shape == 'pad'), \
 								   ref_len=ref_len, gen_len=gen_len, \
