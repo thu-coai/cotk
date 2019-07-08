@@ -979,7 +979,10 @@ class FwBwBleuCorpusMetric(MetricBase):
 		bw_bleu = (1.0 * sum(bleu_irl_bw) / len(bleu_irl_bw))
 		result["fw-bleu"] = fw_bleu
 		result["bw-bleu"] = bw_bleu
-		result["fw-bw-bleu"] = 2.0 * bw_bleu * fw_bleu / (fw_bleu + bw_bleu)
+		if fw_bleu + bw_bleu > 0:
+			result["fw-bw-bleu"] = 2.0 * bw_bleu * fw_bleu / (fw_bleu + bw_bleu)
+		else:
+			result["fw-bw-bleu"] = 0
 
 		self._hash_relevant_data(self.refs)
 		result["fw-bw-bleu hashvalue"] = self._hashvalue()
