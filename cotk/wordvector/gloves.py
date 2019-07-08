@@ -8,16 +8,19 @@ from .wordvector import WordVector
 from .._utils.file_utils import get_resource_file_path
 
 class Glove(WordVector):
-	r'''GloVe is pre-trained word vectors from
-	Jeffrey Pennington, Richard Socher, and Christopher D. Manning. 2014.
-	GloVe: Global Vectors for Word Representation.
+	r'''GloVe is pre-trained word vector named `Global Vectors for Word Representation`.
+
+	References:
+
+		[1] Jeffrey Pennington, Richard Socher, and Christopher D. Manning. 2014.
+		GloVe: Global Vectors for Word Representation.
 
 	Arguments:
 		file_id (str): a str indicates the source of GloVe word vectors. If it is local file,
-			it can be a directory contains 'glove.txt' or a text file.
-		file_type (str): a str indicates the type of GloVe word vectors. Default: Glove300d
+			it can be a directory contains 'glove.txt' or just a text file.
+			Default: ``resources://Glove300d``.	A 300d glove is downloaded and cached.
 	'''
-	def __init__(self, file_id):
+	def __init__(self, file_id="resources://Glove300d"):
 		super().__init__()
 		if file_id is not None:
 			self.file_id = file_id
@@ -42,6 +45,7 @@ class Glove(WordVector):
 
 		wordvec = []
 		oov_cnt = 0
+		have_warned = False
 		for vocab in vocab_list:
 			str_vec = raw_word2vec.get(vocab, None)
 			vec = np.random.randn(n_dims) * 0.1
@@ -49,6 +53,14 @@ class Glove(WordVector):
 				oov_cnt += 1
 			else:
 				tmp = np.fromstring(str_vec, sep=" ")
+				if len(tmp) != n_dims and not have_warned:
+					have_warned = True
+					if len(tmp) > n_dims:
+						print("Warning: Dimension of loaded wordvec is %d, but ``n_dims`` is set to %d. \
+							The redundant dimension is trimmed.")
+					else:
+						print("Warning: Dimension of loaded wordvec is %d, but ``n_dims`` is set to %d. \
+							The extra dimension is initialized by normal distribution (mean=0, std=0.1).")
 				now_dims = min(len(tmp), n_dims)
 				vec[:now_dims] = tmp[:now_dims]
 			wordvec.append(vec)

@@ -70,7 +70,7 @@ def run(argv):
 	args.grad_clip = 5.0
 	args.show_sample = [0]
 	args.min_vocab_times = 50
-	args.max_sen_length = 50
+	args.max_sent_length = 50
 	args.max_turn_length = 11
 	args.checkpoint_steps = 1000
 	args.checkpoint_max_to_keep = 5

@@ -34,60 +34,27 @@ class MultiTurnDialog(GenerationBase):
 		ext_vocab = ext_vocab or ["<pad>", "<unk>", "<go>", "<eos>"]
 		super().__init__(ext_vocab, key_name)
 
-	def get_batch(self, key, index):
-		'''Get a batch of specified `index`.
 
-		Arguments:
-			{ARGUMENTS}
-
-		Returns:
-			(dict): A dict at least contains:
-			{RETURNSDICT}
-
-			See the example belows.
-
-		Examples:
-			{EXAMPLES}
-
-		'''
-		if key not in self.key_name:
-			raise ValueError("No set named %s." % key)
-		res = {}
-		res["turn_length"] = [len(self.data[key]['session'][i]) for i in index]
-		res["sent_length"] = []
-		for i in index:
-			sent_length = [len(sent) for sent in self.data[key]['session'][i]]
-			res["sent_length"].append(sent_length)
-		res_sent = res["sent"] = np.zeros((len(index), np.max(res['turn_length']), \
-			np.max(list(chain(*res['sent_length'])))), dtype=int)
-		for i, index_i in enumerate(index):
-			for j, sent in enumerate(self.data[key]['session'][index_i]):
-				res_sent[i, j, :len(sent)] = sent
-
-		res["sent_allvocabs"] = res_sent.copy()
-		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
-		return res
-
-	get_batch.ARGUMENTS = r'''
-			key (str): must be contained in `key_name`
+	GET_BATCH_ARGUMENTS = r'''
+			key (str): key name of dataset, must be contained in ``self.key_name``.
 			index (list): a list of specified index
 	'''
 
-	get_batch.RETURNSDICT = r'''
-				* turn_length(list): A 1-d list, the number of turns in sessions.
-					Size: `[batch_size]`
-				* sent_length(list): A 2-d non-padded list, the length of sentence in turns.
-					The second dimension is various in different session.
-					Length of outer list: `[batch_size]`
-				* sent(:class:`numpy.array`): A 3-d padding array containing id of words.
-					Only provide valid words. `unk_id` will be used if a word is not valid.
-					Size: `[batch_size, max(turn_length[i]), max(sent_length)]`
-				* sent_allvocabs(:class:`numpy.array`): A 3-d padding array containing id of words.
-					Provide both valid and invalid vocabs.
-					Size: `[batch_size, max(turn_length[i]), max(sent_length)]`
+	GET_BATCH_RETURNS_DICT = r'''
+			* turn_length(list): A 1-d list, the number of turns in sessions.
+			  Size: ``[batch_size]``
+			* sent_length(list): A 2-d non-padded list, the length of sentence in turns.
+			  The second dimension is various in different session.
+			  Length of outer list: ``[batch_size]``
+			* sent(:class:`numpy.ndarray`): A 3-d padding array containing words of index form.
+			  Only provide valid words. `unk_id` will be used if a word is not valid.
+			  Size: ``[batch_size, max(turn_length[i]), max(sent_length)]``
+			* sent_allvocabs(:class:`numpy.ndarray`): A 3-d padding array containing words of index form.
+			  Provide both valid and invalid vocabs.
+			  Size: ``[batch_size, max(turn_length[i]), max(sent_length)]``
 	'''
 
-	get_batch.EXAMPLESPART = r'''
+	GET_BATCH_EXAMPLES_PART = r'''
 			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you",
 			>>> #	"hello", "i", "am", "fine"]
 			>>> # vocab_size = 9
@@ -116,51 +83,87 @@ class MultiTurnDialog(GenerationBase):
 				]),
 				"turn_length": [4, 2], # the number of turns in each session
 				"sent_length": [[3, 3, 5, 5], [6, 5]], # length of sentences'''
-	get_batch.EXAMPLES = get_batch.EXAMPLESPART + r'''
-			}
-	'''
 
-	def multi_turn_trim_index(self, index, turn_length=None, ignore_first_token=False):
-		'''Trim indexes for multi turn dialog. There will be 3 steps:
-			* For every turn, if there is an `<eos>`, \
-				find first `<eos>` and abandon words after it (included the `<eos>`).
-			* Ignore `<pad>` s at the end of every turn.
-			* When `turn_length` is None, discard the first empty turn and the turn after it. \
-				Otherwise, discard the turn according to turn_length.
+	def get_batch(self, key, index):
+		'''Get a batch of specified `index`.
 
 		Arguments:
-			index (list or :class:`numpy.array`): a 2-d array of int.
-				Size: `[turn_length, max_sent_length]`
-			turn_length (int): Default: None
-			ignore_first_token (bool): if True, ignore first token of each turn (must be `<go>`).
+			{GET_BATCH_ARGUMENTS}
+
+		Returns:
+			(dict): A dict at least contains:
+			{GET_BATCH_RETURNS_DICT}
+
+			See the example belows.
+
+		Examples:
+			{GET_BATCH_EXAMPLES_PART}
+			}
+		'''
+		if key not in self.key_name:
+			raise ValueError("No set named %s." % key)
+		res = {}
+		res["turn_length"] = [len(self.data[key]['session'][i]) for i in index]
+		res["sent_length"] = []
+		for i in index:
+			sent_length = [len(sent) for sent in self.data[key]['session'][i]]
+			res["sent_length"].append(sent_length)
+		res_sent = res["sent"] = np.zeros((len(index), np.max(res['turn_length']), \
+			np.max(list(chain(*res['sent_length'])))), dtype=int)
+		for i, index_i in enumerate(index):
+			for j, sent in enumerate(self.data[key]['session'][index_i]):
+				res_sent[i, j, :len(sent)] = sent
+
+		res["sent_allvocabs"] = res_sent.copy()
+		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
+		return res
+
+	def multi_turn_trim_index(self, index, turn_length=None, ignore_first_token=False):
+		r'''Trim indexes for multi turn dialog. There will be 3 steps:
+
+		* For every turn, if there is an ``<eos>``, \
+		  find first ``<eos>`` and abandon words after it (included the ``<eos>``).
+		* Ignore ``<pad>`` s at the end of every turn.
+		* When ``turn_length`` is None, discard the first empty turn and the turn after it. \
+		  Otherwise, discard the turn according to turn_length.
+
+		Arguments:
+			index (list or :class:`numpy.ndarray`): a 2-d jagged array of int.
+				Size: ``[turn_length, ~sent_length]``, where "~" means different sizes
+				in this dimension is allowed.
+			turn_length (int): Default: ``None``
+			ignore_first_token (bool): if True, ignore first token of each turn (must be ``<go>``).
+
+		Returns:
+			(list) a jagged 2-d array of trimmed index. Size: ``[turn_length, ~sent_length]``.
 
 		Examples:
 			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 			>>> #	"been", "to", "China", "Japan"]
 			>>> dataloader.multi_turn_trim_index(
-			...	[[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0],
-			... 		# <go> I have been to China <pad> <pad> <eos> I <eos> <pad>
-			... [2, 4, 5, 6, 7, 9, 3, 0, 3, 4, 3, 0],
-			... 		# <go> I have been to Japan <eos> <pad> <eos> I <eos> <pad>
-			... [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-			... [2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0]],
-			...			# <go> I have been to China <pad> <pad> <eos> I <eos> <pad>
-			... turn_length = None, ignore_first_token = False)
-			>>> [[2, 4, 5, 6, 7, 8], [2, 4, 5, 6, 7, 9]]
+			...     [[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0],
+			...         # <go> I have been to China <pad> <pad> <eos> I <eos> <pad>
+			...     [2, 4, 5, 6, 7, 9, 3, 0, 3, 4, 3, 0],
+			...         # <go> I have been to Japan <eos> <pad> <eos> I <eos> <pad>
+			...     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+			...     [2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0]],
+			...         # <go> I have been to China <pad> <pad> <eos> I <eos> <pad>
+			...     turn_length = None, ignore_first_token = False)
+			[[2, 4, 5, 6, 7, 8], [2, 4, 5, 6, 7, 9]]
 			>>> dataloader.multi_turn_trim_index(
-			...	[[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0],
-			... [2, 4, 5, 6, 7, 9, 3, 0, 3, 4, 3, 0],
-			... [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-			... [2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0]],
-			... turn_length = 1, ignore_first_token = False)
-			>>> [[2, 4, 5, 6, 7, 8]]
+			...     [[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0],
+			...     [2, 4, 5, 6, 7, 9, 3, 0, 3, 4, 3, 0],
+			...     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+			...     [2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0]],
+			...     turn_length = 1, ignore_first_token = False)
+			[[2, 4, 5, 6, 7, 8]]
 			>>> dataloader.multi_turn_trim_index(
-			...	[[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0],
-			... [2, 4, 5, 6, 7, 9, 3, 0, 3, 4, 3, 0],
-			... [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-			... [2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0]],
-			... turn_length = None, ignore_first_token = True)
-			>>> [[4, 5, 6, 7, 8], [4, 5, 6, 7, 9]]
+			...     [[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0],
+			...     [2, 4, 5, 6, 7, 9, 3, 0, 3, 4, 3, 0],
+			...     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+			...     [2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0]],
+			...     turn_length = None, ignore_first_token = True)
+			[[4, 5, 6, 7, 8], [4, 5, 6, 7, 9]]
 		'''
 		res = []
 		for i, turn_index in enumerate(index):
@@ -174,29 +177,31 @@ class MultiTurnDialog(GenerationBase):
 			res.append(turn_trim)
 		return res
 
-	def multi_turn_sen_to_index(self, session, invalid_vocab=False):
+	def convert_multi_turn_tokens_to_ids(self, session, invalid_vocab=False):
 		'''Convert a session from string to index representation.
 
 		Arguments:
-			sen (list): a 2-d list of str, representing each token of the session.
+			session (list): a jagged 2-d list of string, representing each token of the session.
+					Size: ``[turn_length, ~sent_length]``, where "~" means different sizes
+					in this dimension is allowed.
 			invalid_vocab (bool): whether to provide invalid vocabs.
-					If ``False``, invalid vocabs will be transferred to `unk_id`.
+					If ``False``, invalid vocabs will be transferred to ``unk_id``.
 					If ``True``, invalid vocabs will using their own id.
-					Default: False
+					Default: ``False``.
 
 		Examples:
 			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 			>>> #	"been", "to", "China", "Japan"]
 			>>> # vocab_size = 7
 			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have", "been"]
-			>>> dataloader.multi_turn_sen_to_index(
+			>>> dataloader.convert_multi_turn_tokens_to_ids(
 			...	[["<go>", "I", "have", "been", "to", "China", "<eos>"],
-			... ["<go>", "I", "have", "been", "to", "Japan", "<eos>"]], invalid_vocab = False)
+			... ["<go>", "I", "have", "been", "to", "Japan", "<eos>"]], invalid_vocab=False)
 			>>> [[2, 4, 5, 6, 1, 1, 3], [2, 4, 5, 6, 1, 1, 3]]
-			>>> dataloader.multi_turn_sen_to_index(
+			>>> dataloader.convert_multi_turn_tokens_to_ids(
 			...	[["<go>", "I", "have", "been", "to", "China", "<eos>"],
-			... ["<go>", "I", "have", "been", "to", "Japan", "<eos>"]], invalid_vocab = True)
-			>>> [[2, 4, 5, 6, 7 ,8 ,3], [2, 4, 5, 6, 7 ,9 ,3]]
+			... ["<go>", "I", "have", "been", "to", "Japan", "<eos>"]], invalid_vocab=True)
+			>>> [[2, 4, 5, 6, 7, 8, 3], [2, 4, 5, 6, 7, 9, 3]]
 		'''
 		if invalid_vocab:
 			return list(map(lambda sent: list(map( \
@@ -207,43 +212,48 @@ class MultiTurnDialog(GenerationBase):
 				self._valid_word2id, sent)), \
 			session))
 
-	def multi_turn_index_to_sen(self, index, trim=True, turn_length=None, ignore_first_token=False):
+	def convert_multi_turn_ids_to_tokens(self, index, trim=True, turn_length=None, \
+				ignore_first_token=False):
 		'''Convert a session from index to string representation
 
 		Arguments:
-			index (list or :class:`numpy.array`): a 2-d array of int.
-				Size: [turn_length, max_sent_length]
+			index (list or :class:`numpy.ndarray`): a jagged 2-d array of int.
+				Size: ``[turn_length, ~sent_length]``, where where "~" means different sizes
+				in this dimension is allowed.
 			trim (bool): if True, call :func:`multi_turn_trim_index` before convertion.
-			turn_length (int): Only works when trim=True.
+			turn_length (int): Only works when trim=``True``.
 				If True, the session is trimmed according the turn_length. Default: None
-			ignore_first_token (bool): Only works when trim=True.
+			ignore_first_token (bool): Only works when trim=``True``.
 				If True, ignore first token of each turn (must be `<go>`).
 
 		Examples:
 			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 			>>> #	"been", "to", "China", "Japan"]
-			>>> dataloader.multi_turn_index_to_sen(
+			>>> dataloader.convert_multi_turn_ids_to_tokens(
 			...	[[2, 4, 5, 6, 7, 8, 3, 0, 0],
 			... [2, 4, 5, 6, 7, 9, 3, 0, 0]],
-			... trim = True, turn_length = None, ignore_first_token = False)
+			... trim=True, turn_length=None, ignore_first_token=False)
 			>>> [["<go>", "I", "have", "been", "to", "China"],
 			... ["<go>", "I", "have", "been", "to", "Japan"]]
-			>>> dataloader.multi_turn_index_to_sen(
+			>>> dataloader.convert_multi_turn_ids_to_tokens(
 			...	[[2, 4, 5, 6, 7, 8, 3, 0, 0],
 			... [2, 4, 5, 6, 7, 9, 3, 0, 0]],
-			... trim = True, turn_length = 1, ignore_first_token = False)
+			... trim=True, turn_length=1, ignore_first_token=False)
 			>>> [["<go>", "I", "have", "been", "to", "China"]]
-			>>> dataloader.multi_turn_index_to_sen(
+			>>> dataloader.convert_multi_turn_ids_to_tokens(
 			...	[[2, 4, 5, 6, 7, 8, 3, 0, 0],
 			... [2, 4, 5, 6, 7, 9, 3, 0, 0]],
-			... trim = True, turn_length = None, ignore_first_token = True)
+			... trim=True, turn_length=None, ignore_first_token=True)
 			>>> [["I", "have", "been", "to", "China"],
 			... ["I", "have", "been", "to", "Japan"]]
-			>>> dataloader.multi_turn_index_to_sen(
+			>>> dataloader.convert_multi_turn_ids_to_tokens(
 			...	[[2, 4, 5, 6, 7, 8, 3, 0, 0],
-			... [2, 4, 5, 6, 7, 9, 3, 0, 0]], trim = False)
+			... [2, 4, 5, 6, 7, 9, 3, 0, 0]], trim=False)
 			>>> [["<go>", "I", "have", "been", "to", "China", "<eos>", "<pad>", "<pad>"],
 			... ["<go>", "I", "have", "been", "to", "Japan", "<eos>", "<pad>", "<pad>"]]
+
+		Returns:
+			(list): a list of trimmed index
 		'''
 		if trim:
 			index = self.multi_turn_trim_index(index, turn_length=turn_length, \
@@ -253,20 +263,25 @@ class MultiTurnDialog(GenerationBase):
 			index))
 
 	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob"):
-		'''Get metric for teacher-forcing mode.
+		'''Get metric for teacher-forcing.
 
 		It contains:
 
 		* :class:`.metric.MultiTurnPerplexityMetric`
 
 		Arguments:
-			gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerplexityMetric`
+			gen_log_prob_key (str): The key of predicted log probablilty over words.
+				Refer to :class:`.metric.MultiTurnPerplexityMetric`. Default: ``gen_log_prob``.
+
+		Returns:
+			A :class:`.metric.MetricChain` object.
 		'''
 		metric = MetricChain()
-		metric.add_metric(MultiTurnPerplexityMetric(self, gen_log_prob_key=gen_log_prob_key))
+		metric.add_metric(MultiTurnPerplexityMetric(self, multi_turn_gen_log_prob_key=gen_log_prob_key, \
+			multi_turn_reference_len_key="sent_allvocabs"))
 		return metric
 
-	def get_inference_metric(self, gen_key="gen"):
+	def get_inference_metric(self, multi_turn_gen_key="gen"):
 		'''Get metric for inference.
 
 		It contains:
@@ -275,12 +290,19 @@ class MultiTurnDialog(GenerationBase):
 		* :class:`.metric.MultiTurnDialogRecorder`
 
 		Arguments:
-			gen_key (str): default: "gen". Refer to :class:`.metric.BleuCorpusMetric` or
-					   :class:`.metric.MultiTurnDialogRecorder`
+			gen_key (str): The key of generated sentences in index form.
+				Refer to :class:`.metric.BleuCorpusMetric` or :class:`.metric.MultiTurnDialogRecorder`.
+				Default: ``gen``.
+
+		Returns:
+			A :class:`.metric.MetricChain` object.
 		'''
 		metric = MetricChain()
-		metric.add_metric(MultiTurnBleuCorpusMetric(self, gen_key=gen_key))
-		metric.add_metric(MultiTurnDialogRecorder(self, gen_key=gen_key))
+		metric.add_metric(MultiTurnBleuCorpusMetric(self, multi_turn_gen_key=multi_turn_gen_key,\
+			multi_turn_reference_allvocabs_key="sent_allvocabs", turn_len_key="turn_length"))
+		metric.add_metric(MultiTurnDialogRecorder(self, multi_turn_gen_key=multi_turn_gen_key,\
+			multi_turn_reference_allvocabs_key="sent_allvocabs", turn_len_key="turn_length", \
+			multi_turn_context_allvocabs_key="sent_allvocabs"))
 		return metric
 
 class UbuntuCorpus(MultiTurnDialog):
@@ -289,7 +311,7 @@ class UbuntuCorpus(MultiTurnDialog):
 
 	Arguments:
 		file_id (str): a str indicates the source of UbuntuCorpus dataset.
-		file_type (str): a str indicates the type of UbuntuCorpus dataset. Default: "Ubuntu"
+			Default: ``resources://Ubuntu``. A preset dataset is downloaded and cached.
 		{ARGUMENTS}
 
 	Refer to :class:`.MultiTurnDialog` for attributes and methods.
@@ -304,30 +326,31 @@ class UbuntuCorpus(MultiTurnDialog):
 	'''
 
 	ARGUMENTS = r'''
-			min_vocab_times (int): A cut-off threshold of `UNK` tokens. All tokens appear
-				less than `min_vocab_times`	will be replaced by `<unk>`. Default: 10.
-			max_sen_length (int): All sentences longer than `max_sen_length` will be shortened
-				to first `max_sen_length` tokens. Default: 50.
-			max_turn_length (int): All sessions longer than `max_turn_length` will be shortened
-				to first `max_turn_length` sentences. Default: 20.
-			invalid_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
-				not less than `invalid_vocab_times` in the **whole dataset** (except valid words) will be
-				marked as invalid words. Otherwise, they are unknown words, both in training or
-				testing stages. Default: 0 (No unknown words).
+		min_vocab_times (int):  A cut-off threshold of valid tokens. All tokens appear
+			not less than `min_vocab_times` in **training set** will be marked as valid words.
+			Default: ``10``.
+		max_sent_length (int): All sentences longer than ``max_sent_length`` will be shortened
+			to first ``max_sent_length`` tokens. Default: ``50``.
+		max_turn_length (int): All sessions longer than ``max_turn_length`` will be shortened
+			to first ``max_turn_length`` sentences. Default: ``20``.
+		invalid_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
+			not less than ``invalid_vocab_times`` in the **whole dataset** (except valid words) will be
+			marked as invalid words. Otherwise, they are unknown words, both in training or
+			testing stages. Default: ``0`` (No unknown words).
 	'''
 
-	def __init__(self, file_id, min_vocab_times=10, \
-			max_sen_length=50, max_turn_length=20, invalid_vocab_times=0):
+	def __init__(self, file_id="resources://Ubuntu", min_vocab_times=10, \
+			max_sent_length=50, max_turn_length=20, invalid_vocab_times=0):
 		self._file_id = file_id
 		self._file_path = get_resource_file_path(file_id)
 		self._min_vocab_times = min_vocab_times
-		self._max_sen_length = max_sen_length
+		self._max_sent_length = max_sent_length
 		self._max_turn_length = max_turn_length
 		self._invalid_vocab_times = invalid_vocab_times
 		super(UbuntuCorpus, self).__init__()
 
 	def _load_data(self):
-		r'''Loading dataset, invoked by `MultiTurnDialog.__init__`
+		r'''Loading dataset, invoked during the initialization of :class:`MultiTurnDialog`.
 		'''
 		origin_data = {}
 		for key in self.key_name:
@@ -371,7 +394,7 @@ class UbuntuCorpus(MultiTurnDialog):
 		word2id = {w: i for i, w in enumerate(vocab_list)}
 		line2id = lambda line: ([self.go_id] + list(\
 					map(lambda word: word2id.get(word, self.unk_id), line)) + \
-					[self.eos_id])[:self._max_sen_length]
+					[self.eos_id])[:self._max_sent_length]
 
 		data = {}
 		data_size = {}
@@ -385,7 +408,7 @@ class UbuntuCorpus(MultiTurnDialog):
 			oov_num = len(list(filter(lambda word: word not in word2id, vocab)))
 			invalid_num = len(list(filter(lambda word: word not in valid_vocab_set, vocab))) - oov_num
 			sent_length = list(map(len, chain(*origin_data[key]['session'])))
-			cut_word_num = np.sum(np.maximum(np.array(sent_length) - self._max_sen_length + 2, 0))
+			cut_word_num = np.sum(np.maximum(np.array(sent_length) - self._max_sent_length + 2, 0))
 			turn_length = list(map(len, origin_data[key]['session']))
 			sent_num = np.sum(turn_length)
 			cut_sent_num = np.sum(np.maximum(np.array(turn_length) - self._max_turn_length, 0))
@@ -398,8 +421,11 @@ class UbuntuCorpus(MultiTurnDialog):
 class SwitchboardCorpus(MultiTurnDialog):
 	'''A dataloader for Switchboard dataset.
 
+	In this dataset, all sessions start with a ``<d>`` representing empty context.
+
 	Arguments:
-		file_id (str): a str indicates the source of SwitchboardCorpus dataset.
+		file_id (str): a string indicating the source of SwitchboardCorpus dataset.
+			Default: ``resources://SwitchboardCorpus``. A preset dataset is downloaded and cached.
 		{ARGUMENTS}
 
 	Refer to :class:`.MultiTurnDialog` for attributes and methods.
@@ -412,12 +438,12 @@ class SwitchboardCorpus(MultiTurnDialog):
 
 	ARGUMENTS = UbuntuCorpus.ARGUMENTS
 
-	def __init__(self, file_id, min_vocab_times=5, max_sen_length=50, max_turn_length=1000, \
-				 invalid_vocab_times=0):
+	def __init__(self, file_id="resources://SwitchboardCorpus", min_vocab_times=5, \
+				max_sent_length=50, max_turn_length=1000, invalid_vocab_times=0):
 		self._file_id = file_id
 		self._file_path = get_resource_file_path(file_id)
 		self._min_vocab_times = min_vocab_times
-		self._max_sen_length = max_sen_length
+		self._max_sent_length = max_sent_length
 		self._max_turn_length = max_turn_length
 		self._invalid_vocab_times = invalid_vocab_times
 
@@ -425,8 +451,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 		super().__init__()
 
 	def _convert2ids(self, origin_data):
-		'''Convert topic, da, word to ids, invoked by `SwitchboardCorpus._load_data`
-		and `SwitchboardCorpus._load_multi_ref_data`
+		'''Convert topic, da, word to ids, invoked by :meth:`._load_data`
 
 		Arguments:
 			origin_data (dict): Contains at least:
@@ -439,12 +464,12 @@ class SwitchboardCorpus(MultiTurnDialog):
 		Returns:
 			(dict): Contains:
 
-			* session (list): utterances in ids. Size: same as input
+			* session (list): utterances represented in index form. Size: same as input
 		'''
 		data = {}
 		sess2id = lambda sess: [([self.go_id] + \
 								 list(map(lambda word: self.word2id.get(word, self.unk_id), utt)) + \
-								 [self.eos_id])[:self._max_sen_length] for utt in sess]
+								 [self.eos_id])[:self._max_sent_length] for utt in sess]
 		cand2id = lambda cand: [list(map(lambda word: self.word2id.get(word, self.unk_id), resp)) \
 								for resp in cand]
 		data['session'] = list(map(sess2id, origin_data['session']))
@@ -453,13 +478,13 @@ class SwitchboardCorpus(MultiTurnDialog):
 		return data
 
 	def _read_file(self, filepath, read_multi_ref=False):
-		'''Reading data from file, invoked by `SwitchboardCorpus._load_data`.
+		'''Reading data from file, invoked during the initialization of :class:`MultiTurnDialog`.
 
 		Arguments:
 			filepath (str): Name of the file to read from
 			read_multi_ref (bool):
-				If False, add turn `<d>` ahead of each session
-				If True, add turn `<d>` at the end of each session and read candidate `responses`
+				If False, add turn ``<d>`` ahead of each session
+				If True, add turn ``<d>`` at the end of each session and read candidate ``responses``
 		'''
 		origin_data = {'session': []}
 		if read_multi_ref:
@@ -512,7 +537,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 		return vocab_list, valid_vocab_set
 
 	def _load_data(self):
-		r'''Loading dataset, invoked by `MultiTurnDialog.__init__`
+		r'''Loading dataset, invoked during the initialization of :class:`MultiTurnDialog`.
 		'''
 		origin_data = {}
 		self.key_name.append('multi_ref')
@@ -534,7 +559,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 			invalid_vocab_num = len(list(filter(lambda word: \
 											word not in valid_vocab_set, vocab))) - oov_num
 			sent_lens = list(map(len, chain(*origin_data[key]['session'])))
-			cut_word_num = np.sum(np.maximum(np.array(sent_lens) - self._max_sen_length + 2, 0))
+			cut_word_num = np.sum(np.maximum(np.array(sent_lens) - self._max_sent_length + 2, 0))
 			turn_lens = list(map(len, origin_data[key]['session']))
 			cut_sent_num = np.sum(np.maximum(np.array(turn_lens) - self._max_turn_length, 0))
 			print(("%s set. invalid rate: %f, unknown rate: %f, max sentence length before cut: %d, " + \
@@ -543,27 +568,32 @@ class SwitchboardCorpus(MultiTurnDialog):
 				   cut_word_num / vocab_num, max(turn_lens), cut_sent_num / np.sum(turn_lens)))
 		return vocab_list, len(valid_vocab_set), data, data_size
 
+
 	def get_batch(self, key, index):
 		'''Get a batch of specified `index`.
 
 		Arguments:
-			{ARGUMENTS}
+			{MultiTurnDialog.GET_BATCH_ARGUMENTS}
 
 		Returns:
 			(dict): A dict contains what is in the return of MultiTurnDialog.get_batch.
-				{RETURNSDICT}
+			{MultiTurnDialog.GET_BATCH_RETURNS_DICT}
 
 				It additionally contains:
 
-				* candidate_allvocabs (list): A 3-d list, multiple responses for reference.
-				  The size of outermost list is batch_size, while the size of second innermost list
-				  is varying with the number of references and the size of innermost list is varying
-				  with the number of words in a reference.
+				* candidate_allvocabs (list): A 3-d list, multiple responses for a session.
+				  Size: ``[batch_size, ~reference_num, ~sent_length]``, where "~" means different sizes
+				  in this dimension is allowed.
 
 			See the example belows.
 
 		Examples:
-			{EXAMPLES}
+			{MultiTurnDialog.GET_BATCH_EXAMPLES_PART}
+			"candidate_allvocabs":[
+				[[2, 7, 3],                   # two responses to 1st session: <go> hello <eos>
+				 [2, 6, 5, 10, 3]],           #                               <go> you are fine <eos>
+				[[2, 6, 5, 10, 3]]]           # one response to 2nd session:  <go> you are fine <eos>
+			}
 		'''
 		res = super().get_batch(key, index)
 		gather = lambda sub_key: [self.data[key][sub_key][i] for i in index]
@@ -572,18 +602,11 @@ class SwitchboardCorpus(MultiTurnDialog):
 				res[sub_key] = gather(sub_key)
 		return res
 
-	get_batch.ARGUMENTS = MultiTurnDialog.get_batch.ARGUMENTS
-	get_batch.RETURNSDICT = MultiTurnDialog.get_batch.RETURNSDICT
-	get_batch.EXAMPLES = MultiTurnDialog.get_batch.EXAMPLESPART + r'''
-				"candidate_allvocabs": [
-				[[2, 7, 3],[2, 6, 5, 10, 3]], # two responses to 1st session: <go> hello <eos>
-											  # <go> you are fine <eos>
-				[[2, 6, 5, 10, 3]]]           # one response to 2nd session: <go> you are fine <eos>
-			}
-	'''
 
-	def get_precision_recall_metric(self, sent_per_inst=20, embed=None):
-		'''Get metrics for precision and recall in terms of BLEU, cosine similarity.
+
+	def get_multi_ref_metric(self, generated_num_per_context=20, embed=None,\
+				multiple_gen_key="multiple_gen_key"):
+		'''Get metrics for multiple references.
 
 		It contains:
 
@@ -591,16 +614,22 @@ class SwitchboardCorpus(MultiTurnDialog):
 		* :class:`.metric.EmbSimilarityPrecisionRecallMetric`
 
 		Arguments:
-			sent_per_inst (int): The number of sentences to generate per instance
-			embed (:class:`numpy.array`): Word embedding for lookup
-				Default: Glove word embedding
+			generated_num_per_context (int): The number of sentences generated per context.
+			embed (:class:`numpy.ndarray`): Word embedding for embedding similarity.
+				Default: if ``None``, using glove word embedding from ``resources://Glove300d``.
+
+		Returns:
+			A :class:`.metric.MetricChain` object.
 		'''
 		metric = MetricChain()
 		if embed is None:
 			glove = Glove("resources://Glove300d")
 			embed = glove.load(300, self.vocab_list)
 		for ngram in range(1, 5):
-			metric.add_metric(BleuPrecisionRecallMetric(self, ngram, sent_per_inst))
-		metric.add_metric(EmbSimilarityPrecisionRecallMetric(self, embed, 'avg', sent_per_inst))
-		metric.add_metric(EmbSimilarityPrecisionRecallMetric(self, embed, 'extrema', sent_per_inst))
+			metric.add_metric(BleuPrecisionRecallMetric(self, ngram, generated_num_per_context,\
+			multiple_gen_key=multiple_gen_key))
+		metric.add_metric(EmbSimilarityPrecisionRecallMetric(self, embed, \
+			'avg', generated_num_per_context, multiple_gen_key=multiple_gen_key))
+		metric.add_metric(EmbSimilarityPrecisionRecallMetric(self, embed, \
+			'extrema', generated_num_per_context, multiple_gen_key=multiple_gen_key))
 		return metric

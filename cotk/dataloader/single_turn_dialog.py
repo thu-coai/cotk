@@ -14,6 +14,9 @@ from ..metric import MetricChain, PerplexityMetric, BleuCorpusMetric, SingleTurn
 class SingleTurnDialog(GenerationBase):
 	r"""Base class for single-turn dialog datasets. This is an abstract class.
 
+	This class is supported for sequence to sequence generation tasks, especially
+	single turn dialog tasks.
+
 	Arguments:{ARGUMENTS}
 
 	Attributes:{ATTRIBUTES}
@@ -26,29 +29,29 @@ class SingleTurnDialog(GenerationBase):
 		'''Get a batch of specified `index`.
 
 		Arguments:
-			key (str): must be contained in `key_name`
+			key (str): key name of dataset, must be contained in ``self.key_name``.
 			index (list): a list of specified index
 
 		Returns:
 			(dict): A dict at least contains:
 
-				* post_length (:class:`numpy.array`): A 1-d array, the length of post in each batch.
-			  	  Size: `[batch_size]`
-				* post (:class:`numpy.array`): A 2-d padding array containing id of words in posts.
-			  	  Only provide valid words. `unk_id` will be used if a word is not valid.
-			  	  Size: `[batch_size, max(sent_length)]`
-				* post_allvocabs (:class:`numpy.array`): A 2-d padding array containing id of words in posts.
-			  	  Provide both valid and invalid vocabs.
-			  	  Size: `[batch_size, max(sent_length)]`
-				* resp_length (:class:`numpy.array`): A 1-d array, the length of response in each batch.
-			  	  Size: `[batch_size]`
-				* resp (:class:`numpy.array`): A 2-d padding array containing id of words in responses.
-			  	  Only provide valid vocabs. `unk_id` will be used if a word is not valid.
-			  	  Size: `[batch_size, max(sent_length)]`
-				* resp_allvocabs (:class:`numpy.array`):
-				  A 2-d padding array containing id of words in responses.
-			  	  Provide both valid and invalid vocabs.
-			  	  Size: `[batch_size, max(sent_length)]`
+			* **post_length** (:class:`numpy.ndarray`): A 1-d array, the length of post in each batch.
+			  Size: ``[batch_size]``
+			* **post** (:class:`numpy.ndarray`): A 2-d padded array containing words of index form in posts.
+			  Only provide valid words. ``unk_id`` will be used if a word is not valid.
+			  Size: ``[batch_size, max(sent_length)]``
+			* **post_allvocabs** (:class:`numpy.ndarray`): A 2-d padded array containing words of index
+			  form in posts. Provide both valid and invalid vocabs.
+			  Size: ``[batch_size, max(sent_length)]``
+			* **resp_length** (:class:`numpy.ndarray`): A 1-d array, the length of response in each batch.
+			  Size: ``[batch_size]``
+			* **resp** (:class:`numpy.ndarray`): A 2-d padded array containing words of index form
+			  in responses. Only provide valid vocabs. ``unk_id`` will be used if a word is not valid.
+			  Size: ``[batch_size, max(sent_length)]``
+			* **resp_allvocabs** (:class:`numpy.ndarray`):
+			  A 2-d padded array containing words of index form in responses.
+			  Provide both valid and invalid vocabs.
+			  Size: ``[batch_size, max(sent_length)]``
 
 		Examples:
 			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you",
@@ -58,19 +61,19 @@ class SingleTurnDialog(GenerationBase):
 			>>> dataloader.get_batch('train', [0, 1])
 			{
 				"post_allvocabs": numpy.array([
-					[2, 5, 6, 10, 3],   # first post: <go> are you fine <eos>
+					[2, 5, 6, 10, 3],  # first post:  <go> are you fine <eos>
 					[2, 7, 3, 0, 0],   # second post: <go> hello <eos> <pad> <pad>
 				]),
 				"post": numpy.array([
-					[2, 5, 6, 1, 3],   # first post: <go> are you <unk> <eos>
+					[2, 5, 6, 1, 3],   # first post:  <go> are you <unk> <eos>
 					[2, 7, 3, 0, 0],   # second post: <go> hello <eos> <pad> <pad>
 				]),
 				"resp_allvocabs": numpy.array([
-					[2, 8, 9, 10, 3],  # first response: <go> i am fine <eos>
+					[2, 8, 9, 10, 3],  # first response:  <go> i am fine <eos>
 					[2, 7, 3, 0, 0],   # second response: <go> hello <eos> <pad> <pad>
 				]),
 				"resp": numpy.array([
-					[2, 8, 1, 1, 3],  # first response: <go> i <unk> <unk> <eos>
+					[2, 8, 1, 1, 3],   # first response:  <go> i <unk> <unk> <eos>
 					[2, 7, 3, 0, 0],   # second response: <go> hello <eos> <pad> <pad>
 				]),
 				"post_length": numpy.array([5, 3]), # length of posts
@@ -97,34 +100,53 @@ class SingleTurnDialog(GenerationBase):
 		res_resp[res_resp >= self.valid_vocab_len] = self.unk_id
 		return res
 
-	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob"):
-		'''Get metric for teacher-forcing mode.
+	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob",\
+					   invalid_vocab=False):
+		'''Get metrics for teacher-forcing.
 
 		It contains:
 
 		* :class:`.metric.PerplexityMetric`
 
 		Arguments:
-			gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerplexityMetric`
+			gen_log_prob_key (str):  The key of predicted log probablilty over words.
+				Refer to :class:`.metric.PerplexityMetric`. Default: ``gen_log_prob``.
+			invalid_vocab (bool): Whether ``gen_log_prob`` contains invalid vocab.
+				Refer to :class:`.metric.PerplexityMetric`. Default: ``False``.
+
+
+		Returns:
+			A :class:`.metric.MetricChain` object.
 		'''
 		metric = MetricChain()
-		metric.add_metric(PerplexityMetric(self, gen_log_prob_key=gen_log_prob_key))
+		metric.add_metric(PerplexityMetric(self,\
+			reference_allvocabs_key="resp_allvocabs",\
+			reference_len_key="resp_length",\
+			gen_log_prob_key=gen_log_prob_key,\
+			invalid_vocab=invalid_vocab))
 		return metric
 
-	def get_inference_metric(self, gen_key="gen"):
-		'''Get metric for inference.
+	def get_inference_metric(self, reference_allvocabs_key="resp_allvocabs", \
+					gen_key="gen",\
+					):
+		'''Get metrics for inference.
 
 		It contains:
 
 		* :class:`.metric.BleuCorpusMetric`
-		* :class:`.metric.SingleDialogRecorder`
+		* :class:`.metric.SingleTurnDialogRecorder`
 
 		Arguments:
-			gen_key (str): default: "gen". Refer to :class:`.metric.BleuCorpusMetric` or
-			               :class:`.metric.SingleDialogRecorder`
+			gen_key (str): The key of generated sentences in index form.
+				Refer to :class:`.metric.BleuCorpusMetric` or
+				:class:`.metric.SingleTurnDialogRecorder`. Default: ``gen``.
+
+		Returns:
+			A :class:`.metric.MetricChain` object.
 		'''
 		metric = MetricChain()
-		metric.add_metric(BleuCorpusMetric(self, gen_key=gen_key))
+		metric.add_metric(BleuCorpusMetric(self, gen_key=gen_key, \
+			reference_allvocabs_key="resp_allvocabs"))
 		metric.add_metric(SingleTurnDialogRecorder(self, gen_key=gen_key))
 		return metric
 
@@ -132,16 +154,17 @@ class OpenSubtitles(SingleTurnDialog):
 	'''A dataloader for OpenSubtitles dataset.
 
 	Arguments:
-		file_id (str): a str indicates the source of OpenSubtitles dataset.
-		file_type (str): a str indicates the type of OpenSubtitles dataset. Default: "OpenSubtitles"
-		min_vocab_times (int): A cut-off threshold of `UNK` tokens. All tokens appear
-			less than `min_vocab_times`	will be replaced by `<unk>`. Default: 10.
-		max_sen_length (int): All sentences longer than `max_sen_length` will be shortened
-			to first `max_sen_length` tokens. Default: 50.
+		file_id (str): A string indicating the source of OpenSubtitles dataset.
+				Default: ``resources://OpenSubtitles``. A preset dataset is downloaded and cached.
+		min_vocab_times (int): A cut-off threshold of valid tokens. All tokens appear
+				not less than `min_vocab_times` in **training set** will be marked as valid words.
+				Default: ``10``.
+		max_sent_length (int): All sentences longer than `max_sent_length` will be shortened
+				to first `max_sent_length` tokens. Default: ``50``.
 		invalid_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
-			not less than `invalid_vocab_times` in the **whole dataset** (except valid words) will be
-			marked as invalid vocabs. Otherwise, they are unknown words, both in training or
-			testing stages. Default: 0 (No unknown words).
+				not less than `invalid_vocab_times` in the **whole dataset** (except valid words) will be
+				marked as invalid vocabs. Otherwise, they are unknown words, both in training or
+				testing stages. Default: ``0`` (No unknown words).
 
 	Refer to :class:`.SingleTurnDialog` for attributes and methods.
 
@@ -151,17 +174,17 @@ class OpenSubtitles(SingleTurnDialog):
 		[2] P. Lison and J. Tiedemann, OpenSubtitles2016: Extracting Large Parallel Corpora from
 		Movie and TV Subtitles. LREC 2016.
 	'''
-	def __init__(self, file_id, min_vocab_times=10, \
-			max_sen_length=50, invalid_vocab_times=0):
+	def __init__(self, file_id="resources://OpenSubtitles", min_vocab_times=10, \
+			max_sent_length=50, invalid_vocab_times=0):
 		self._file_id = file_id
 		self._file_path = get_resource_file_path(file_id)
 		self._min_vocab_times = min_vocab_times
-		self._max_sen_length = max_sen_length
+		self._max_sent_length = max_sent_length
 		self._invalid_vocab_times = invalid_vocab_times
 		super(OpenSubtitles, self).__init__()
 
 	def _load_data(self):
-		r'''Loading dataset, invoked by `SingleTurnDialog.__init__`
+		r'''Loading dataset, invoked during the initialization of :class:`SingleTurnDialog`.
 		'''
 		origin_data = {}
 		for key in self.key_name:
@@ -197,7 +220,7 @@ class OpenSubtitles(SingleTurnDialog):
 		word2id = {w: i for i, w in enumerate(vocab_list)}
 		line2id = lambda line: ([self.go_id] + \
 					list(map(lambda word: word2id[word] if word in word2id else self.unk_id, line)) + \
-					[self.eos_id])[:self._max_sen_length]
+					[self.eos_id])[:self._max_sent_length]
 
 		data = {}
 		data_size = {}
@@ -216,7 +239,7 @@ class OpenSubtitles(SingleTurnDialog):
 						lambda word: word not in valid_vocab_set, \
 						vocab))) - oov_num
 			length = list(map(len, origin_data[key]['post'] + origin_data[key]['resp']))
-			cut_num = np.sum(np.maximum(np.array(length) - self._max_sen_length + 1, 0))
+			cut_num = np.sum(np.maximum(np.array(length) - self._max_sent_length + 1, 0))
 			print("%s set. invalid rate: %f, unknown rate: %f, max length before cut: %d, \
 					cut word rate: %f" % \
 					(key, invalid_num / vocab_num, oov_num / vocab_num, max(length), cut_num / vocab_num))

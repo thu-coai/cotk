@@ -4,7 +4,7 @@ import pytest
 from pytest_mock import mocker
 
 from cotk.dataloader import SingleTurnDialog, OpenSubtitles
-from cotk.metric import MetricBase, HashValueRecorder
+from cotk.metric import MetricBase
 
 def setup_module():
 	import random
@@ -139,39 +139,39 @@ class TestSingleTurnDialog():
 	def base_test_convert(self, dl):
 		sent_id = [0, 1, 2]
 		sent = ["<pad>", "<unk>", "<go>"]
-		assert sent == dl.index_to_sen(sent_id)
-		assert sent_id == dl.sen_to_index(sent)
+		assert sent == dl.convert_ids_to_tokens(sent_id)
+		assert sent_id == dl.convert_tokens_to_ids(sent)
 
 		sent = ["<unk>", "<go>", "<pad>", "<unkownword>", "<pad>", "<go>"]
 		sent_id = [1, 2, 0, 1, 0, 2]
-		assert sent_id == dl.sen_to_index(sent)
-		assert sent_id == dl.sen_to_index(sent, invalid_vocab=True)
+		assert sent_id == dl.convert_tokens_to_ids(sent)
+		assert sent_id == dl.convert_tokens_to_ids(sent, invalid_vocab=True)
 
 		sent = [dl.all_vocab_list[dl.vocab_size]]
-		assert [1] == dl.sen_to_index(sent)
-		assert [dl.vocab_size] == dl.sen_to_index(sent, invalid_vocab=True)
+		assert [1] == dl.convert_tokens_to_ids(sent)
+		assert [dl.vocab_size] == dl.convert_tokens_to_ids(sent, invalid_vocab=True)
 
 
 		sent_id = [0, 1, 2, 0, 0, 3, 1, 0, 0]
 		sent = ["<pad>", "<unk>", "<go>", "<pad>", "<pad>", "<eos>", "<unk>", "<pad>", "<pad>"]
-		assert sent == dl.index_to_sen(sent_id, trim=False)
+		assert sent == dl.convert_ids_to_tokens(sent_id, trim=False)
 		sent = ["<pad>", "<unk>", "<go>"]
-		assert sent == dl.index_to_sen(sent_id)
+		assert sent == dl.convert_ids_to_tokens(sent_id)
 
 		sent_id = [0, 0, 3]
 		sent = ["<pad>", "<pad>", "<eos>"]
-		assert sent == dl.index_to_sen(sent_id, trim=False)
-		assert not dl.index_to_sen(sent_id)
+		assert sent == dl.convert_ids_to_tokens(sent_id, trim=False)
+		assert not dl.convert_ids_to_tokens(sent_id)
 
 		sent_id = [3, 3, 3]
 		sent = ["<eos>", "<eos>", "<eos>"]
-		assert sent == dl.index_to_sen(sent_id, trim=False)
-		assert not dl.index_to_sen(sent_id)
+		assert sent == dl.convert_ids_to_tokens(sent_id, trim=False)
+		assert not dl.convert_ids_to_tokens(sent_id)
 
 		sent_id = [0, 0, 0]
 		sent = ["<pad>", "<pad>", "<pad>"]
-		assert sent == dl.index_to_sen(sent_id, trim=False)
-		assert not dl.index_to_sen(sent_id)
+		assert sent == dl.convert_ids_to_tokens(sent_id, trim=False)
+		assert not dl.convert_ids_to_tokens(sent_id)
 
 	def base_test_teacher_forcing_metric(self, dl):
 		assert isinstance(dl.get_teacher_forcing_metric(), MetricBase)

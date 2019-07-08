@@ -109,7 +109,7 @@ And text output:
 
 "name": "LM",  
 
-"max_sen_length": 50,  
+"max_sent_length": 50,  
 
 "checkpoint_max_to_keep": 5,  
 

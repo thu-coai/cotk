@@ -10,7 +10,7 @@ from cotk.metric import MetricBase, \
 	BleuPrecisionRecallMetric, EmbSimilarityPrecisionRecallMetric, \
 	PerplexityMetric, MultiTurnPerplexityMetric, BleuCorpusMetric, SelfBleuCorpusMetric, FwBwBleuCorpusMetric, \
 	MultiTurnBleuCorpusMetric, SingleTurnDialogRecorder, MultiTurnDialogRecorder, LanguageGenerationRecorder, \
-	HashValueRecorder, MetricChain
+	MetricChain
 from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunction
 from cotk.dataloader import GenerationBase, MultiTurnDialog
 
@@ -385,28 +385,32 @@ def generate_unequal_data(data, key_list, pad_id, reference_key, \
 	return res
 
 class TestBleuPrecisionRecallMetric():
+	default_reference_key = 'candidate_allvocabs'
+	default_gen_key = 'multiple_gen'
+	default_keywords = (default_reference_key, default_gen_key)
+
 	def test_base_class(self):
 		with pytest.raises(NotImplementedError):
 			dataloader = FakeMultiDataloader()
 			gen = []
 			reference = []
-			bprm = BleuPrecisionRecallMetric(dataloader, ngram=1, sent_per_inst=3)
-			super(BleuPrecisionRecallMetric, bprm).score(gen, reference)
+			bprm = BleuPrecisionRecallMetric(dataloader, 1, 3)
+			super(BleuPrecisionRecallMetric, bprm)._score(gen, reference)
 
 	def test_hashvalue(self):
 		dataloader = FakeMultiDataloader()
-		reference_key, gen_key = ('resp_allvocabs', 'gen')
-		key_list = [reference_key, gen_key]
+		reference_key, gen_key = self.default_keywords
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 								   to_list=True, pad=False, \
 								   ref_len='non-empty', gen_len='non-empty', test_prec_rec=True)
 		bprm = BleuPrecisionRecallMetric(dataloader, 4, 3)
+		assert bprm.candidate_allvocabs_key == reference_key
 		bprm_shuffle = BleuPrecisionRecallMetric(dataloader, 4, 3)
 
-		data_shuffle = shuffle_instances(data, key_list)
+		data_shuffle = shuffle_instances(data, self.default_keywords)
 		for idx in range(len(data_shuffle[reference_key])):
 			np.random.shuffle(data_shuffle[reference_key][idx])
-		batches_shuffle = split_batch(data_shuffle, key_list)
+		batches_shuffle = split_batch(data_shuffle, self.default_keywords)
 
 		bprm.forward(data)
 		res = bprm.close()
@@ -418,7 +422,7 @@ class TestBleuPrecisionRecallMetric():
 
 		data_less_word = copy.deepcopy(data)
 		data_less_word[reference_key][0][0] = data_less_word[reference_key][0][0][:-2]
-		for data_unequal in [data_less_word] + generate_unequal_data(data, key_list, \
+		for data_unequal in [data_less_word] + generate_unequal_data(data, self.default_keywords, \
 												  dataloader.pad_id, \
 												  reference_key, reference_is_3D=True):
 			bprm_unequal = BleuPrecisionRecallMetric(dataloader, 4, 3)
@@ -439,7 +443,7 @@ class TestBleuPrecisionRecallMetric():
 			return
 
 		if argument == 'default':
-			reference_key, gen_key = ('resp_allvocabs', 'gen')
+			reference_key, gen_key = self.default_keywords
 			bprm = BleuPrecisionRecallMetric(dataloader, ngram, 3)
 		else:
 			reference_key, gen_key = ('rk', 'gk')
@@ -481,6 +485,10 @@ emb_similarity_precision_recall_test_parameter = generate_testcase( \
 
 
 class TestEmbSimilarityPrecisionRecallMetric():
+	default_reference_key = 'candidate_allvocabs'
+	default_gen_key = 'multiple_gen'
+	default_keywords = (default_reference_key, default_gen_key)
+
 	def test_hashvalue(self):
 		dataloader = FakeMultiDataloader()
 		emb = []
@@ -491,7 +499,7 @@ class TestEmbSimilarityPrecisionRecallMetric():
 			emb.append(vec)
 		emb = np.array(emb)
 
-		reference_key, gen_key = ('resp_allvocabs', 'gen')
+		reference_key, gen_key = self.default_keywords
 		key_list = [reference_key, gen_key]
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 								   to_list=True, pad=False, \
@@ -544,7 +552,7 @@ class TestEmbSimilarityPrecisionRecallMetric():
 			emb = np.array(emb)
 
 		if emb_type != 'array':
-			with pytest.raises(ValueError, match="invalid type or shape or embed."):
+			with pytest.raises(ValueError, match="invalid type or shape"):
 				espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
 			return
 		if emb_len == 'unequal':
@@ -557,7 +565,7 @@ class TestEmbSimilarityPrecisionRecallMetric():
 			return
 
 		if argument == 'default':
-			reference_key, gen_key = ('resp_allvocabs', 'gen')
+			reference_key, gen_key = self.default_keywords
 			print(emb)
 			espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
 		else:
@@ -610,9 +618,15 @@ perplexity_test_engine_parameter = generate_testcase(\
 )
 
 class TestPerplexityMetric():
+	default_reference_key = 'ref_allvocabs'
+	default_reference_len_key = 'ref_length'
+	default_gen_prob_key = 'gen_log_prob'
+	default_keywords = (default_reference_key, default_reference_len_key, default_gen_prob_key)
+
 	def get_perplexity(self, input, dataloader, invalid_vocab=False, \
-					   reference_key='resp_allvocabs', reference_len_key='resp_length', \
-					   gen_prob_key='gen_log_prob'):
+						reference_key=default_reference_key, \
+						reference_len_key=default_reference_len_key, \
+						gen_prob_key=default_gen_prob_key):
 		length_sum = 0
 		word_loss = 0
 		for i in range(len(input[reference_key])):
@@ -640,7 +654,7 @@ class TestPerplexityMetric():
 	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
 	def test_hashvalue(self, to_list, pad):
 		dataloader = FakeDataLoader()
-		reference_key, reference_len_key, gen_prob_key = ('resp_allvocabs', 'resp_length', 'gen_log_prob')
+		reference_key, reference_len_key, gen_prob_key = self.default_keywords
 		key_list = [reference_key, reference_len_key, gen_prob_key]
 		data = dataloader.get_data(reference_key=reference_key, \
 								   reference_len_key=reference_len_key, gen_prob_key=gen_prob_key, \
@@ -679,7 +693,7 @@ class TestPerplexityMetric():
 	@pytest.mark.parametrize("ref_vocab, gen_prob_vocab", perplexity_test_engine_parameter)
 	def test_same_result_with_pytorch_engine(self, ref_vocab, gen_prob_vocab):
 		dataloader = FakeDataLoader()
-		reference_key, reference_len_key, gen_prob_key = ('resp_allvocabs', 'resp_length', 'gen_log_prob')
+		reference_key, reference_len_key, gen_prob_key = self.default_keywords
 		data = dataloader.get_data(reference_key=reference_key, \
 								   reference_len_key=reference_len_key, gen_prob_key=gen_prob_key, \
 								   to_list=True, pad=True, \
@@ -717,7 +731,7 @@ class TestPerplexityMetric():
 		# 'random_check' or 'full_check' or 'no_check'
 		# 'random', 'non-empty', 'empty'
 		dataloader = FakeDataLoader()
-		reference_key, reference_len_key, gen_prob_key = ('resp_allvocabs', 'resp_length', 'gen_log_prob') \
+		reference_key, reference_len_key, gen_prob_key = self.default_keywords \
 			if argument == 'default' else ('ra', 'rl', 'glp')
 		data = dataloader.get_data(reference_key=reference_key, \
 								   reference_len_key=reference_len_key, gen_prob_key=gen_prob_key, \
@@ -770,9 +784,15 @@ multiperplexity_test_parameter = generate_testcase(\
 
 
 class TestMultiTurnPerplexityMetric:
+	default_reference_key = 'multi_turn_ref_allvocabs'
+	default_reference_len_key = 'multi_turn_ref_length'
+	default_gen_prob_key = 'multi_turn_gen_log_prob'
+	default_keywords = (default_reference_key, default_reference_len_key, default_gen_prob_key)
+
 	def get_perplexity(self, input, dataloader, invalid_vocab=False, \
-					   reference_key='sent_allvocabs', reference_len_key='sent_length', \
-					   gen_prob_key='gen_prob'):
+					   reference_key=default_reference_key, \
+					   reference_len_key=default_reference_len_key, \
+					   gen_prob_key=default_gen_prob_key):
 		length_sum = 0
 		word_loss = 0
 		for i in range(len(input[reference_key])):
@@ -799,7 +819,7 @@ class TestMultiTurnPerplexityMetric:
 	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
 	def test_hashvalue(self, to_list, pad):
 		dataloader = FakeMultiDataloader()
-		reference_key, reference_len_key, gen_prob_key = ('sent_allvocabs', 'sent_length', 'gen_log_prob')
+		reference_key, reference_len_key, gen_prob_key = self.default_keywords
 		key_list = [reference_key, reference_len_key, gen_prob_key]
 		data = dataloader.get_data(reference_key=reference_key, \
 								   reference_len_key=reference_len_key, gen_prob_key=gen_prob_key, \
@@ -848,7 +868,7 @@ class TestMultiTurnPerplexityMetric:
 		# 'random_check' or 'full_check' or 'no_check'
 		# 'random', 'non-empty', 'empty'
 		dataloader = FakeMultiDataloader()
-		reference_key, reference_len_key, gen_prob_key = ('sent_allvocabs', 'sent_length', 'gen_log_prob') \
+		reference_key, reference_len_key, gen_prob_key = self.default_keywords \
 			if argument == 'default' else ('rk', 'rl', 'gp')
 		data = dataloader.get_data(reference_key=reference_key, \
 								   reference_len_key=reference_len_key, gen_prob_key=gen_prob_key, \
@@ -899,6 +919,10 @@ bleu_test_parameter = generate_testcase(\
 
 
 class TestBleuCorpusMetric:
+	default_reference_key = "ref_allvocabs"
+	default_gen_key = "gen"
+	default_keywords = [default_reference_key, default_gen_key]
+
 	def get_bleu(self, dataloader, input, reference_key, gen_key):
 		refs = []
 		gens = []
@@ -912,7 +936,7 @@ class TestBleuCorpusMetric:
 	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
 	def test_hashvalue(self, to_list, pad):
 		dataloader = FakeDataLoader()
-		reference_key, gen_key = ('resp_allvocabs', 'gen')
+		reference_key, gen_key = self.default_keywords
 		key_list = [reference_key, gen_key]
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 								   to_list=to_list, pad=pad, \
@@ -952,7 +976,7 @@ class TestBleuCorpusMetric:
 		# 'random', 'non-empty', 'empty'
 		# 'random', 'non-empty', 'empty'
 		dataloader = FakeDataLoader()
-		reference_key, gen_key = ('resp_allvocabs', 'gen') \
+		reference_key, gen_key = self.default_keywords \
 			if argument == 'default' else ('rk', 'gk')
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 								   to_list=(type == 'list'), pad=(shape == 'pad'), \
@@ -961,7 +985,7 @@ class TestBleuCorpusMetric:
 		if argument == 'default':
 			bcm = BleuCorpusMetric(dataloader)
 		else:
-			bcm = BleuCorpusMetric(dataloader, reference_key, gen_key)
+			bcm = BleuCorpusMetric(dataloader, reference_allvocabs_key=reference_key, gen_key=gen_key)
 
 		if batch_len == 'unequal':
 			data[reference_key] = data[reference_key][1:]
@@ -977,7 +1001,7 @@ class TestBleuCorpusMetric:
 		dataloader = FakeDataLoader()
 		ref = [[2, 1, 3]]
 		gen = [[1]]
-		data = {'resp_allvocabs': ref, 'gen': gen}
+		data = {self.default_reference_key: ref, self.default_gen_key: gen}
 		bcm = BleuCorpusMetric(dataloader)
 
 		with pytest.raises(ZeroDivisionError):
@@ -1146,6 +1170,11 @@ multi_bleu_test_parameter = generate_testcase(\
 
 
 class TestMultiTurnBleuCorpusMetric:
+	default_reference_key = "reference_allvocabs"
+	default_turn_len_key = "turn_length"
+	default_gen_key = "multi_turn_gen"
+	default_keywords = [default_reference_key, default_turn_len_key, default_gen_key]
+
 	def get_bleu(self, dataloader, input, reference_key, gen_key):
 		refs = []
 		gens = []
@@ -1160,7 +1189,7 @@ class TestMultiTurnBleuCorpusMetric:
 	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
 	def test_hashvalue(self, to_list, pad):
 		dataloader = FakeMultiDataloader()
-		reference_key, turn_len_key, gen_key = ('reference_allvocabs', 'turn_length', 'gen')
+		reference_key, turn_len_key, gen_key = self.default_keywords
 		key_list = [reference_key, turn_len_key, gen_key]
 		data = dataloader.get_data(reference_key=reference_key, turn_len_key=turn_len_key, gen_key=gen_key, \
 								   to_list=to_list, pad=pad, ref_len='non-empty', \
@@ -1180,7 +1209,6 @@ class TestMultiTurnBleuCorpusMetric:
 		for batch in batches_shuffle:
 			mtbcm_shuffle.forward(batch)
 		res_shuffle = mtbcm_shuffle.close()
-
 		assert same_dict(res, res_shuffle, False)
 
 		data_less_word = copy.deepcopy(data)
@@ -1205,7 +1233,7 @@ class TestMultiTurnBleuCorpusMetric:
 		# 'random', 'non-empty', 'empty'
 		# 'random', 'non-empty', 'empty'
 		dataloader = FakeMultiDataloader()
-		reference_key, turn_len_key, gen_key = ('reference_allvocabs', 'turn_length', 'gen') \
+		reference_key, turn_len_key, gen_key = self.default_keywords \
 			if argument == 'default' else ('rk', 'tlk', 'gk')
 		data = dataloader.get_data(reference_key=reference_key, turn_len_key=turn_len_key, gen_key=gen_key, \
 								   to_list=(type == 'list'), pad=(shape == 'pad'), \
@@ -1214,7 +1242,8 @@ class TestMultiTurnBleuCorpusMetric:
 		if argument == 'default':
 			mtbcm = MultiTurnBleuCorpusMetric(dataloader)
 		else:
-			mtbcm = MultiTurnBleuCorpusMetric(dataloader, reference_key, gen_key, turn_len_key)
+			mtbcm = MultiTurnBleuCorpusMetric(dataloader, multi_turn_reference_allvocabs_key=reference_key, \
+											  multi_turn_gen_key=gen_key, turn_len_key=turn_len_key)
 
 		if batch_len == 'unequal':
 			data[reference_key] = data[reference_key][1:]
@@ -1231,7 +1260,7 @@ class TestMultiTurnBleuCorpusMetric:
 		ref = [[[2, 1, 3]]]
 		gen = [[[1]]]
 		turn_len = [1]
-		data = {'reference_allvocabs': ref, 'gen': gen, 'turn_length': turn_len}
+		data = {self.default_reference_key: ref, self.default_gen_key: gen, self.default_turn_len_key: turn_len}
 		mtbcm = MultiTurnBleuCorpusMetric(dataloader)
 
 		with pytest.raises(ZeroDivisionError):
@@ -1248,19 +1277,24 @@ single_turn_dialog_recorder_test_parameter = generate_testcase(\
 )
 
 class TestSingleTurnDialogRecorder():
-	def get_sen_from_index(self, dataloader, data, post_key='post_allvocabs', \
-			reference_key='resp_allvocabs', gen_key='gen'):
+	default_post_key = "post_allvocabs"
+	default_ref_key = "resp_allvocabs"
+	default_gen_key = "gen"
+	default_keywords = [default_post_key, default_ref_key, default_gen_key]
+
+	def get_sen_from_index(self, dataloader, data, post_key=default_post_key, \
+			reference_key=default_ref_key, gen_key=default_gen_key):
 		ans = { \
 			'post': [], \
 			'resp': [], \
 			'gen': [], \
 			}
 		for sen in data[post_key]:
-			ans['post'].append(dataloader.index_to_sen(sen[1:]))
+			ans['post'].append(dataloader.convert_ids_to_tokens(sen[1:]))
 		for sen in data[reference_key]:
-			ans['resp'].append(dataloader.index_to_sen(sen[1:]))
+			ans['resp'].append(dataloader.convert_ids_to_tokens(sen[1:]))
 		for sen in data[gen_key]:
-			ans['gen'].append(dataloader.index_to_sen(sen))
+			ans['gen'].append(dataloader.convert_ids_to_tokens(sen))
 
 		return ans
 
@@ -1271,7 +1305,7 @@ class TestSingleTurnDialogRecorder():
 		# 'list' or 'array'
 		# 'equal' or 'unequal'
 		dataloader = FakeDataLoader()
-		post_key, reference_key, gen_key = ('post_allvocabs', 'resp_allvocabs', 'gen') \
+		post_key, reference_key, gen_key = self.default_keywords \
 			if argument == 'default' else ('pk', 'rk', 'gk')
 		data = dataloader.get_data(post_key=post_key, reference_key=reference_key, gen_key=gen_key, \
 								   to_list=(type == 'list'), pad=(shape == 'pad'),
@@ -1304,8 +1338,13 @@ multi_turn_dialog_test_parameter = generate_testcase(\
 )
 
 class TestMultiTurnDialogRecorder:
-	def check(self, ans, dataloader, data, context_key='context_allvocabs', \
-			  resp_key='reference_allvocabs', gen_key='gen', turn_length='turn_length'):
+	default_context_key = 'multi_turn_context_allvocabs'
+	default_ref_key = 'multi_turn_ref_allvocabs'
+	default_gen_key = "multi_turn_gen"
+	default_turn_len_key= "turn_length"
+	default_keywords = [default_context_key, default_ref_key, default_gen_key, default_turn_len_key]
+	def check(self, ans, dataloader, data, context_key=default_context_key, \
+			  resp_key=default_ref_key, gen_key=default_gen_key, turn_length=default_turn_len_key):
 		_ans = {'context': [], 'reference': [], 'gen': []}
 		for i, context_turn in enumerate(data[context_key]):
 			context_now = []
@@ -1362,7 +1401,7 @@ class TestMultiTurnDialogRecorder:
 		# 'random', 'non-empty', 'empty'
 		# 'random', 'non-empty', 'empty'
 		dataloader = FakeMultiDataloader()
-		context_key, reference_key, gen_key, turn_len_key = ('context_allvocabs', 'reference_allvocabs', 'gen', 'turn_length') \
+		context_key, reference_key, gen_key, turn_len_key = self.default_keywords \
 			if argument == 'default' else ('ck', 'rk', 'gk', 'tk')
 		data = dataloader.get_data(context_key=context_key, turn_len_key=turn_len_key, reference_key=reference_key, gen_key=gen_key, \
 								   to_list=(type == 'list'), pad=(shape == 'pad'), \
@@ -1404,7 +1443,7 @@ class TestLanguageGenerationRecorder():
 	def get_sen_from_index(self, dataloader, data, gen_key='gen'):
 		ans = []
 		for sen in data[gen_key]:
-			ans.append(dataloader.index_to_sen(sen))
+			ans.append(dataloader.convert_ids_to_tokens(sen))
 		return ans
 
 	@pytest.mark.parametrize('argument, shape, type, gen_len', language_generation_test_parameter)
@@ -1436,33 +1475,6 @@ hash_value_recorder_test_parameter = generate_testcase(\
 )
 
 
-class TestHashValueRecorder():
-	@pytest.mark.parametrize('argument, hash_data', hash_value_recorder_test_parameter)
-	def test_close(self, argument, hash_data):
-		if argument == 'default':
-			hash_key = 'hashvalue'
-			hvr = HashValueRecorder()
-		else:
-			hash_key = 'hk'
-			hvr = HashValueRecorder(hash_key)
-
-		if hash_data == 'has_key':
-			t = []
-			for i in range(32):
-				t.append(random.randrange(0, 100))
-			data = {'hashvalue': bytes(t)}
-			hvr.forward(data)
-			ans = hvr.close()
-			assert type(ans[hash_key]) == bytes
-			assert len(ans[hash_key]) == 32
-		else:
-			data = {}
-			hvr.forward(data)
-			ans = hvr.close()
-			assert ans == {}
-
-
-
 class TestMetricChain():
 	def test_init(self):
 		mc = MetricChain()
@@ -1482,7 +1494,8 @@ class TestMetricChain():
 		perplexity = TestMultiTurnPerplexityMetric().get_perplexity( \
 			data, dataloader, True, 'reference_key', 'reference_len_key', 'gen_prob_key')
 
-		bcm = MultiTurnBleuCorpusMetric(dataloader, 'reference_key', 'gen_key', 'turn_len_key')
+		bcm = MultiTurnBleuCorpusMetric(dataloader, multi_turn_reference_allvocabs_key='reference_key', \
+										multi_turn_gen_key='gen_key', turn_len_key='turn_len_key')
 		bleu = TestMultiTurnBleuCorpusMetric().get_bleu(dataloader, data, 'reference_key', 'gen_key')
 
 		_data = copy.deepcopy(data)

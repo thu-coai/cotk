@@ -44,7 +44,9 @@ setup(
 			"requests-mock",
 			"pytest>=3.6.0",
 			"pytest-cov==2.4.0",
-			"checksumdir"
+			"checksumdir",
+			"tensorboardX",
+			"tensorflow==1.13.1",
 		]
 	},
 	cmdclass={'test': LibTest},

@@ -12,13 +12,14 @@ import importlib
 import subprocess
 from subprocess import PIPE
 import re
+import shutil
 import traceback
 
 import requests
 import cotk
 from cotk._utils import file_utils
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
+#sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(level=logging.INFO)
@@ -111,10 +112,14 @@ def run_model(entry, args):
 	# before run model
 	# cotk recorder start
 	cotk.start_recorder()
+	sys.path.insert(0, os.getcwd())
 	model = importlib.import_module(entry)
 
+	if args is None:
+		args = []
+
 	try:
-		model.run(args)
+		model.run(*args)
 	except Exception as _: #pylint: disable=broad-except
 		traceback.print_exc()
 		sys.exit(1)
@@ -165,120 +170,132 @@ def get_local_token():
 	else:
 		raise RuntimeError("Please config your token, \n" + \
 						   "either by setting it temporarily in cotk\n" + \
-						   "or by calling ^cotk config^")
+						   "or by calling `cotk config`")
 
-def report(args):
-	'''Entrance of report'''
-	parser = argparse.ArgumentParser(prog="cotk report", \
-		description='Report model performance to cotk model dashboard.')
-	parser.add_argument('--token', type=str, default="")
+def run(args):
+	'''Entrance of run'''
+	parser = argparse.ArgumentParser(prog="cotk run", \
+		description='Run model and report performance to cotk dashboard.')
+	parser.add_argument('--token', type=str, default=None)
 	parser.add_argument('--result', type=str, default="result.json", \
 		help='Path to result file. Default: result.json')
+	parser.add_argument("--only-run", action="store_true", \
+		help="Just run my model, don't collect any information or upload anything.")
 	parser.add_argument('--only-upload', action="store_true", \
-		help="Don't run your model, just upload the existing result. \
+		help="Don't run my model, just upload the existing result. \
 		(Some information will be missing and this option is not recommended.)")
 	parser.add_argument('--entry', type=str, default="main", nargs='?',\
 		help="Entry of your model. Default: main")
-	parser.add_argument('--args', nargs=argparse.REMAINDER)
+	parser.add_argument('args', nargs=argparse.REMAINDER)
 
 	cargs = parser.parse_args(args)
 
-	if cargs.token:
-		token = cargs.token
-	else:
-		token = get_local_token()
-	assert_repo_exist()
-	git_user, git_repo = get_repo_remote()
-	git_commit = get_repo_commit()
-	assert_commit_exist(git_user, git_repo, git_commit)
-	LOGGER.info("git information detected.")
-	LOGGER.info("user: %s, repo: %s, commit sha1: %s", git_user, git_repo, git_commit)
+	if not cargs.only_run:
+		if cargs.token:
+			token = cargs.token
+		else:
+			token = get_local_token()
+		assert_repo_exist()
+		git_user, git_repo = get_repo_remote()
+		git_commit = get_repo_commit()
+		assert_commit_exist(git_user, git_repo, git_commit)
+		LOGGER.info("git information detected.")
+		LOGGER.info("user: %s, repo: %s, commit sha1: %s", git_user, git_repo, git_commit)
 	if cargs.only_upload:
-		LOGGER.warning("Your model is not runing, only upload existing result. \
+		LOGGER.warning("Your model is not running, only upload existing result. \
 Some information will be missing and it is not recommended.")
 		cotk_record_information = None
 	else:
-		if not check_repo_clean():
+		if not cargs.only_run and not check_repo_clean():
 			raise RuntimeError("Your changes of code hasn't been committed. Use \"git status\" \
 to check your changes.")
+
 		LOGGER.info("Running your model at '%s' with arguments: %s.", cargs.entry, cargs.args)
 		cotk_record_information = run_model(cargs.entry, cargs.args)
+		LOGGER.info("Your model has exited.")
 
-	LOGGER.info("Collecting info for update...")
-	upload_id = upload_report(cargs.result, cargs.entry, cargs.args, \
-		git_user, git_repo, git_commit, \
-		cotk_record_information, token)
-	LOGGER.info("Upload complete. Check %s for your report.", SHOW_URL % upload_id)
+	if not cargs.only_run:
+		LOGGER.info("Collecting info for update...")
+		upload_id = upload_report(cargs.result, cargs.entry, cargs.args, \
+			git_user, git_repo, git_commit, \
+			cotk_record_information, token)
+		LOGGER.info("Upload complete. Check %s for your report.", SHOW_URL % upload_id)
 
 def download(args):
 	'''Entrance of download'''
 	parser = argparse.ArgumentParser(prog="cotk download", \
-		description='Download model information from cotk model dashboard.')
-	parser.add_argument("--zip_url", type=str, default="", \
-						help="Zipfile url to download from online git repo")
-	parser.add_argument("--id", type=int, default=-1, help="query id")
-	parser.add_argument("--result", type=str, default="result.json", \
+		description='Download model and information from github and dashboard.',\
+		formatter_class=argparse.RawTextHelpFormatter)
+	parser.add_argument("model", type=str, help=\
+r"""A string indicates model path. It can be one of following:
+* Id of cotk dashboard. Example: 12.
+* Url of a git repo / branch / commit.
+    Example: https://github.com/USER/REPO
+             https://github.com/USER/REPO/tree/BRANCH
+             https://github.com/USER/REPO/commit/COMMIT (full commit id should be included)
+* A string specifying a git repo / branch / commit.
+    Example: USER/REPO
+             USER/REPO/BRANCH
+             USER/REPO/COMMIT (full commit id should be included)
+""")
+	parser.add_argument("--result", type=str, default="dashboard_result.json", \
 						help="Path to dump query result.")
-	parser.add_argument("--model_url", type=str, default="", help="Model url")
 	cargs = parser.parse_args(args)
 
-	if cargs.model_url:
-		try:
-			model_dir = file_utils.load_model_from_url(cargs.model_url)
-		except ValueError as err:
-			LOGGER.warning(str(err))
-			model_dir = re.match(r'.*`rm (\S+)`\.', str(err)).groups()[0]
-
-	if cargs.zip_url:
-		# download from online git repo
-		match_res = re.match(r'https?://github.com/(\S+)/(\S+)/archive/(\S+).zip', cargs.zip_url)
-		if match_res:
-			git_user, git_repo, git_commit = match_res.groups()
-			assert_commit_exist(git_user, git_repo, git_commit)
-			extract_dir = '{}_{}'.format(git_repo, git_commit)
-			code_dir = clone_codes_from_commit(git_user, git_repo, git_commit, extract_dir)
-			LOGGER.info("Codes from {}/{}/{} fetched.".format(git_commit, git_repo, git_user))
-			config_path = "{}/config.json".format(code_dir)
-			if not os.path.isfile(config_path):
-				raise FileNotFoundError("Config file ({}) is not found.".format(config_path))
-			try:
-				info = json.load(open(config_path, "r"))
-			except json.JSONDecodeError as err:
-				raise json.JSONDecodeError("{} is not a valid json. {}".format(config_path, err.msg), \
-										   err.doc, err.pos)
-			undefined_keys = []
-			for key in ['working_dir', 'entry', 'args']:
-				if key not in info:
-					undefined_keys.append(key)
-			if undefined_keys:
-				raise RuntimeError("Undefined keys in `config.json`: {}".format(", ".join(undefined_keys)))
-		else:
-			raise ValueError("Invalid zip url.")
-	else:
+	if cargs.model.isalnum():
 		# download from dashboard
-		LOGGER.info("Collecting info from id %d...", cargs.id)
-		info = get_result_from_id(cargs.id)
+		board_id = int(cargs.model)
+		LOGGER.info("Collecting info from id %d...", board_id)
+		info = get_result_from_id(board_id)
 		json.dump(info, open(cargs.result, "w"))
-		LOGGER.info("Info from id %d saved to %s.", cargs.id, cargs.result)
+		LOGGER.info("Info from id %d saved to %s.", board_id, cargs.result)
 		extract_dir = "{}".format(cargs.id)
 
 		code_dir = clone_codes_from_commit(info['git_user'], info['git_repo'], \
 												  info['git_commit'], extract_dir)
 		LOGGER.info("Codes from id %d fetched.")
+	else:
+		# download from online git repo
+		patterns_2 = r'(?:https?://github\.com/)?(\w+)/(\w+)/?'
+		patterns_3 = r'(?:https?://github\.com/)?(\w+)/(\w+)/(?:(?:tree|commit)/)?(\w+)/?'
+		match_res = re.fullmatch(patterns_2, cargs.model)
+		if match_res:
+			git_user, git_repo = match_res.groups()
+			git_commit = "master"
+		else:
+			match_res = re.fullmatch(patterns_3, cargs.model)
+			if not match_res:
+				raise ValueError("'%s' can't match any pattern." % cargs.model)
+			git_user, git_repo, git_commit = match_res.groups()
+
+		LOGGER.info("Fetching {}/{}/{}".format(git_user, git_repo, git_commit))
+		assert_commit_exist(git_user, git_repo, git_commit)
+		extract_dir = '{}_{}'.format(git_repo, git_commit)
+		code_dir = clone_codes_from_commit(git_user, git_repo, git_commit, extract_dir)
+		LOGGER.info("Codes from {}/{}/{} fetched.".format(git_user, git_repo, git_commit))
+		config_path = "{}/config.json".format(code_dir)
+		if not os.path.isfile(config_path):
+			raise FileNotFoundError("Config file ({}) is not found.".format(config_path))
+		try:
+			info = json.load(open(config_path, "r"))
+		except json.JSONDecodeError as err:
+			raise json.JSONDecodeError("{} is not a valid json. {}".format(config_path, err.msg), \
+										err.doc, err.pos)
+		undefined_keys = []
+		for key in ['working_dir', 'entry', 'args']:
+			if key not in info:
+				undefined_keys.append(key)
+		if undefined_keys:
+			raise RuntimeError("Undefined keys in `config.json`: {}".format(", ".join(undefined_keys)))
 
 	# cmd construction
-	cmd = "cd {}/{} && python {}.py".format(code_dir, info['working_dir'], info['entry'])
+	cmd = "cd {}/{} && cotk run --only-run --entry {}".format(code_dir, info['working_dir'], info['entry'])
 	if not info['args']:
 		info['args'] = []
 	else:
 		if not isinstance(info['args'], list):
 			raise ValueError("`args` in `config.json` should be of type `list`.")
-	if cargs.model_url:
-		try:
-			idx = info['args'].index('--model_dir')
-			info['args'] = info['args'][:idx] + ['--model_dir', model_dir] + info['args'][idx + 2:]
-		except:
-			info['args'] = ['--model_dir', model_dir] + info['args']
+
 	cmd += " {}".format(" ".join(info['args']))
 	with open("{}/run_model.sh".format(extract_dir), "w") as file:
 		file.write(cmd)
@@ -286,16 +303,16 @@ def download(args):
 	print("Model running cmd: \t{}".format(cmd))
 
 	# run model
-	result_path = "{}/result.json".format(code_dir)
-	old_time_stamp = 0
-	if os.path.exists(result_path):
-		old_time_stamp = os.path.getmtime(result_path)
+	# result_path = "{}/result.json".format(code_dir)
+	# old_time_stamp = 0
+	# if os.path.exists(result_path):
+	# 	old_time_stamp = os.path.getmtime(result_path)
 
-	os.system("bash {}/run_model.sh".format(extract_dir))
-	if not os.path.exists(result_path) or \
-		os.path.getmtime('{}/result.json'.format(code_dir)) <= old_time_stamp:
-		raise FileNotFoundError("New result file not found.")
-	print(json.load(open("{}/result.json".format(code_dir), "r")))
+	# os.system("bash {}/run_model.sh".format(extract_dir))
+	# if not os.path.exists(result_path) or \
+	# 	os.path.getmtime('{}/result.json'.format(code_dir)) <= old_time_stamp:
+	# 	raise FileNotFoundError("New result file not found.")
+	# print(json.load(open("{}/result.json".format(code_dir), "r")))
 
 def get_result_from_id(query_id):
 	'''Query uploaded info from id'''
@@ -308,6 +325,7 @@ def get_result_from_id(query_id):
 def clone_codes_from_commit(git_user, git_repo, git_commit, extract_dirname):
 	'''Download codes from commit'''
 	url = "https://github.com/{}/{}/archive/{}.zip".format(git_user, git_repo, git_commit)
+	# TODO: ask user whether delete!! Use less subprocess especially rm, wget and unzip
 	subprocess.run(['rm', '-rf', "{}.zip".format(git_commit)], stdout=PIPE, stderr=PIPE)
 	download_res = subprocess.run(["wget", url], stdout=PIPE, stderr=PIPE)
 	if re.search(r'ERROR 404: Not Found', download_res.stderr.decode()):
@@ -353,16 +371,32 @@ def import_local_resources(args):
 	file_utils.import_local_resources(cargs.file_id, cargs.file_path)
 	LOGGER.info("Successfully import local resource {}.".format(cargs.file_id))
 
+def show_command():
+	'''show help'''
+	print(r"""usage: cotk <command> [...]
+
+command list:
+   report       Push your model result.
+   download     Download a model online.
+   import       Import local files to cotk cache.
+   config       Settings.
+
+You can type `cotk <command>` for details of each command.
+""")
+
 def dispatch(sub_entrance, args):
 	'''Dispatcher of sub-entrances'''
-	if sub_entrance == 'report':
-		report(args)
+	if sub_entrance == 'run':
+		run(args)
 	elif sub_entrance == 'download':
 		download(args)
 	elif sub_entrance == 'import':
 		import_local_resources(args)
 	elif sub_entrance == 'config':
 		config(args)
+	else:
+		print("Unknown command.\n")
+		show_command()
 
 def main():
 	'''Entry of command line'''
@@ -374,6 +408,8 @@ def main():
 			dispatch(sys.argv[1], sys.argv[2:])
 		except Exception as err: #pylint: disable=broad-except
 			print("%s: %s" % (type(err).__name__, err))
+	else:
+		show_command()
 
 if __name__ == "__main__":
 	dispatch(sys.argv[1], sys.argv[2:])

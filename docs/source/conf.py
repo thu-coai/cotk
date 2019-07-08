@@ -79,6 +79,10 @@ exclude_patterns = ['build', 'Thumbs.db', '.DS_Store']
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
+napoleon_use_ivar = True
+napoleon_use_rtype = False
+napoleon_use_param = False
+
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -190,3 +194,6 @@ autodoc_member_order = 'bysource'
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
+
+def setup(app):
+    app.add_stylesheet('cotk_theme.css')

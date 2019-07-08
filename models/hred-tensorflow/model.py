@@ -79,7 +79,7 @@ class HredModel(object):
 		with tf.variable_scope('decoder', reuse=tf.AUTO_REUSE):
 			decoder_infer = tf.contrib.seq2seq.BasicDecoder(cell_dec_attn, infer_helper, dec_start, output_layer = output_fn)
 			infer_outputs, _, _ = tf.contrib.seq2seq.dynamic_decode(decoder_infer, impute_finished = True,
-					maximum_iterations=args.max_sen_length, scope = "decoder_rnn")
+					maximum_iterations=args.max_sent_length, scope = "decoder_rnn")
 			self.decoder_distribution = infer_outputs.rnn_output
 			self.generation_index = tf.argmax(tf.split(self.decoder_distribution,
 				[2, data.vocab_size-2], 2)[1], 2) + 2 # for removing UNK
@@ -269,7 +269,7 @@ class HredModel(object):
 			batch_results = []
 			for response_id in batched_responses_id:
 				response_id_list = response_id.tolist()
-				response_token = data.index_to_sen(response_id_list)
+				response_token = data.convert_ids_to_tokens(response_id_list)
 				if data.eos_id in response_id_list:
 					result_id = response_id_list[:response_id_list.index(data.eos_id)+1]
 				else:

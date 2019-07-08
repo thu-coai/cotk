@@ -57,7 +57,7 @@ def main(args):
 	else:
 		data = data_class(args.datapath,
 				min_vocab_times=args.min_vocab_times,
-				max_sen_length=args.max_sen_length,
+				max_sent_length=args.max_sent_length,
 				max_turn_length=args.max_turn_length)
 		wv = wordvec_class(args.wvpath)
 		vocab = data.vocab_list

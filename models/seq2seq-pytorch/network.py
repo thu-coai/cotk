@@ -176,12 +176,12 @@ class GenNetwork(nn.Module):
 		dm = self.param.volatile.dm
 		w_o = gen.w_o.detach().cpu().numpy()
 		incoming.result.resp_str = resp_str = \
-				[" ".join(dm.index_to_sen(w_o[:, i].tolist())) for i in range(batch_size)]
+				[" ".join(dm.convert_ids_to_tokens(w_o[:, i].tolist())) for i in range(batch_size)]
 		incoming.result.golden_str = golden_str = \
-				[" ".join(dm.index_to_sen(incoming.data.resp[:, i].detach().cpu().numpy().tolist()))\
+				[" ".join(dm.convert_ids_to_tokens(incoming.data.resp[:, i].detach().cpu().numpy().tolist()))\
 				for i in range(batch_size)]
 		incoming.result.post_str = post_str = \
-				[" ".join(dm.index_to_sen(incoming.data.post[:, i].detach().cpu().numpy().tolist()))\
+				[" ".join(dm.convert_ids_to_tokens(incoming.data.post[:, i].detach().cpu().numpy().tolist()))\
 				for i in range(batch_size)]
 		incoming.result.show_str = "\n".join(["post: " + a + "\n" + "resp: " + b + "\n" + \
 				"golden: " + c + "\n" \

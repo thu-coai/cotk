@@ -1,5 +1,5 @@
 r"""
-`cotk.wordvector` provides classes and functions downloading and
+``cotk.wordvector`` provides classes and functions downloading and
 loading wordvector automatically.
 """
 

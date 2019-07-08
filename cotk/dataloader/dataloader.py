@@ -20,21 +20,21 @@ class GenerationBase(Dataloader):
 	"""
 
 	ARGUMENTS = r"""
-			ext_vocab (list): special tokens. default: `["<pad>", "<unk>", "<go>", "<eos>"]`
-			key_name (list): name of subsets of the data. default: `["train", "dev", "test"]`
+			ext_vocab (list): special tokens. Default: ``["<pad>", "<unk>", "<go>", "<eos>"]``
+			key_name (list): name of subsets of the data. Default: ``["train", "dev", "test"]``
 	"""
 	ATTRIBUTES = r"""
-			ext_vocab (list): special tokens, be placed at beginning of `vocab_list`.
-					For example: `["<pad>", "<unk>", "<go>", "<eos>"]`
-			pad_id (int): token for padding, always equal to `0`
-			unk_id (int): token for unknown words, always equal to `1`
-			go_id (int): token at the beginning of sentences, always equal to `2`
-			eos_id (int): token at the end of sentences, always equal to `3`
-			key_name (list): name of subsets of the data. For example: `["train", "dev", "test"]`
+			ext_vocab (list): special tokens, placed at beginning of ``vocab_list``.
+					For example: ``["<pad>", "<unk>", "<go>", "<eos>"]``.
+			pad_id (int): token for padding, always equal to ``0``.
+			unk_id (int): token for unknown words, always equal to ``1``.
+			go_id (int): token at the beginning of sentences, always equal to ``2``.
+			eos_id (int): token at the end of sentences, always equal to ``3``.
+			key_name (list): name of subsets of the data. For example: ``["train", "dev", "test"]``.
 			all_vocab_list (list): vocabulary list of the datasets,
 					including valid vocabs and invalid vocabs.
-			word2id (dict): a dict mapping all vocab to index.
-					Maybe you want to use :meth:`sen_to_index` instead.
+			word2id (dict): a dict mapping all vocab to index. You don't need to use it 
+					at most times, see :meth:`convert_tokens_to_ids` instead.
 	"""
 
 	def __init__(self, \
@@ -64,8 +64,13 @@ class GenerationBase(Dataloader):
 			self.index[key] = list(range(self.data_size[key]))
 
 	def _valid_word2id(self, word):
-		'''This function return the id for a valid word (``id < valid_vocab_len``),
-		otherwise return `unk_id`.
+		'''This function return the id for a valid word, otherwise return ``unk_id``.
+
+		Arguments:
+			word (str): a word.
+
+		Returns:
+			int
 		'''
 		idx = self.word2id.get(word, self.unk_id)
 		if idx >= self.vocab_size:
@@ -76,47 +81,47 @@ class GenerationBase(Dataloader):
 		r'''This function is called during the initialization.
 
 		Returns:
-			(tuple): tuple containing:
+			(tuple): containing:
 
-			* all_vocab_list (list): vocabulary list of the datasets,
-			  including valid and invalid vocabs
-			* valid_vocab_len (int): the number of valid vocab.
+			* **all_vocab_list** (list): vocabulary list of the datasets,
+			  including valid and invalid vocabs.
+			* **valid_vocab_len** (int): the number of valid vocab.
 			  ``vocab_list[:valid_vocab_len]`` will be regarded as valid vocabs,
-			  while ``vocab_list[valid_vocab_len:]`` regarded as invalid vocabs
-			* data (dict): a dict contains data.
-			* data_size (dict): a dict contains size of each item in data.
+			  while ``vocab_list[valid_vocab_len:]`` regarded as invalid vocabs.
+			* **data** (dict): a dict contains data.
+			* **data_size** (dict): a dict contains size of each item in data.
 		'''
 		raise NotImplementedError( \
 			"This function should be implemented by subclasses.")
 
 	@property
 	def vocab_size(self):
-		'''int: equals to ``valid_vocab_len``. Read only.
+		'''int: equals to ``valid_vocab_len``.
 		'''
 		return self.valid_vocab_len
 
 	@property
 	def all_vocab_size(self):
-		'''int: equals to ``len(self.all_vocab_list)``. Read only.
+		'''int: equals to ``len(self.all_vocab_list)``.
 		'''
 		return len(self.all_vocab_list)
 
 	@property
 	def vocab_list(self):
 		r'''list: valid vocab list, equals to ``all_vocab_list[：valid_vocab_len]``.
-		Read only.
 		'''
 		# using utf-8 ：instead of : for avoiding bug in sphinx
 		return self.all_vocab_list[:self.valid_vocab_len]
 
 	def restart(self, key, batch_size=None, shuffle=True):
-		'''Initialize mini-batches. Must call this function before :func:`get_next_batch`
+		r'''Initialize batches. This function be called before :func:`get_next_batch`
 		or an epoch is end.
 
 		Arguments:
-				key (str): must be contained in `key_name`.
-				batch_size (None or int): default (None): use last batch_size.
-				shuffle (bool): whether to shuffle the data. default: `True`
+				key (str): key name of dataset, must be contained in ``self.key_name``.
+				batch_size (int): the number of sample in a batch.
+					default: if ``None``, last ``batch_size`` is used.
+				shuffle (bool): whether to shuffle the data. Default: ``True``.
 		'''
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
@@ -136,8 +141,8 @@ class GenerationBase(Dataloader):
 		'''Get a batch of specified `index`.
 
 		Arguments:
-				key (str): must be contained in `key_name`
-				index (list): a list of specified index
+				key (str): key name of dataset, must be contained in ``self.key_name``.
+				index (list): a list of specified index.
 
 		Returns:
 				A dict. See examples in subclasses.
@@ -146,15 +151,16 @@ class GenerationBase(Dataloader):
 			"This function should be implemented by subclasses.")
 
 	def get_next_batch(self, key, ignore_left_samples=False):
-		'''Get next batch.
+		'''Get next batch. It can be called only after Initializing batches (:func:`restart`).
 
 		Arguments:
-				key (str): must be contained in `key_name`
-				ignore_left_samples (bool): Ignore the last batch, whose sample num
-						is not equal to `batch_size`. Default: `False`
+			key (str): key name of dataset, must be contained in ``self.key_name``.
+			ignore_left_samples (bool): If the number of left samples is not equal to
+				``batch_size``, ignore them. This make sure all batches have same number of samples.
+				Default: ``False``
 
 		Returns:
-				A dict like :func:`get_batch`, or None if the epoch is end.
+			A dict like :func:`get_batch`, or None if the epoch is end.
 		'''
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
@@ -174,18 +180,19 @@ class GenerationBase(Dataloader):
 		return res
 
 	def get_batches(self, key, batch_size=None, shuffle=True, ignore_left_samples=False):
-		'''An iterator of batches of data. It first call restart, and then get batches\
+		'''An iterator over batches. It first call :func:`restart`, and then :func:`get_next_batches`\
 			until no more data is available.
 
 		Arguments:
-				key (str): must be contained in `key_name`
-				batch_size (None or int): default (None): use last batch_size.
-				shuffle (bool): whether to shuffle the data. default: `True`
-				ignore_left_samples (bool): Ignore the last batch, whose sample num
-						is not equal to `batch_size`. Default: `False`
+			key (str): key name of dataset, must be contained in ``self.key_name``.
+			batch_size (int, optional): default: ``None``.  Use ``batch_size`` by default.
+			shuffle (bool): whether to shuffle the data. Default: ``True``.
+			ignore_left_samples (bool): If the number of left samples is not equal to
+				``batch_size``, ignore them. This make sure all batches have same number of samples.
+				Default: ``False``.
 
 		Returns:
-				An iterator where each element is like :func:`get_batch`
+			An iterator where each element is like :func:`get_batch`.
 		'''
 		self.restart(key, batch_size, shuffle)
 		while True:
@@ -194,42 +201,48 @@ class GenerationBase(Dataloader):
 				break
 			yield res
 
-	def sen_to_index(self, sen, invalid_vocab=False):
-		'''Convert a sentence from string to index representation.
+	def convert_tokens_to_ids(self, sent, invalid_vocab=False):
+		r'''Convert a sentence from string to index representation.
 
 		Arguments:
-			sen (list): a list of str, representing each token of the sentences.
+			sent (list): a list of string, representing each token of the sentences.
 			invalid_vocab (bool): whether to provide invalid vocabs.
-					If ``False``, invalid vocabs will be replaced by `unk_id`.
+					If ``False``, invalid vocabs will be replaced by ``unk_id``.
 					If ``True``, invalid vocabs will using their own id.
-					Default: `False`
+					Default: ``False``
+
+		Returns:
+			(list): a list of indexes
 
 		Examples:
 			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 			>>> #	"been", "to", "China"]
 			>>> # vocab_size = 7
 			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have", "been"]
-			>>> dataloader.sen_to_index(
-			...	["<go>", "I", "have", "been", "to", "China", "<eos>"], invalid_vocab = False)
+			>>> dataloader.convert_tokens_to_ids(
+			...	["<go>", "I", "have", "been", "to", "China", "<eos>"], invalid_vocab=False)
 			>>> [2, 4, 5, 6, 1, 1, 3]
-			>>> dataloader.sen_to_index(
-			...	["<go>", "I", "have", "been", "to", "China", "<eos>"], invalid_vocab = True)
-			>>> [2, 4, 5, 6, 7 ,8 ,3]
+			>>> dataloader.convert_tokens_to_ids(
+			...	["<go>", "I", "have", "been", "to", "China", "<eos>"], invalid_vocab=True)
+			>>> [2, 4, 5, 6, 7, 8, 3]
 		'''
 		if invalid_vocab:
-			return list(map(lambda word: self.word2id.get(word, self.unk_id), sen))
+			return list(map(lambda word: self.word2id.get(word, self.unk_id), sent))
 		else:
-			return list(map(self._valid_word2id, sen))
+			return list(map(self._valid_word2id, sent))
 
 	def trim_index(self, index):
-		'''Trim index. There will be two steps:
+		r'''Trim a sentence represented by index. There will be two steps:
 
-			* If there is an end token (`<eos>`) in sentences,
+			* If there is an end token (``<eos>``) in the sentence,
 			  find first end token and abandon words after it (included the end token).
-			* ignore `<pad>` s at the end of the sentence.
+			* ignore ``<pad>`` s at the end of the sentence.
 
 		Arguments:
-			index (list): a list of int
+			index (list or :class:`numpy.ndarray`): a list of int
+
+		Returns:
+			(list): a list of trimmed index
 
 		Examples:
 
@@ -248,21 +261,24 @@ class GenerationBase(Dataloader):
 		index = index[:idx]
 		return index
 
-	def index_to_sen(self, index, trim=True):
+	def convert_ids_to_tokens(self, index, trim=True):
 		'''Convert a sentence from index to string representation.
 
 		Arguments:
 				index (list): a list of int.
 				trim (bool): if True, call :func:`trim_index` before convertion.
 
+		Returns:
+			(list): a list of tokens
+
 		Examples:
 			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 			>>> #	"been", "to", "China"]
-			>>> dataloader.index_to_sen(
-			...		[2, 4, 5, 6, 7, 8, 3, 0, 0], trim = True)
+			>>> dataloader.convert_ids_to_tokens(
+			...		[2, 4, 5, 6, 7, 8, 3, 0, 0], trim=True)
 			>>> ["<go>", "I", "have", "been", "to", "China"]
-			>>> dataloader.index_to_sen(
-			...		[2, 4, 5, 6, 7, 8, 3, 0, 0], trim = False)
+			>>> dataloader.convert_ids_to_tokens(
+			...		[2, 4, 5, 6, 7, 8, 3, 0, 0], trim=False)
 			>>> ["<go>", "I", "have", "been", "to", "China", "<eos>", "<pad>", "<pad>"]
 
 		'''

@@ -3,7 +3,7 @@ from itertools import chain
 import pytest
 
 from cotk.dataloader import MultiTurnDialog, UbuntuCorpus, SwitchboardCorpus
-from cotk.metric import MetricBase, HashValueRecorder
+from cotk.metric import MetricBase
 from cotk.wordvector.gloves import Glove
 
 def setup_module():
@@ -144,61 +144,61 @@ class TestMultiTurnDialog():
 	def base_test_convert(self, dl):
 		sent_id = [0, 1, 2]
 		sent = ["<pad>", "<unk>", "<go>"]
-		assert sent == dl.index_to_sen(sent_id)
-		assert sent_id == dl.sen_to_index(sent)
+		assert sent == dl.convert_ids_to_tokens(sent_id)
+		assert sent_id == dl.convert_tokens_to_ids(sent)
 
 		sent = ["<unk>", "<go>", "<pad>", "<unkownword>", "<pad>", "<go>"]
 		sent_id = [1, 2, 0, 1, 0, 2]
-		assert sent_id == dl.sen_to_index(sent)
-		assert sent_id == dl.sen_to_index(sent, invalid_vocab=True)
+		assert sent_id == dl.convert_tokens_to_ids(sent)
+		assert sent_id == dl.convert_tokens_to_ids(sent, invalid_vocab=True)
 
 		sent = [dl.all_vocab_list[dl.vocab_size]]
-		assert [1] == dl.sen_to_index(sent)
-		assert [dl.vocab_size] == dl.sen_to_index(sent, invalid_vocab=True)
+		assert [1] == dl.convert_tokens_to_ids(sent)
+		assert [dl.vocab_size] == dl.convert_tokens_to_ids(sent, invalid_vocab=True)
 
 		sent_id = [0, 1, 2, 3, 0, 1, 0, 0]
 		sent = ["<pad>", "<unk>", "<go>", "<eos>", "<pad>", "<unk>", "<pad>", "<pad>"]
-		assert sent == dl.index_to_sen(sent_id, trim=False)
+		assert sent == dl.convert_ids_to_tokens(sent_id, trim=False)
 		sent = ["<pad>", "<unk>", "<go>"]
-		assert sent == dl.index_to_sen(sent_id)
+		assert sent == dl.convert_ids_to_tokens(sent_id)
 
 		sent_id = [0, 0, 3]
 		sent = ["<pad>", "<pad>", "<eos>"]
-		assert sent == dl.index_to_sen(sent_id, trim=False)
-		assert not dl.index_to_sen(sent_id)
+		assert sent == dl.convert_ids_to_tokens(sent_id, trim=False)
+		assert not dl.convert_ids_to_tokens(sent_id)
 
 		sent_id = [3, 3, 3]
 		sent = ["<eos>", "<eos>", "<eos>"]
-		assert sent == dl.index_to_sen(sent_id, trim=False)
-		assert not dl.index_to_sen(sent_id)
+		assert sent == dl.convert_ids_to_tokens(sent_id, trim=False)
+		assert not dl.convert_ids_to_tokens(sent_id)
 
 		sent_id = [0, 0, 0]
 		sent = ["<pad>", "<pad>", "<pad>"]
-		assert sent == dl.index_to_sen(sent_id, trim=False)
-		assert not dl.index_to_sen(sent_id)
+		assert sent == dl.convert_ids_to_tokens(sent_id, trim=False)
+		assert not dl.convert_ids_to_tokens(sent_id)
 
 	def base_test_multi_turn_convert(self, dl):
 		sent_id = [[0, 1, 2], [2, 1, 1]]
 		sent = [["<pad>", "<unk>", "<go>"], ["<go>", "<unk>", "<unk>"]]
-		assert sent == dl.multi_turn_index_to_sen(sent_id)
-		assert sent_id == dl.multi_turn_sen_to_index(sent)
+		assert sent == dl.convert_multi_turn_ids_to_tokens(sent_id)
+		assert sent_id == dl.convert_multi_turn_tokens_to_ids(sent)
 
 		sent = [["<unk>", "<go>", "<pad>", "<unkownword>", "<pad>", "<go>"], ["<go>", "<eos>"]]
 		sent_id = [[1, 2, 0, 1, 0, 2], [2, 3]]
-		assert sent_id == dl.multi_turn_sen_to_index(sent)
+		assert sent_id == dl.convert_multi_turn_tokens_to_ids(sent)
 
 		sent_id = [[0, 1, 2, 2, 0, 3, 1, 0, 0], [0, 3, 2], [1, 2, 2, 0], [1, 2, 2, 3]]
 		sent = [["<pad>", "<unk>", "<go>", "<go>", "<pad>", "<eos>", "<unk>", "<pad>", "<pad>"], \
 				["<pad>", "<eos>", "<go>"], \
 				["<unk>", "<go>", "<go>", "<pad>"], \
 				["<unk>", "<go>", "<go>", "<eos>"]]
-		assert sent == dl.multi_turn_index_to_sen(sent_id, trim=False)
+		assert sent == dl.convert_multi_turn_ids_to_tokens(sent_id, trim=False)
 		sent = [["<pad>", "<unk>", "<go>", "<go>"]]
-		assert sent == dl.multi_turn_index_to_sen(sent_id)
+		assert sent == dl.convert_multi_turn_ids_to_tokens(sent_id)
 
 		sent = [[dl.all_vocab_list[dl.vocab_size]]]
-		assert [[1]] == dl.multi_turn_sen_to_index(sent)
-		assert [[dl.vocab_size]] == dl.multi_turn_sen_to_index(sent, invalid_vocab=True)
+		assert [[1]] == dl.convert_multi_turn_tokens_to_ids(sent)
+		assert [[dl.vocab_size]] == dl.convert_multi_turn_tokens_to_ids(sent, invalid_vocab=True)
 
 	def base_test_teacher_forcing_metric(self, dl):
 		assert isinstance(dl.get_teacher_forcing_metric(), MetricBase)
@@ -297,7 +297,7 @@ class TestSwitchboardCorpus(TestMultiTurnDialog):
 		dl = load_switchboardcorpus()
 		glove = Glove("./tests/wordvector/dummy_glove/300d/")
 		embed = glove.load(300, dl.vocab_list)
-		assert isinstance(dl.get_precision_recall_metric(sent_per_inst=3, embed=embed), MetricBase)
+		assert isinstance(dl.get_multi_ref_metric(generated_num_per_context=3, embed=embed), MetricBase)
 
 	def test_init_multi_runs(self, load_switchboardcorpus):
 		super().base_test_multi_runs([load_switchboardcorpus() for i in range(3)])

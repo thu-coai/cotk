@@ -68,7 +68,7 @@ def run(argv):
 	args.batch_size = 128
 	args.grad_clip = 5.0
 	args.show_sample = [0]
-	args.max_sen_length = 50
+	args.max_sent_length = 50
 	args.checkpoint_steps = 1000
 	args.checkpoint_max_to_keep = 5
 

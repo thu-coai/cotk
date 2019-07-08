@@ -4,14 +4,17 @@ Metric
 
 .. autoclass:: MetricBase
     :members:
+    
+    .. automethod:: _hash_relevant_data
+    .. automethod:: _hashvalue
 
 Metric class
 ---------------------------------
 .. autoclass:: BleuPrecisionRecallMetric
-    :members: forward,score,close
+    :members: forward,_score,close
 
 .. autoclass:: EmbSimilarityPrecisionRecallMetric
-    :members: forward,score,close
+    :members: forward,_score,close
 
 .. autoclass:: PerplexityMetric
     :members:
@@ -41,9 +44,6 @@ Metric-like class
     :members:
 
 .. autoclass:: LanguageGenerationRecorder
-    :members:
-
-.. autoclass:: HashValueRecorder
     :members:
 
 .. autoclass:: MetricChain
