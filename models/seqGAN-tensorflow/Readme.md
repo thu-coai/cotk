@@ -30,7 +30,7 @@ Lantao Yu, Weinan Zhang, Jun Wang, Yong Yu. SeqGAN: Sequence Generative Adversar
 
 ### Arguments
 
-```
+```none
     usage: run.py [-h] [--name NAME] [--restore RESTORE] [--mode MODE]
                   [--dataset DATASET] [--datapath DATAPATH]
                   [--wvclass WVCLASS] [--wvpath WVPATH] [--out_dir OUT_DIR]
@@ -75,19 +75,19 @@ Following plot are shown in this model:
 
 - gen_loss: loss when pre-training the generator.
 
-  ![](../../models/seqGAN-tensorflow/images/gen_loss.png)
+  ![](./images/gen_loss.png)
 
 - gen_reward: average reward when adversarially training the generator.
 
-  ![](../../models/seqGAN-tensorflow/images/gen_rewards.png)
+  ![](./images/gen_rewards.png)
 
 - dis_loss: loss when pre-training and adversarially training the discriminator.
 
-  ![](../../models/seqGAN-tensorflow/images/dis_loss.png)
+  ![](./images/dis_loss.png)
 
 - dis_accuracy: accuracy when pre-training and adversarially training
 
-  ![](../../models/seqGAN-tensorflow/images/dis_acc.png)
+  ![](./images/dis_acc.png)
 
 
 
@@ -98,7 +98,7 @@ Execute ``python run.py --mode test --restore best``
 
 The following output will be in `./output/[name]_test.txt`:
 
-```
+```none
 self-bleu-4:0.129181
 bw-bleu-4:0.464359
 fw-bw-bleu-2:0.569625

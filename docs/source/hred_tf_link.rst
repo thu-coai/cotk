@@ -1,1 +1,0 @@
-.. mdinclude:: ../../models/hred-tensorflow/Readme.md

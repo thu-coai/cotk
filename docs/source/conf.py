@@ -14,6 +14,7 @@
 #
 import os
 import sys
+import shutil
 sys.path.insert(0, os.path.abspath('../'))
 
 
@@ -195,5 +196,44 @@ autodoc_member_order = 'bysource'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
 
+
+# mycss
 def setup(app):
     app.add_stylesheet('cotk_theme.css')
+
+# copy readme and images
+
+models = {"LanguageGeneration": {
+        "lm_tf":"LM-tensorflow",
+        "vae_tf":"VAE-tensorflow",
+        "seqgan_tf":"seqGAN-tensorflow"
+    }, "SingleTurnDialog": {
+        "seq2seq_torch": "seq2seq-pytorch",
+        "seq2seq_tf":"seq2seq-tensorflow"
+    }, "MultiTurnDialog": {
+        "hred_tf": "hred-tensorflow",
+        "cvae_tf": "CVAE-tensorflow"
+    }
+}
+
+exclude_patterns = []
+shutil.rmtree("./models", ignore_errors=True)
+os.makedirs("./models", exist_ok=True)
+for dir1, submodels in models.items():
+    os.makedirs(os.path.join("./models", dir1), exist_ok=True)
+    index_file = open(os.path.join("./models", dir1, "index.rst"), 'w')
+    index_file.write("%s\n=========================================\n" % dir1)
+    index_file.write(".. toctree::\n\n")
+    for rstname, modelname in submodels.items():
+        index_file.write("   %s/readme.md\n" % modelname)
+        os.makedirs(os.path.join("./models", dir1, modelname), exist_ok=True)
+        shutil.copy(os.path.join("../../", "models", modelname, "Readme.md"), 
+            os.path.join("./models", dir1, modelname, "Readme.md"))
+        exclude_patterns.append(os.path.join("models", dir1, modelname, "Readme.md"))
+        shutil.copytree(os.path.join("../../", "models", modelname, "images"),
+            os.path.join("./models", dir1, modelname, "images"))
+        with open(os.path.join("./models", dir1, modelname, "readme.rst"), 'w') as rst_file:
+            rst_file.write(".. mdinclude:: ./Readme.md\n")
+    index_file.close()
+
+#print(exclude_patterns)

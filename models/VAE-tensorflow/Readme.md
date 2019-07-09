@@ -1,6 +1,6 @@
 ## VAE (TensorFlow)
 
-![VAE-model](../../models/VAE-tensorflow/images/VAE-model.png)
+![VAE-model](./images/VAE-model.png)
 
 An implementation of VAE language generation model. Refer to the following paper for more details:
 
@@ -34,7 +34,7 @@ Bowman, S., Vilnis, L., Vinyals, O., Dai, A., Jozefowicz, R., and Bengio, S. Gen
 
 ### Arguments
 
-```
+```none
     usage: run.py [-h] [--name NAME] [--restore RESTORE] [--mode MODE]
                   [--dataset DATASET] [--datapath DATAPATH] [--epoch EPOCH]
                   [--wvclass WVCLASS] [--wvpath WVPATH] [--out_dir OUT_DIR]
@@ -82,29 +82,29 @@ Following plot are shown in this model:
 
 - loss: reconstruction loss + kl loss.
 
-  ![loss](../../models/VAE-tensorflow/images/loss.png)
+  ![loss](./images/loss.png)
 
 - perplexity: reconstruction perplexity.
 
-  ![perplexity](../../models/VAE-tensorflow/images/perplexity.png)
+  ![perplexity](./images/perplexity.png)
 
 - kl_loss: kl_weight * min(kld, min_kl=10).
 
-  ![kl_loss](../../models/VAE-tensorflow/images/kl_loss.png)
+  ![kl_loss](./images/kl_loss.png)
 
 - kld: kl divergence.
 
-  ![kld](../../models/VAE-tensorflow/images/kld.png)
+  ![kld](./images/kld.png)
 
 - kl_weight: weight to the kl loss in the loss function.
 
-  ![kl_weight](../../models/VAE-tensorflow/images/kl_weight.png)
+  ![kl_weight](./images/kl_weight.png)
 
 
 
 And text output:
 
-![text_arg](../../models/VAE-tensorflow/images/text_arg.png)
+![text_arg](./images/text_arg.png)
 
 Following text are shown in this model:
 
@@ -118,7 +118,7 @@ Execute ``python run.py --mode test --restore last``
 
 The following output will be in `./output/[name]_test.txt`:
 
-```
+```none
 perplexity:     7.292317
 Fancy decorated bathroom with a toilet , sink , and shower .
 A close-up of a plate with a sandwich in the middle .

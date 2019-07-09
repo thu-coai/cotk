@@ -27,6 +27,7 @@ Serban, I. V., Sordoni, A., Bengio, Y., Courville, A. C., & Pineau, J. (2016, Fe
 
 ### Arguments
 
+```none
     usage: run.py [-h] [--name NAME] [--restore RESTORE] [--mode MODE]
                   [--dataset DATASET] [--datapath DATAPATH] [--epoch EPOCH]
                   [--wvclass WVCLASS] [--wvpath WVPATH] [--out_dir OUT_DIR]
@@ -65,12 +66,13 @@ Serban, I. V., Sordoni, A., Bengio, Y., Courville, A. C., & Pineau, J. (2016, Fe
       --debug               Enter debug mode (using ptvsd).
       --cache               Use cache for speeding up load data and wordvec. (It
                        	    may cause problems when you switch dataset.)
+```
 
 ### TensorBoard Example
 
 Execute ``tensorboard --logdir=./tensorboard``, you will see the plot in tensorboard pages:
 
-![hred_plot_example](../../models/hred-tensorflow/images/hred-plot-example.png)
+![hred_plot_example](./images/hred-plot-example.png)
 
 Following plot are shown in this model:
 
@@ -85,7 +87,7 @@ Following plot are shown in this model:
 
 And text output:
 
-![hred_text_example](../../models/hred-tensorflow/images/hred-text-example.png)
+![hred_text_example](./images/hred-text-example.png)
 
 Following text are shown in this model:
 
@@ -97,13 +99,14 @@ Execute ``python run.py --mode test --restore best``
 
 The following output will be in `./output/[name]_[dev|test].txt`:
 
-```
+```none
 perplexity:     74.407300
 bleu:   0.089069
-post:   anyone knows why my stock oneiric exports env var <unk> I mean what is that used for? I know of USER but not <unk> . My precise install doesnt export USERNAME <eos>
-resp:   looks like it used to be exported by <unk> but the line had the comment <unk> <unk> Is this <unk> so I guess it isnt surprising it is gone <eos>
+
+post:   anyone knows why my stock oneiric exports env var <unk> I mean what is that used for? I know of $USER but not <unk> . My precise install doesn't export USERNAME <eos>
+resp:   looks like it used to be exported by <unk> but the line had the comment <unk> <unk> Is this <unk> so I guess it isn't surprising it is gone <eos>
 gen:    you <eos>
-post:   looks like it used to be exported by <unk> but the line had the comment <unk> <unk> Is this <unk> so I guess it isnt surprising it is gone <eos>
+post:   looks like it used to be exported by <unk> but the line had the comment <unk> <unk> Is this <unk> so I guess it isn't surprising it is gone <eos>
 resp:   thanks! How the heck did you figure that out? <eos>
 gen:    I have no idea what that is <eos>
 post:   thanks! How the heck did you figure that out? <eos>
@@ -113,7 +116,7 @@ post:   <unk> <eos>
 resp:   nice thanks! <eos>
 gen:    I <eos>
 
-post:   i set up my hd such that i have to type a passphrase to access it at boot. how can i remove that <unk> and just boot up normal. i did this at install, it works fine, just tired of having re       boots where i need to be at terminal
+post:   i set up my hd such that i have to type a passphrase to access it at boot. how can i remove that <unk> and just boot up normal. i did this at install, it works fine, just tired of having reboots where i need to be at terminal
 resp:   backup your data, and re-install without encryption "might" be the easiest method <eos>
 gen:    you can install the ubuntu package <eos>
 post:   backup your data, and re-install without encryption "might" be the easiest method <eos>

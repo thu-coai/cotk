@@ -32,7 +32,7 @@ An implementation of LM(language model).
 
 ### Arguments
 
-```
+```none
     usage: run.py [-h] [--name NAME] [--restore RESTORE] [--mode MODE]
                   [--dataset DATASET] [--datapath DATAPATH] [--epoch EPOCH]
                   [--wvclass WVCLASS] [--wvpath WVPATH] [--out_dir OUT_DIR]
@@ -82,77 +82,46 @@ Following plot are shown in this model:
 
 - loss: reconstruction loss.
 
-  ![loss](../../models/LM-tensorflow/image/loss.png)
+  ![loss](./images/loss.png)
 
 - perplexity: reconstruction perplexity.
 
-  ![perplexity](../../models/LM-tensorflow/image/perplexity.png)
+  ![perplexity](./images/perplexity.png)
 
 
 And text output:
 
-```
-
+```none
 
 "epochs": 10,  
-
 "lr": 0.1,  
-
 "log_dir": "./tensorboard",  
-
 "name": "LM",  
-
 "max_sen_length": 50,  
-
 "checkpoint_max_to_keep": 5,  
-
 "embedding_size": 300,  
-
 "momentum": 0.9,  
-
 "checkpoint_steps": 1000,  
-
 "datapath": "resources://MSCOCO~tsinghua",  
-
 "cache": false,  
-
 "debug": false,  
-
 "wvclass": null,  
-
 "restore": "last",  
-
 "show_sample": [  
-
 0
-
 ],  
-
 "wvpath": null,  
-
 "dh_size": 200,  
-
 "batch_size": 128,  
-
 "lr_decay": 0.995,  
-
 "model_dir": "./model",  
-
 "out_dir": "./output",  
-
 "cache_dir": "./cache",  
-
 "softmax_samples": 512,  
-
 "mode": "train",  
-
 "grad_clip": 5.0,  
-
 "dataset": "MSCOCO",  
-
 "cuda": true  
-
-
 
 ```
 
@@ -170,7 +139,7 @@ Execute ``python run.py --mode test --restore last``
 
 The following output will be in `./output/[name]_test.txt`:
 
-```
+```none
 self-bleu-3:	0.709417
 bw-bleu-3:	0.513164
 self-bleu-4:	0.515631
@@ -190,7 +159,7 @@ A people in to a table in to a tree sign
 A man dog with a in in a bathroom bathroom .
 A man young plate to be served by a people .
 A man is on a bench next front park of a woods .
-A man is a piece feeder s a in
+A man is a piece feeder 's a in
 A man of a old man in a small .
 A man is on a bench next looking dog is on her fence . the park station .
 A old man is standing a orange tie .
@@ -206,14 +175,13 @@ A man is in two legs and in a couch . a .
 A man is two legs of a person on out a television .
 A in a helmet a on front of a building of people .
 A man is standing on a dog on a laptop .
-...
 
 ```
 
 
 ### Performance
 
-|        | Reconstruction Perplexity |
+|        | Perplexity |
 | ------ | ------------------------- |
 | MSCOCO | 13.41                     |
 

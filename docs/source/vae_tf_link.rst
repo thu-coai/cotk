@@ -1,1 +1,0 @@
-.. mdinclude:: ../../models/VAE-tensorflow/Readme.md

@@ -28,6 +28,7 @@ Bahdanau, D., Cho, K., & Bengio, Y. (2015). Neural machine translation by jointl
 
 ### Arguments
 
+```none
     usage: run.py [-h] [--name NAME] [--restore RESTORE] [--mode MODE]
                   [--dataset DATASET] [--datapath DATAPATH] [--epoch EPOCH]
                   [--wvclass WVCLASS] [--wvpath WVPATH] [--out_dir OUT_DIR]
@@ -66,12 +67,13 @@ Bahdanau, D., Cho, K., & Bengio, Y. (2015). Neural machine translation by jointl
       --debug               Enter debug mode (using ptvsd).
       --cache               Use cache for speeding up load data and wordvec. (It
                                may cause problems when you switch dataset.)
+none
 
 ### TensorBoard Example
 
 Execute ``tensorboard --logdir=./tensorboard``, you will see the plot in tensorboard pages:
 
-![tensorboard_plot_example](../../models/seq2seq-tensorflow/images/tensorflow-plot-example.png)
+![tensorboard_plot_example](.seq2seq-tensorflow/images/tensorflow-plot-example.png)
 
 Following plot are shown in this model:
 
@@ -84,7 +86,7 @@ Following plot are shown in this model:
 
 And text output:
 
-![tensorboard_text_example](../../models/seq2seq-tensorflow/images/tensorflow-text-example.png)
+![tensorboard_text_example](.seq2seq-tensorflow/images/tensorflow-text-example.png)
 
 Following text are shown in this model:
 
@@ -96,7 +98,7 @@ Execute ``python run.py --mode test --restore best``
 
 The following output will be in `./output/[name]_[dev|test].txt`:
 
-```
+```none
 bleu:  0.186838
 perplexity:    40.417562
 post:  if it were anyone but <unk> s son .

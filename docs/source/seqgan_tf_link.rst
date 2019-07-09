@@ -1,1 +1,0 @@
-.. mdinclude:: ../../models/seqGAN-tensorflow/Readme.md

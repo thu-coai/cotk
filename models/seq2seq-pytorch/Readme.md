@@ -31,6 +31,7 @@ Bahdanau, D., Cho, K., & Bengio, Y. (2015). Neural machine translation by jointl
 
 ## Arguments
 
+```none
     usage: run.py [-h] [--name NAME] [--restore RESTORE] [--mode MODE]
                   [--eh_size EH_SIZE] [--dh_size DH_SIZE] [--droprate DROPRATE]
                   [--batchnorm] [--decode_mode {max,sample,gumbel,samplek,beam}]
@@ -83,12 +84,13 @@ Bahdanau, D., Cho, K., & Bengio, Y. (2015). Neural machine translation by jointl
       --debug               Enter debug mode (using ptvsd).
       --cache               Use cache for speeding up load data and wordvec. (It
                             may cause problems when you switch dataset.)
+```
 
 ## TensorBoard Example
 
 Execute ``tensorboard --logdir=./tensorboard``, you will see the plot in tensorboard pages:
 
-![tensorboard_plot_example](../../models/seq2seq-pytorch/images/tensorboard_plot_example.png)
+![tensorboard_plot_example](./images/tensorboard_plot_example.png)
 
 Following plot are shown in this model:
 
@@ -105,7 +107,7 @@ Following plot are shown in this model:
 
 And text output:
 
-![tensorboard_plot_example](../../models/seq2seq-pytorch/images/tensorboard_text_example.png)
+![tensorboard_plot_example](./images/tensorboard_text_example.png)
 
 Following text are shown in this model:
 
@@ -118,21 +120,21 @@ Execute ``python run.py --mode test --restore best``
 
 The following output will be in `./output/[name]_[dev|test].txt`:
 
-```
+```none
 perplexity:     48.194050
 bleu:    0.320098
 post:   my name is josie .
 resp:   <unk> <unk> , pennsylvania , the <unk> state .
-gen:    i am a teacher .
+gen:    i' m a teacher .
 post:   i put premium gasoline in her .
 resp:   josie , i told you .
-gen:    i dont know .
+gen:    i don' t know .
 post:   josie , dont hang up
 resp:   they do it to aii the new kids .
 gen:    aii right , you guys , you know what ?
 post:   about playing a part .
 resp:   and thats the theme of as you like it .
-gen:    i dont know .
+gen:    i don' t know .
 ......
 ```
 

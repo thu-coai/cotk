@@ -8,12 +8,11 @@ Zhao, T., Zhao, R., & Eskenazi, M. (2017). Learning discourse-level diversity fo
 ### Require Packages
 
 * cotk
-* TensorFlow == 1.3
+* TensorFlow == 1.13.1
 * TensorBoardX >= 1.4
 
 ### Quick Start
 
-* Downloading dataset and save it to ``./data``. (Dataset will be released soon.)
 * Execute ``python run.py`` to train the model.
   * The default dataset is ``SwitchboardCorpus``. You can use ``--dataset`` to specify other ``dataloader`` class.
   * It don't use pretrained word vector by default setting. You can use ``--wvclass`` to specify ``wordvector`` class. For example: ``--wvclass gloves``
@@ -27,6 +26,7 @@ Zhao, T., Zhao, R., & Eskenazi, M. (2017). Learning discourse-level diversity fo
 
 ### Arguments
 
+```none
     usage: run.py [-h] [--name NAME] [--restore RESTORE] [--mode MODE]
                   [--dataset DATASET] [--datapath DATAPATH] [--epoch EPOCH]
                   [--wvclass WVCLASS] [--wvpath WVPATH] [--out_dir OUT_DIR]
@@ -65,12 +65,13 @@ Zhao, T., Zhao, R., & Eskenazi, M. (2017). Learning discourse-level diversity fo
       --debug               Enter debug mode (using ptvsd).
       --cache               Use cache for speeding up load data and wordvec. (It
                        	    may cause problems when you switch dataset.)
+```
 
 ### TensorBoard Example
 
 Execute ``tensorboard --logdir=./tensorboard``, you will see the plot in tensorboard pages:
 
-![CVAE_plot_example](../../models/CVAE-tensorflow/images/CVAE-plot-example.png)
+![CVAE_plot_example](./images/CVAE-plot-example.png)
 
 Following plot are shown in this model:
 
@@ -87,31 +88,31 @@ Execute ``python run.py --mode test --restore best``
 
 The following output will be in `./output/[name]_[dev|test].txt`:
 
-```
+```none
 perplexity:	46.376537
 bleu:	0.077950
 session: 	0
 	post:	<d> <eos>
 	resp:	alright what do you think <eos>
-	gen:	<go> i dont know im not sure that we have to be in the country and <eos>
+	gen:	<go> i don't know i'm not sure that we have to be in the country and <eos>
 
 	post:	alright what do you think <eos>
-	resp:	well i think air pollution is a pretty big problem right now and its i mean i think its a real bad problem i dont think that a lot is really being done about it at this point <eos> and theres just things like for a i think that
-	gen:	<go> im not going to have to pay this much more than what i consider <eos>
+	resp:	well i think air pollution is a pretty big problem right now and it's i mean i think it's a real bad problem i don't think that a lot is really being done about it at this point <eos> and there's just things like for a i think that
+	gen:	<go> i'm not going to have to pay this much more than what i consider <eos>
 
-	post:	well i think air pollution is a pretty big problem right now and its i mean i think its a real bad problem i dont think that a lot is really being done about it at this point <eos> and theres just things like for a i think that
+	post:	well i think air pollution is a pretty big problem right now and it's i mean i think it's a real bad problem i don't think that a lot is really being done about it at this point <eos> and there's just things like for a i think that
 	resp:	right <eos>
 	gen:	<go> yeah <eos> well i think it will be interesting to start getting ready for the next week <eos>
 
 	post:	right <eos>
-	resp:	and if you look at other countries like in the third world and stuff where people ride bikes and all that im sure that their <eos> air quality is much better than ours just as a result of their lack of having cars like if you look at los
-	gen:	<go> i dont know i dont know i dont know i think that i think that the reason i have been working for a lot of people say that i work for a company and i think that i think that the people that have been working for the ti and
+	resp:	and if you look at other countries like in the third world and stuff where people ride bikes and all that i'm sure that their <eos> air quality is much better than ours just as a result of their lack of having cars like if you look at los
+	gen:	<go> i don't know i don't know i don't know i think that i think that the reason i have been working for a lot of people say that i work for a company and i think that i think that the people that have been working for the ti and
 
-	post:	and if you look at other countries like in the third world and stuff where people ride bikes and all that im sure that their <eos> air quality is much better than ours just as a result of their lack of having cars like if you look at los
-	resp:	hum okay well i mean also along the same lines i know that theres somebody i read one time about somebodys developed a test to look at the emissions from your car <eos>
+	post:	and if you look at other countries like in the third world and stuff where people ride bikes and all that i'm sure that their <eos> air quality is much better than ours just as a result of their lack of having cars like if you look at los
+	resp:	hum okay well i mean also along the same lines i know that there's somebody i read one time about somebody's developed a test to look at the emissions from your car <eos>
 	gen:	<go> uh-huh <eos>
 
-	post:	hum okay well i mean also along the same lines i know that theres somebody i read one time about somebodys developed a test to look at the emissions from your car <eos>
+	post:	hum okay well i mean also along the same lines i know that there's somebody i read one time about somebody's developed a test to look at the emissions from your car <eos>
 	resp:	uh-huh <eos> right <eos>
 	gen:	<go> yeah <eos> yeah <eos> well i have to say that i have a pretty small town there that i used to be in the air force and i used to be a little bit of the ground <eos>
 
@@ -124,18 +125,18 @@ session: 	0
 |               | SwitchboardCorpus |
 | ------------- | ----------------- |
 | Perplexity (KL) | 21.70 (12.20) |
-| BLEU-1 precision | 0.13610096174113043 |
-| BLEU-1 recall | 0.04107955330116912 |
-| BLEU-2 precision | 0.022377578693671962 |
-| BLEU-2 recall | 0.006170739692356583 |
-| BLEU-3 precision | 0.0039785479627456165 |
-| BLEU-3 recall | 0.0011547747149167798 |
-| BLEU-4 precision | 0.0005179246307354963 |
-| BLEU-4 recall | 0.0001631668312096369 |
-| avg-bow precision | 0.9454527495106744 |
-| avg-bow recall | 0.2303857347459659 |
-| extrema-bow precision | 0.9023087747864434 |
-| extrema-bow recall | 0.21619671889790235 |
+| BLEU-1 precision | 0.13610 |
+| BLEU-1 recall | 0.04108 |
+| BLEU-2 precision | 0.02238 |
+| BLEU-2 recall | 0.00617 |
+| BLEU-3 precision | 0.00398 |
+| BLEU-3 recall | 0.00115 |
+| BLEU-4 precision | 0.00052 |
+| BLEU-4 recall | 0.00016 |
+| avg-bow precision | 0.94545 |
+| avg-bow recall | 0.23039 |
+| extrema-bow precision | 0.90231 |
+| extrema-bow recall | 0.21620 |
 
 ### Author
 

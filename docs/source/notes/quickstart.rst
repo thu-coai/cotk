@@ -9,7 +9,7 @@ Requirements
 -  nltk >= 3.4
 -  tqdm >= 4.30
 -  checksumdir >= 1.1
--  pytorch == 1.0.0 (optional)
+-  pytorch >= 1.0.0 (optional)
 -  pytorch-pretrained-bert (optional)
 
 Installation

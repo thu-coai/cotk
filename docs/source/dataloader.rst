@@ -113,11 +113,8 @@ We offer some tips for you to further understand how vocabularies work.
           they don't have index.
 
 
-Basic Class
+Basic Classes
 ------------------------------------
-
-
-
 
 .. autoclass:: Dataloader
 

@@ -126,9 +126,7 @@ class SingleTurnDialog(GenerationBase):
 			invalid_vocab=invalid_vocab))
 		return metric
 
-	def get_inference_metric(self, reference_allvocabs_key="resp_allvocabs", \
-					gen_key="gen",\
-					):
+	def get_inference_metric(self, gen_key="gen"):
 		'''Get metrics for inference.
 
 		It contains:
