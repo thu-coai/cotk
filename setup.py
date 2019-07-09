@@ -37,16 +37,14 @@ setup(
 	],
 	extras_require={
 		'develop':  [
-			"torch==1.0.0",
+			"torch>=1.0.0",
 			"python-coveralls",
 			"pytest-dependency",
 			"pytest-mock",
 			"requests-mock",
 			"pytest>=3.6.0",
 			"pytest-cov==2.4.0",
-			"checksumdir",
-			"tensorboardX",
-			"tensorflow==1.13.1",
+			"checksumdir"
 		]
 	},
 	cmdclass={'test': LibTest},

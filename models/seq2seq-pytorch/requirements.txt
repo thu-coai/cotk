@@ -1,2 +1,2 @@
 tensorboardX
-torch==1.0.0
+torch>=1.0.0
