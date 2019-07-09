@@ -1,4 +1,4 @@
-## HRED -- a tensorflow implementation
+## HRED (TensorFlow)
 
 HRED is a basic model for multiple turn dialog. Here, we implement HRED with attention mechanism. You can refer to the following papers for details:
 
@@ -8,7 +8,7 @@ Serban, I. V., Sordoni, A., Bengio, Y., Courville, A. C., & Pineau, J. (2016, Fe
 ### Require Packages
 
 * cotk
-* TensorFlow == 1.3
+* TensorFlow == 1.13.1
 * TensorBoardX >= 1.4
 
 ### Quick Start

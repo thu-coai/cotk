@@ -9,7 +9,7 @@ Bahdanau, D., Cho, K., & Bengio, Y. (2015). Neural machine translation by jointl
 ### Require Packages
 
 * cotk
-* TensorFlow == 1.3
+* TensorFlow == 1.13.1
 * TensorBoardX >= 1.4
 
 ### Quick Start
