@@ -44,7 +44,7 @@ Serban, I. V., Sordoni, A., Bengio, Y., Courville, A. C., & Pineau, J. (2016, Fe
                             "best" for best checkpoints on dev. Attention: "last"
                             and "best" wiil cause unexpected behaviour when run 2
                             models in the same dir at the same time. Default: None
-                            (don't load anything)
+                            (dont load anything)
       --mode MODE           "train" or "test". Default: train
       --dataset DATASET     Dataloader class. Default: OpenSubtitles
       --datapath DATAPATH   Directory for data set. Default: ./data
@@ -65,17 +65,12 @@ Serban, I. V., Sordoni, A., Bengio, Y., Courville, A. C., & Pineau, J. (2016, Fe
       --debug               Enter debug mode (using ptvsd).
       --cache               Use cache for speeding up load data and wordvec. (It
                        	    may cause problems when you switch dataset.)
-#### For developer
 
-* Arguments above (except ``cache``\\``debug``) are required. You should remain the same behavior (not for implementation).
-
-* You can add more arguments if you want.
-
-### An example of tensorboard
+### TensorBoard Example
 
 Execute ``tensorboard --logdir=./tensorboard``, you will see the plot in tensorboard pages:
 
-![hred_plot_example](images/hred-plot-example.png)
+![hred_plot_example](../../models/hred-tensorflow/images/hred-plot-example.png)
 
 Following plot are shown in this model:
 
@@ -90,13 +85,13 @@ Following plot are shown in this model:
 
 And text output:
 
-![hred_text_example](images/hred-text-example.png)
+![hred_text_example](../../models/hred-tensorflow/images/hred-text-example.png)
 
 Following text are shown in this model:
 
 * args
 
-### An example of test output
+### Case Study of Model Results
 
 Execute ``python run.py --mode test --restore best``
 
@@ -105,10 +100,10 @@ The following output will be in `./output/[name]_[dev|test].txt`:
 ```
 perplexity:     74.407300
 bleu:   0.089069
-post:   anyone knows why my stock oneiric exports env var <unk> I mean what is that used for? I know of $USER but not <unk> . My precise install doesn't export USERNAME <eos>
-resp:   looks like it used to be exported by <unk> but the line had the comment <unk> <unk> Is this <unk> so I guess it isn't surprising it is gone <eos>
+post:   anyone knows why my stock oneiric exports env var <unk> I mean what is that used for? I know of USER but not <unk> . My precise install doesnt export USERNAME <eos>
+resp:   looks like it used to be exported by <unk> but the line had the comment <unk> <unk> Is this <unk> so I guess it isnt surprising it is gone <eos>
 gen:    you <eos>
-post:   looks like it used to be exported by <unk> but the line had the comment <unk> <unk> Is this <unk> so I guess it isn't surprising it is gone <eos>
+post:   looks like it used to be exported by <unk> but the line had the comment <unk> <unk> Is this <unk> so I guess it isnt surprising it is gone <eos>
 resp:   thanks! How the heck did you figure that out? <eos>
 gen:    I have no idea what that is <eos>
 post:   thanks! How the heck did you figure that out? <eos>
@@ -126,9 +121,6 @@ resp:   so you dont know, ok, anyone else? <eos> you are like, yah my mouse does
 gen:    I have no idea what you mean by the <eos>
 ```
 
-#### For developer
-
-- You should remain similar output in this task.
 
 ### Performance
 

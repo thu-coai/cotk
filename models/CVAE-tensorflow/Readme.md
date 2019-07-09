@@ -1,4 +1,4 @@
-## CVAE -- a tensorflow implementation
+## CVAE (TensorFlow)
 
 CVAE is a basic model for multiple turn dialog. You can refer to the following papers for details:
 
@@ -44,7 +44,7 @@ Zhao, T., Zhao, R., & Eskenazi, M. (2017). Learning discourse-level diversity fo
                             "best" for best checkpoints on dev. Attention: "last"
                             and "best" wiil cause unexpected behaviour when run 2
                             models in the same dir at the same time. Default: None
-                            (don't load anything)
+                            (dont load anything)
       --mode MODE           "train" or "test". Default: train
       --dataset DATASET     Dataloader class. Default: OpenSubtitles
       --datapath DATAPATH   Directory for data set. Default: ./data
@@ -65,17 +65,12 @@ Zhao, T., Zhao, R., & Eskenazi, M. (2017). Learning discourse-level diversity fo
       --debug               Enter debug mode (using ptvsd).
       --cache               Use cache for speeding up load data and wordvec. (It
                        	    may cause problems when you switch dataset.)
-#### For developer
 
-* Arguments above (except ``cache``\\``debug``) are required. You should remain the same behavior (not for implementation).
-
-* You can add more arguments if you want.
-
-### An example of tensorboard
+### TensorBoard Example
 
 Execute ``tensorboard --logdir=./tensorboard``, you will see the plot in tensorboard pages:
 
-![CVAE_plot_example](images/CVAE-plot-example.png)
+![CVAE_plot_example](../../models/CVAE-tensorflow/images/CVAE-plot-example.png)
 
 Following plot are shown in this model:
 
@@ -86,7 +81,7 @@ Following plot are shown in this model:
 * test/loss
 * test/perplexity
 
-### An example of test output
+### Case Study of Model Results
 
 Execute ``python run.py --mode test --restore best``
 
@@ -98,35 +93,31 @@ bleu:	0.077950
 session: 	0
 	post:	<d> <eos>
 	resp:	alright what do you think <eos>
-	gen:	<go> i don't know i'm not sure that we have to be in the country and <eos>
+	gen:	<go> i dont know im not sure that we have to be in the country and <eos>
 
 	post:	alright what do you think <eos>
-	resp:	well i think air pollution is a pretty big problem right now and it's i mean i think it's a real bad problem i don't think that a lot is really being done about it at this point <eos> and there's just things like for a i think that
-	gen:	<go> i'm not going to have to pay this much more than what i consider <eos>
+	resp:	well i think air pollution is a pretty big problem right now and its i mean i think its a real bad problem i dont think that a lot is really being done about it at this point <eos> and theres just things like for a i think that
+	gen:	<go> im not going to have to pay this much more than what i consider <eos>
 
-	post:	well i think air pollution is a pretty big problem right now and it's i mean i think it's a real bad problem i don't think that a lot is really being done about it at this point <eos> and there's just things like for a i think that
+	post:	well i think air pollution is a pretty big problem right now and its i mean i think its a real bad problem i dont think that a lot is really being done about it at this point <eos> and theres just things like for a i think that
 	resp:	right <eos>
 	gen:	<go> yeah <eos> well i think it will be interesting to start getting ready for the next week <eos>
 
 	post:	right <eos>
-	resp:	and if you look at other countries like in the third world and stuff where people ride bikes and all that i'm sure that their <eos> air quality is much better than ours just as a result of their lack of having cars like if you look at los
-	gen:	<go> i don't know i don't know i don't know i think that i think that the reason i have been working for a lot of people say that i work for a company and i think that i think that the people that have been working for the ti and
+	resp:	and if you look at other countries like in the third world and stuff where people ride bikes and all that im sure that their <eos> air quality is much better than ours just as a result of their lack of having cars like if you look at los
+	gen:	<go> i dont know i dont know i dont know i think that i think that the reason i have been working for a lot of people say that i work for a company and i think that i think that the people that have been working for the ti and
 
-	post:	and if you look at other countries like in the third world and stuff where people ride bikes and all that i'm sure that their <eos> air quality is much better than ours just as a result of their lack of having cars like if you look at los
-	resp:	hum okay well i mean also along the same lines i know that there's somebody i read one time about somebody's developed a test to look at the emissions from your car <eos>
+	post:	and if you look at other countries like in the third world and stuff where people ride bikes and all that im sure that their <eos> air quality is much better than ours just as a result of their lack of having cars like if you look at los
+	resp:	hum okay well i mean also along the same lines i know that theres somebody i read one time about somebodys developed a test to look at the emissions from your car <eos>
 	gen:	<go> uh-huh <eos>
 
-	post:	hum okay well i mean also along the same lines i know that there's somebody i read one time about somebody's developed a test to look at the emissions from your car <eos>
+	post:	hum okay well i mean also along the same lines i know that theres somebody i read one time about somebodys developed a test to look at the emissions from your car <eos>
 	resp:	uh-huh <eos> right <eos>
 	gen:	<go> yeah <eos> yeah <eos> well i have to say that i have a pretty small town there that i used to be in the air force and i used to be a little bit of the ground <eos>
 
 ...
 
 ```
-
-#### For developer
-
-- You should remain similar output in this task.
 
 ### Performance
 

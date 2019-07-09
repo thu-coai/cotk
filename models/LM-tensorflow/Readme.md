@@ -1,4 +1,4 @@
-## LM -- a tensorflow implementation
+## Language Model (TensorFlow)
 
 
 
@@ -33,55 +33,48 @@ An implementation of LM(language model).
 ### Arguments
 
 ```
-usage: run.py [-h] [--name NAME] [--restore RESTORE] [--mode MODE]
-              [--dataset DATASET] [--datapath DATAPATH] [--epoch EPOCH]
-              [--wvclass WVCLASS] [--wvpath WVPATH] [--out_dir OUT_DIR]
-              [--log_dir LOG_DIR] [--model_dir MODEL_DIR]
-              [--cache_dir CACHE_DIR] [--cpu] [--debug] [--cache]
+    usage: run.py [-h] [--name NAME] [--restore RESTORE] [--mode MODE]
+                  [--dataset DATASET] [--datapath DATAPATH] [--epoch EPOCH]
+                  [--wvclass WVCLASS] [--wvpath WVPATH] [--out_dir OUT_DIR]
+                  [--log_dir LOG_DIR] [--model_dir MODEL_DIR]
+                  [--cache_dir CACHE_DIR] [--cpu] [--debug] [--cache]
 
-A language model
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --name NAME           The name of your model, used for variable scope and
-                        tensorboard, etc. Default: runXXXXXX_XXXXXX
-                        (initialized by current time)
-  --restore RESTORE     Checkpoints name to load. "last" for last checkpoints,
-                        "best" for best checkpoints on dev. Attention: "last"
-                        and "best" wiil cause unexpected behaviour when run 2
-                        models in the same dir at the same time. Default: None
-                        (don't load anything)
-  --mode MODE           "train" or "test". Default: train
-  --dataset DATASET     Dataloader class. Default: MSCOCO
-  --datapath DATAPATH   Directory for data set. Default: ./data
-  --epoch EPOCH         Epoch for trainning. Default: 10
-  --wvclass WVCLASS     Wordvector class, None for using Glove pretrained
-                        wordvec. Default: None
-  --wvpath WVPATH       Path for pretrained wordvector. Default: wordvec
-  --out_dir OUT_DIR     Output directory for test output. Default: ./output
-  --log_dir LOG_DIR     Log directory for tensorboard. Default: ./tensorboard
-  --model_dir MODEL_DIR
-                        Checkpoints directory for model. Default: ./model
-  --cache_dir CACHE_DIR
-                        Checkpoints directory for cache. Default: ./cache
-  --cpu                 Use cpu.
-  --debug               Enter debug mode (using ptvsd).
-  --cache               Use cache for speeding up load data and wordvec. (It
-                        may cause problems when you switch dataset.)
+    optional arguments:
+      -h, --help            show this help message and exit
+      --name NAME           The name of your model, used for variable scope and
+                            tensorboard, etc. Default: runXXXXXX_XXXXXX
+                            (initialized by current time)
+      --restore RESTORE     Checkpoints name to load. "last" for last checkpoints,
+                            "best" for best checkpoints on dev. Attention: "last"
+                            and "best" wiil cause unexpected behaviour when run 2
+                            models in the same dir at the same time. Default: None
+                            (dont load anything)
+      --mode MODE           "train" or "test". Default: train
+      --dataset DATASET     Dataloader class. Default: MSCOCO
+      --datapath DATAPATH   Directory for data set. Default: ./data
+      --epoch EPOCH         Epoch for trainning. Default: 10
+      --wvclass WVCLASS     Wordvector class, None for using Glove pretrained
+                            wordvec. Default: None
+      --wvpath WVPATH       Path for pretrained wordvector. Default: wordvec
+      --out_dir OUT_DIR     Output directory for test output. Default: ./output
+      --log_dir LOG_DIR     Log directory for tensorboard. Default: ./tensorboard
+      --model_dir MODEL_DIR
+                            Checkpoints directory for model. Default: ./model
+      --cache_dir CACHE_DIR
+                            Checkpoints directory for cache. Default: ./cache
+      --cpu                 Use cpu.
+      --debug               Enter debug mode (using ptvsd).
+      --cache               Use cache for speeding up load data and wordvec. (It
+                            may cause problems when you switch dataset.)
 ```
 
 For hyperparameter settings, please refer to `run.py`.
 
 
 
-#### For developer
-
-- Arguments above (except ``cache``\\``debug``) are required. You should remain the same behavior (not for implementation).
-- You can add more arguments if you want.
 
 
-
-### An example of tensorboard
+### TensorBoard Example
 
 Execute ``tensorboard --logdir=./tensorboard``, you will see the plot in tensorboard pages:
 
@@ -89,18 +82,18 @@ Following plot are shown in this model:
 
 - loss: reconstruction loss.
 
-  ![loss](image/loss.png)
+  ![loss](../../models/LM-tensorflow/image/loss.png)
 
 - perplexity: reconstruction perplexity.
 
-  ![perplexity](image/perplexity.png)
+  ![perplexity](../../models/LM-tensorflow/image/perplexity.png)
 
 
 And text output:
 
-```{  
+```
 
-{
+
 "epochs": 10,  
 
 "lr": 0.1,  
@@ -109,7 +102,7 @@ And text output:
 
 "name": "LM",  
 
-"max_sent_length": 50,  
+"max_sen_length": 50,  
 
 "checkpoint_max_to_keep": 5,  
 
@@ -159,7 +152,7 @@ And text output:
 
 "cuda": true  
 
-}
+
 
 ```
 
@@ -171,7 +164,7 @@ Following text are shown in this model:
 
 
 
-### An example of test output
+### Case Study of Model Results
 
 Execute ``python run.py --mode test --restore last``
 
@@ -197,7 +190,7 @@ A people in to a table in to a tree sign
 A man dog with a in in a bathroom bathroom .
 A man young plate to be served by a people .
 A man is on a bench next front park of a woods .
-A man is a piece feeder 's a in
+A man is a piece feeder s a in
 A man of a old man in a small .
 A man is on a bench next looking dog is on her fence . the park station .
 A old man is standing a orange tie .
@@ -216,11 +209,6 @@ A man is standing on a dog on a laptop .
 ...
 
 ```
-
-#### For developer
-
-- You should remain similar output in this task.
-
 
 
 ### Performance

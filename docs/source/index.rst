@@ -34,6 +34,12 @@ new models fairly with baselines.
    :caption: Model Tutorial
 
    seq2seq_tf_link
+   seq2seq_torch_link
+   hred_tf_link
+   lm_tf_link
+   vae_tf_link
+   cvae_tf_link
+   seqgan_tf_link
 
 Indices and tables
 ==================

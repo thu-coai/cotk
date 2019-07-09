@@ -1,6 +1,6 @@
-## VAE -- a tensorflow implementation
+## VAE (TensorFlow)
 
-![VAE-model](images/VAE-model.png)
+![VAE-model](../../models/VAE-tensorflow/images/VAE-model.png)
 
 An implementation of VAE language generation model. Refer to the following paper for more details:
 
@@ -11,7 +11,7 @@ Bowman, S., Vilnis, L., Vinyals, O., Dai, A., Jozefowicz, R., and Bengio, S. Gen
 ### Require Packages
 
 - cotk
-- TensorFlow == 1.3
+- TensorFlow == 1.13.1
 - TensorBoardX >= 1.4
 
 
@@ -35,55 +35,46 @@ Bowman, S., Vilnis, L., Vinyals, O., Dai, A., Jozefowicz, R., and Bengio, S. Gen
 ### Arguments
 
 ```
-usage: run.py [-h] [--name NAME] [--restore RESTORE] [--mode MODE]
-              [--dataset DATASET] [--datapath DATAPATH] [--epoch EPOCH]
-              [--wvclass WVCLASS] [--wvpath WVPATH] [--out_dir OUT_DIR]
-              [--log_dir LOG_DIR] [--model_dir MODEL_DIR]
-              [--cache_dir CACHE_DIR] [--cpu] [--debug] [--cache]
+    usage: run.py [-h] [--name NAME] [--restore RESTORE] [--mode MODE]
+                  [--dataset DATASET] [--datapath DATAPATH] [--epoch EPOCH]
+                  [--wvclass WVCLASS] [--wvpath WVPATH] [--out_dir OUT_DIR]
+                  [--log_dir LOG_DIR] [--model_dir MODEL_DIR]
+                  [--cache_dir CACHE_DIR] [--cpu] [--debug] [--cache]
 
-A VAE language generation model
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --name NAME           The name of your model, used for variable scope and
-                        tensorboard, etc. Default: runXXXXXX_XXXXXX
-                        (initialized by current time)
-  --restore RESTORE     Checkpoints name to load. "last" for last checkpoints,
-                        "best" for best checkpoints on dev. Attention: "last"
-                        and "best" wiil cause unexpected behaviour when run 2
-                        models in the same dir at the same time. Default: None
-                        (don't load anything)
-  --mode MODE           "train" or "test". Default: train
-  --dataset DATASET     Dataloader class. Default: MSCOCO
-  --datapath DATAPATH   Directory for data set. Default: ./data
-  --epoch EPOCH         Epoch for trainning. Default: 10
-  --wvclass WVCLASS     Wordvector class, None for using Glove pretrained
-                        wordvec. Default: None
-  --wvpath WVPATH       Path for pretrained wordvector. Default: wordvec
-  --out_dir OUT_DIR     Output directory for test output. Default: ./output
-  --log_dir LOG_DIR     Log directory for tensorboard. Default: ./tensorboard
-  --model_dir MODEL_DIR
-                        Checkpoints directory for model. Default: ./model
-  --cache_dir CACHE_DIR
-                        Checkpoints directory for cache. Default: ./cache
-  --cpu                 Use cpu.
-  --debug               Enter debug mode (using ptvsd).
-  --cache               Use cache for speeding up load data and wordvec. (It
-                        may cause problems when you switch dataset.)
+    optional arguments:
+      -h, --help            show this help message and exit
+      --name NAME           The name of your model, used for variable scope and
+                            tensorboard, etc. Default: runXXXXXX_XXXXXX
+                            (initialized by current time)
+      --restore RESTORE     Checkpoints name to load. "last" for last checkpoints,
+                            "best" for best checkpoints on dev. Attention: "last"
+                            and "best" wiil cause unexpected behaviour when run 2
+                            models in the same dir at the same time. Default: None
+                            (dont load anything)
+      --mode MODE           "train" or "test". Default: train
+      --dataset DATASET     Dataloader class. Default: MSCOCO
+      --datapath DATAPATH   Directory for data set. Default: ./data
+      --epoch EPOCH         Epoch for trainning. Default: 10
+      --wvclass WVCLASS     Wordvector class, None for using Glove pretrained
+                            wordvec. Default: None
+      --wvpath WVPATH       Path for pretrained wordvector. Default: wordvec
+      --out_dir OUT_DIR     Output directory for test output. Default: ./output
+      --log_dir LOG_DIR     Log directory for tensorboard. Default: ./tensorboard
+      --model_dir MODEL_DIR
+                            Checkpoints directory for model. Default: ./model
+      --cache_dir CACHE_DIR
+                            Checkpoints directory for cache. Default: ./cache
+      --cpu                 Use cpu.
+      --debug               Enter debug mode (using ptvsd).
+      --cache               Use cache for speeding up load data and wordvec. (It
+                            may cause problems when you switch dataset.)
 ```
 
 For hyperparameter settings, please refer to `run.py`.
 
 
-
-#### For developer
-
-- Arguments above (except ``cache``\\``debug``) are required. You should remain the same behavior (not for implementation).
-- You can add more arguments if you want.
-
-
-
-### An example of tensorboard
+### TensorBoard Example
 
 Execute ``tensorboard --logdir=./tensorboard``, you will see the plot in tensorboard pages:
 
@@ -91,29 +82,29 @@ Following plot are shown in this model:
 
 - loss: reconstruction loss + kl loss.
 
-  ![loss](images/loss.png)
+  ![loss](../../models/VAE-tensorflow/images/loss.png)
 
 - perplexity: reconstruction perplexity.
 
-  ![perplexity](images/perplexity.png)
+  ![perplexity](../../models/VAE-tensorflow/images/perplexity.png)
 
 - kl_loss: kl_weight * min(kld, min_kl=10).
 
-  ![kl_loss](images/kl_loss.png)
+  ![kl_loss](../../models/VAE-tensorflow/images/kl_loss.png)
 
 - kld: kl divergence.
 
-  ![kld](images/kld.png)
+  ![kld](../../models/VAE-tensorflow/images/kld.png)
 
 - kl_weight: weight to the kl loss in the loss function.
 
-  ![kl_weight](images/kl_weight.png)
+  ![kl_weight](../../models/VAE-tensorflow/images/kl_weight.png)
 
 
 
 And text output:
 
-![text_arg](images/text_arg.png)
+![text_arg](../../models/VAE-tensorflow/images/text_arg.png)
 
 Following text are shown in this model:
 
@@ -121,7 +112,7 @@ Following text are shown in this model:
 
 
 
-### An example of test output
+### Case Study of Model Results
 
 Execute ``python run.py --mode test --restore last``
 
@@ -153,11 +144,6 @@ A persons hands holding up a cell phone in their hands .
 A white and red plane is flying in the sky .
 ...
 ```
-
-#### For developer
-
-- You should remain similar output in this task.
-
 
 
 ### Performance
