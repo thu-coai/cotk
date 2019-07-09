@@ -244,7 +244,7 @@ test_include_invalid = [False, True]
 test_ngram = [1, 2, 3, 4, 5, 6]
 
 test_emb_mode = ['avg', 'extrema', 'sum']
-test_emb_type = ['array', 'list']
+test_emb_type = ['dict', 'list']
 test_emb_len = ['equal', 'unequal']
 
 test_hash_data = ['has_key', 'no_key']
@@ -491,13 +491,15 @@ class TestEmbSimilarityPrecisionRecallMetric():
 
 	def test_hashvalue(self):
 		dataloader = FakeMultiDataloader()
-		emb = []
-		for i in range(dataloader.vocab_size):
+		emb = {}
+		emb_unequal = {}
+		for word in dataloader.all_vocab_list[:dataloader.valid_vocab_len]:
 			vec = []
 			for j in range(5):
 				vec.append(random.random())
-			emb.append(vec)
-		emb = np.array(emb)
+			vec = np.array(vec)
+			emb[word] = vec
+			emb_unequal[word] = vec + 1
 
 		reference_key, gen_key = self.default_keywords
 		key_list = [reference_key, gen_key]
@@ -533,6 +535,10 @@ class TestEmbSimilarityPrecisionRecallMetric():
 			res_unequal = espr_unequal.close()
 
 			assert res['avg-bow hashvalue'] != res_unequal['avg-bow hashvalue']
+		espr_unequal = EmbSimilarityPrecisionRecallMetric(dataloader, emb_unequal, 'avg', 3)
+		espr_unequal.forward(data)
+		res_unequal = espr_unequal.close()
+		assert res['avg-bow hashvalue'] != res_unequal['avg-bow hashvalue']
 
 	@pytest.mark.parametrize('argument, shape, type, batch_len, ref_len, gen_len, ' \
 							 'ref_vocab, gen_vocab, emb_mode, emb_type, emb_len', \
@@ -541,24 +547,27 @@ class TestEmbSimilarityPrecisionRecallMetric():
 							 ref_vocab, gen_vocab, emb_mode, emb_type, emb_len):
 		dataloader = FakeMultiDataloader()
 
-		emb = []
-		for i in range(dataloader.vocab_size + (1 if emb_len == 'unequal' else 0)):
+		emb = {}
+		for word in dataloader.all_vocab_list[:dataloader.valid_vocab_len]:
 			vec = []
 			for j in range(5):
 				vec.append(random.random())
-			emb.append(vec)
-		#print(emb_len, gen_vocab)
-		if emb_type == 'array':
-			emb = np.array(emb)
-
-		if emb_type != 'array':
-			with pytest.raises(ValueError, match="invalid type or shape"):
-				espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
-			return
+			emb[word] = vec
 		if emb_len == 'unequal':
-			with pytest.raises(ValueError, match="embed size not equal to vocab size."):
+			key = list(emb.keys())[0]
+			emb[key] = emb[key][:-1]
+		if emb_type == 'list':
+			emb = np.array(list(emb.values()), dtype=np.float32).tolist()
+
+		if emb_type != 'dict':
+			with pytest.raises(ValueError, match="invalid type"):
 				espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
 			return
+		else:
+			if emb_len == 'unequal':
+				with pytest.raises(ValueError, match="word embeddings have inconsistent embedding size or are empty"):
+					espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
+				return
 		if emb_mode not in ['avg', 'extrema']:
 			with pytest.raises(ValueError, match="mode should be 'avg' or 'extrema'."):
 				espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
@@ -1028,6 +1037,35 @@ class TestSelfBleuCorpusMetric:
 				refs[:i]+refs[i+1:],refs[i], smoothing_function=SmoothingFunction().method1))
 		return 1.0 * sum(bleu_irl) / len(bleu_irl)
 
+	def test_hashvalue(self):
+		dataloader = FakeDataLoader()
+		gen_key = 'gen'
+		key_list = [gen_key]
+		data = dataloader.get_data(gen_key=gen_key, \
+								   to_list=False, \
+								   pad=True, \
+								   gen_len='non-empty')
+		bcm = SelfBleuCorpusMetric(dataloader)
+		bcm_shuffle = SelfBleuCorpusMetric(dataloader)
+		bcm_unequal = SelfBleuCorpusMetric(dataloader, sample=2)
+
+		data_shuffle = shuffle_instances(data, key_list)
+		batches_shuffle = split_batch(data_shuffle, key_list)
+
+		bcm.forward(data)
+		res = bcm.close()
+
+		for batch in batches_shuffle:
+			bcm_shuffle.forward(batch)
+		res_shuffle = bcm_shuffle.close()
+
+		assert same_dict(res, res_shuffle, exact_equal=False)
+
+		bcm_unequal.forward(data)
+		res_unequal = bcm_unequal.close()
+
+		assert res['self-bleu hashvalue'] != res_unequal['self-bleu hashvalue']
+
 	@pytest.mark.parametrize('argument, shape, type, gen_len', self_bleu_test_parameter)
 	def test_close(self, argument, shape, type, gen_len):
 		# 'default' or 'custom'
@@ -1119,6 +1157,10 @@ class TestFwBwBleuCorpusMetric:
 			bcm_unequal.forward(data_unequal)
 			res_unequal = bcm_unequal.close()
 			assert res['fw-bw-bleu hashvalue'] != res_unequal['fw-bw-bleu hashvalue']
+		bcm_unequal = FwBwBleuCorpusMetric(dataloader, reference_key, sample=2)
+		bcm_unequal.forward(data)
+		res_unequal = bcm_unequal.close()
+		assert res['fw-bw-bleu hashvalue'] != res_unequal['fw-bw-bleu hashvalue']
 
 	@pytest.mark.parametrize('argument, shape, type, gen_len, ref_len', fwbw_bleu_test_parameter)
 	def test_close(self, argument, shape, type, gen_len, ref_len):

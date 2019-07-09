@@ -2,110 +2,23 @@
 A command library help user upload their results to dashboard.
 '''
 #!/usr/bin/env python
-import logging
 import os
 import os.path
 import json
 import sys
 import argparse
 import importlib
-import subprocess
-from subprocess import PIPE
-import re
-import shutil
 import traceback
 
 import requests
 import cotk
-from cotk._utils import file_utils
+from cotk.scripts import _utils
+from cotk.scripts import entry
 
-#sys.path.insert(0, os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
-
-LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(level=logging.INFO)
-FORMAT = logging.Formatter("%(levelname)s: %(message)s")
-SH = logging.StreamHandler(stream=sys.stdout)
-SH.setFormatter(FORMAT)
-LOGGER.addHandler(SH)
-
-DASHBOARD_URL = os.getenv("COTK_DASHBOARD_URL", "") #TODO: add a online dash board url
-REPORT_URL = DASHBOARD_URL + "/upload"
-SHOW_URL = DASHBOARD_URL + "/show?id=%d"
-QUERY_URL = DASHBOARD_URL + "/get?id=%d"
-
-def assert_repo_exist():
-	'''Assert cwd is in a git repo.'''
-	try:
-		in_git = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], stdout=PIPE, stderr=PIPE)
-	except FileNotFoundError as _:
-		raise RuntimeError("Git is not found. You must install git and \
-make sure git command can be used.")
-
-	if in_git.stdout.decode().strip() != "true":
-		raise RuntimeError("You have to make a commit in your git repo first.")
-
-def check_repo_clean():
-	'''Check whether repo is clean.
-	Return True if clean, False if dirty.'''
-	git_diff = subprocess.run(["git", "diff", "HEAD"], stdout=PIPE, stderr=PIPE)
-	if git_diff.stdout.decode():
-		return False
-	else:
-		return True
-
-def get_repo_workingdir():
-	'''Get relative path of cwd from git repo root.'''
-	git_prefix = subprocess.run(["git", "rev-parse", "--show-prefix"], stdout=PIPE, stderr=PIPE)
-	return git_prefix.stdout.decode().strip()
-
-def get_repo_remote():
-	'''Get remote repo name on github'''
-	git_upstream = subprocess.run(["git", "rev-parse", "--symbolic-full-name", "--abbrev-ref", \
-			"@{upstream}"], stdout=PIPE, stderr=PIPE)
-	err = git_upstream.stderr.decode()
-	if err:
-		if re.match(r"fatal: no upstream configured for branch '\s*?'", err):
-			raise RuntimeError("No upstream branch, you have to set upstream branch for your repo. \
-E.g. git push -u origin master. ")
-		else:
-			raise RuntimeError("Unkown error when getting upstream branch：%s" % err)
-
-	upstream_out = git_upstream.stdout.decode().split('/')
-	remote_name, remote_branch = upstream_out[0], upstream_out[1] #pylint: disable=unused-variable
-
-	git_remote = subprocess.run(["git", "remote", "-v"], stdout=PIPE, stderr=PIPE)
-	ssh_reg = re.search(r"%s\s+git@github.com:(\S+?)/(\S+?)\.git\s+\(push\)" % \
-			remote_name, git_remote.stdout.decode())
-	http_reg = re.search(r"%s\s+https?://github\.com/(\S+?)/(\S+?)\.git\s+\(push\)" % \
-			remote_name, git_remote.stdout.decode())
-	if ssh_reg is None and http_reg is None:
-		raise RuntimeError("No remote named %s, please use 'git remote add' to identify \
-your remote repo on github." % git_remote)
-	if ssh_reg:
-		git_user = ssh_reg.group(1)
-		git_repo = ssh_reg.group(2)
-	else:
-		git_user = http_reg.group(1)
-		git_repo = http_reg.group(2)
-
-	return git_user, git_repo
-
-def get_repo_commit():
-	'''Return the commit sha of HEAD'''
-	git_head = subprocess.run(["git", "rev-parse", "HEAD"], stdout=PIPE, stderr=PIPE)
-	if git_head.stdout.decode().find("fatal: Needed a single revision") >= 0:
-		raise RuntimeError("You have to make a commit in your git repo first.")
-	return git_head.stdout.decode().strip()
-
-def assert_commit_exist(git_user, git_repo, git_commit):
-	'''Assert commit is available'''
-	url = "https://github.com/{}/{}/archive/{}.zip".format(git_user, git_repo, git_commit)
-	res = requests.head(url)
-	if not res.ok:
-		raise RuntimeError("Commit {} does not exist on github:{}/{}. \
-It should be public.".format( \
-			git_commit, git_repo, git_user \
-		))
+LOGGER = entry.LOGGER
+REPORT_URL = entry.REPORT_URL
+SHOW_URL = entry.SHOW_URL
+QUERY_URL = entry.QUERY_URL
 
 def run_model(entry, args):
 	'''Run the model and record the info of library'''
@@ -142,7 +55,7 @@ def upload_report(result_path, entry, args, \
 		raise json.JSONDecodeError("{} is not a valid json. {}".format(result_path, err.msg),\
 				err.doc, err.pos)
 
-	working_dir = get_repo_workingdir()
+	working_dir = _utils.get_repo_workingdir()
 
 	upload_information = { \
 		"entry": entry, \
@@ -154,8 +67,8 @@ def upload_report(result_path, entry, args, \
 		"record_information": cotk_record_information, \
 		"result": json.dumps(result) \
 	}
-	LOGGER.info("Save your report locally at .cotk_upload_backup")
-	json.dump(upload_information, open(".cotk_upload_backup", 'w'))
+	LOGGER.info("Save your report locally at {}".format(entry.BACKUP_FILE))
+	json.dump(upload_information, open(entry.BACKUP_FILE, 'w'))
 	LOGGER.info("Uploading your report...")
 	res = requests.post(REPORT_URL, {"data": upload_information, "token": token})
 	res = json.loads(res.text)
@@ -165,8 +78,8 @@ def upload_report(result_path, entry, args, \
 
 def get_local_token():
 	'''Read locally-saved token'''
-	if os.path.exists('.cotk_config'):
-		return json.load(open('.cotk_config', 'r'))['token']
+	if os.path.exists(entry.CONFIG_FILE):
+		return json.load(open(entry.CONFIG_FILE, 'r'))['token']
 	else:
 		raise RuntimeError("Please config your token, \n" + \
 						   "either by setting it temporarily in cotk\n" + \
@@ -195,10 +108,10 @@ def run(args):
 			token = cargs.token
 		else:
 			token = get_local_token()
-		assert_repo_exist()
-		git_user, git_repo = get_repo_remote()
-		git_commit = get_repo_commit()
-		assert_commit_exist(git_user, git_repo, git_commit)
+		_utils.assert_repo_exist()
+		git_user, git_repo = _utils.get_repo_remote()
+		git_commit = _utils.get_repo_commit()
+		_utils.assert_commit_exist(git_user, git_repo, git_commit)
 		LOGGER.info("git information detected.")
 		LOGGER.info("user: %s, repo: %s, commit sha1: %s", git_user, git_repo, git_commit)
 	if cargs.only_upload:
@@ -206,7 +119,7 @@ def run(args):
 Some information will be missing and it is not recommended.")
 		cotk_record_information = None
 	else:
-		if not cargs.only_run and not check_repo_clean():
+		if not cargs.only_run and not _utils.check_repo_clean():
 			raise RuntimeError("Your changes of code hasn't been committed. Use \"git status\" \
 to check your changes.")
 
@@ -220,196 +133,3 @@ to check your changes.")
 			git_user, git_repo, git_commit, \
 			cotk_record_information, token)
 		LOGGER.info("Upload complete. Check %s for your report.", SHOW_URL % upload_id)
-
-def download(args):
-	'''Entrance of download'''
-	parser = argparse.ArgumentParser(prog="cotk download", \
-		description='Download model and information from github and dashboard.',\
-		formatter_class=argparse.RawTextHelpFormatter)
-	parser.add_argument("model", type=str, help=\
-r"""A string indicates model path. It can be one of following:
-* Id of cotk dashboard. Example: 12.
-* Url of a git repo / branch / commit.
-    Example: https://github.com/USER/REPO
-             https://github.com/USER/REPO/tree/BRANCH
-             https://github.com/USER/REPO/commit/COMMIT (full commit id should be included)
-* A string specifying a git repo / branch / commit.
-    Example: USER/REPO
-             USER/REPO/BRANCH
-             USER/REPO/COMMIT (full commit id should be included)
-""")
-	parser.add_argument("--result", type=str, default="dashboard_result.json", \
-						help="Path to dump query result.")
-	cargs = parser.parse_args(args)
-
-	if cargs.model.isalnum():
-		# download from dashboard
-		board_id = int(cargs.model)
-		LOGGER.info("Collecting info from id %d...", board_id)
-		info = get_result_from_id(board_id)
-		json.dump(info, open(cargs.result, "w"))
-		LOGGER.info("Info from id %d saved to %s.", board_id, cargs.result)
-		extract_dir = "{}".format(cargs.id)
-
-		code_dir = clone_codes_from_commit(info['git_user'], info['git_repo'], \
-												  info['git_commit'], extract_dir)
-		LOGGER.info("Codes from id %d fetched.")
-	else:
-		# download from online git repo
-		patterns_2 = r'(?:https?://github\.com/)?(\w+)/(\w+)/?'
-		patterns_3 = r'(?:https?://github\.com/)?(\w+)/(\w+)/(?:(?:tree|commit)/)?(\w+)/?'
-		match_res = re.fullmatch(patterns_2, cargs.model)
-		if match_res:
-			git_user, git_repo = match_res.groups()
-			git_commit = "master"
-		else:
-			match_res = re.fullmatch(patterns_3, cargs.model)
-			if not match_res:
-				raise ValueError("'%s' can't match any pattern." % cargs.model)
-			git_user, git_repo, git_commit = match_res.groups()
-
-		LOGGER.info("Fetching {}/{}/{}".format(git_user, git_repo, git_commit))
-		assert_commit_exist(git_user, git_repo, git_commit)
-		extract_dir = '{}_{}'.format(git_repo, git_commit)
-		code_dir = clone_codes_from_commit(git_user, git_repo, git_commit, extract_dir)
-		LOGGER.info("Codes from {}/{}/{} fetched.".format(git_user, git_repo, git_commit))
-		config_path = "{}/config.json".format(code_dir)
-		if not os.path.isfile(config_path):
-			raise FileNotFoundError("Config file ({}) is not found.".format(config_path))
-		try:
-			info = json.load(open(config_path, "r"))
-		except json.JSONDecodeError as err:
-			raise json.JSONDecodeError("{} is not a valid json. {}".format(config_path, err.msg), \
-										err.doc, err.pos)
-		undefined_keys = []
-		for key in ['working_dir', 'entry', 'args']:
-			if key not in info:
-				undefined_keys.append(key)
-		if undefined_keys:
-			raise RuntimeError("Undefined keys in `config.json`: {}".format(", ".join(undefined_keys)))
-
-	# cmd construction
-	cmd = "cd {}/{} && cotk run --only-run --entry {}".format(code_dir, info['working_dir'], info['entry'])
-	if not info['args']:
-		info['args'] = []
-	else:
-		if not isinstance(info['args'], list):
-			raise ValueError("`args` in `config.json` should be of type `list`.")
-
-	cmd += " {}".format(" ".join(info['args']))
-	with open("{}/run_model.sh".format(extract_dir), "w") as file:
-		file.write(cmd)
-	LOGGER.info("Model running cmd written in {}".format("run_model.sh"))
-	print("Model running cmd: \t{}".format(cmd))
-
-	# run model
-	# result_path = "{}/result.json".format(code_dir)
-	# old_time_stamp = 0
-	# if os.path.exists(result_path):
-	# 	old_time_stamp = os.path.getmtime(result_path)
-
-	# os.system("bash {}/run_model.sh".format(extract_dir))
-	# if not os.path.exists(result_path) or \
-	# 	os.path.getmtime('{}/result.json'.format(code_dir)) <= old_time_stamp:
-	# 	raise FileNotFoundError("New result file not found.")
-	# print(json.load(open("{}/result.json".format(code_dir), "r")))
-
-def get_result_from_id(query_id):
-	'''Query uploaded info from id'''
-	query = requests.get(QUERY_URL % query_id)
-	if not query.ok:
-		raise RuntimeError("Cannot fetch result from id %d" % query_id)
-	else:
-		return json.loads(query.text)
-
-def clone_codes_from_commit(git_user, git_repo, git_commit, extract_dirname):
-	'''Download codes from commit'''
-	url = "https://github.com/{}/{}/archive/{}.zip".format(git_user, git_repo, git_commit)
-	# TODO: ask user whether delete!! Use less subprocess especially rm, wget and unzip
-	subprocess.run(['rm', '-rf', "{}.zip".format(git_commit)], stdout=PIPE, stderr=PIPE)
-	download_res = subprocess.run(["wget", url], stdout=PIPE, stderr=PIPE)
-	if re.search(r'ERROR 404: Not Found', download_res.stderr.decode()):
-		raise RuntimeError("Commit {} does not exist on github:{}/{}.".format(git_commit, \
-																	git_repo, git_user))
-	subprocess.run(['rm', '-rf', extract_dirname], stdout=PIPE, stderr=PIPE)
-	unzip_res = subprocess.run(["unzip", "-o", "{}.zip".format(git_commit), \
-								"-d", extract_dirname], \
-							   stdout=PIPE, stderr=PIPE)
-	err = unzip_res.stderr.decode().strip()
-	if err:
-		raise RuntimeError("Fail to unzip file {}.zip.\nError:\n{}".format(git_commit, err))
-	relative_code_dir = re.search(r'.*creating: (\S+)\n.*', unzip_res.stdout.decode()).groups()[0][:-1]
-	pwd = subprocess.run(['pwd'], stdout=PIPE, stderr=PIPE)
-	code_dir = "{}/{}".format(pwd.stdout.decode().strip(), relative_code_dir)
-	return code_dir
-
-def config(args):
-	'''Entrance of configuration'''
-	parser = argparse.ArgumentParser(prog="cotk config", \
-		description='Configuration (e.g. token)')
-	parser.add_argument('--token', type=str, default="")
-	cargs = parser.parse_args(args)
-
-	if cargs.token:
-		save_token(cargs.token)
-	else:
-		raise RuntimeError("Token cannot be empty.")
-
-def save_token(token):
-	'''Save token locally'''
-	json.dump({'token': token}, open(".cotk_config", "w"))
-	LOGGER.info("Save your configuration locally at .cotk_config")
-
-def import_local_resources(args):
-	'''Entrance of importing local resources'''
-	parser = argparse.ArgumentParser(prog="cotk import", \
-		description="Import local resources")
-	parser.add_argument("--file_id", type=str, required=True, help="Name of resource")
-	parser.add_argument("--file_path", type=str, required=True, help="Path to resource")
-	cargs = parser.parse_args(args)
-
-	file_utils.import_local_resources(cargs.file_id, cargs.file_path)
-	LOGGER.info("Successfully import local resource {}.".format(cargs.file_id))
-
-def show_command():
-	'''show help'''
-	print(r"""usage: cotk <command> [...]
-
-command list:
-   report       Push your model result.
-   download     Download a model online.
-   import       Import local files to cotk cache.
-   config       Settings.
-
-You can type `cotk <command>` for details of each command.
-""")
-
-def dispatch(sub_entrance, args):
-	'''Dispatcher of sub-entrances'''
-	if sub_entrance == 'run':
-		run(args)
-	elif sub_entrance == 'download':
-		download(args)
-	elif sub_entrance == 'import':
-		import_local_resources(args)
-	elif sub_entrance == 'config':
-		config(args)
-	else:
-		print("Unknown command.\n")
-		show_command()
-
-def main():
-	'''Entry of command line'''
-	sys.path.append(".")
-	if len(sys.argv) > 2 and sys.argv[1] == "debug":
-		dispatch(sys.argv[2], sys.argv[3:])
-	elif len(sys.argv) > 1:
-		try:
-			dispatch(sys.argv[1], sys.argv[2:])
-		except Exception as err: #pylint: disable=broad-except
-			print("%s: %s" % (type(err).__name__, err))
-	else:
-		show_command()
-
-if __name__ == "__main__":
-	dispatch(sys.argv[1], sys.argv[2:])

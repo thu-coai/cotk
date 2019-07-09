@@ -606,7 +606,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 
 
 
-	def get_multi_ref_metric(self, generated_num_per_context=20, embed=None,\
+	def get_multi_ref_metric(self, generated_num_per_context=20, word2vec=None,\
 				multiple_gen_key="multiple_gen_key"):
 		'''Get metrics for multiple references.
 
@@ -617,21 +617,21 @@ class SwitchboardCorpus(MultiTurnDialog):
 
 		Arguments:
 			generated_num_per_context (int): The number of sentences generated per context.
-			embed (:class:`numpy.ndarray`): Word embedding for embedding similarity.
+			word2vec (dict): Maps words to word embeddings for embedding similarity.
 				Default: if ``None``, using glove word embedding from ``resources://Glove300d``.
 
 		Returns:
 			A :class:`.metric.MetricChain` object.
 		'''
 		metric = MetricChain()
-		if embed is None:
+		if word2vec is None:
 			glove = Glove("resources://Glove300d")
-			embed = glove.load(300, self.vocab_list)
+			word2vec = glove.load_pretrained_embed(300, self.vocab_list)
 		for ngram in range(1, 5):
 			metric.add_metric(BleuPrecisionRecallMetric(self, ngram, generated_num_per_context,\
 			multiple_gen_key=multiple_gen_key))
-		metric.add_metric(EmbSimilarityPrecisionRecallMetric(self, embed, \
+		metric.add_metric(EmbSimilarityPrecisionRecallMetric(self, word2vec, \
 			'avg', generated_num_per_context, multiple_gen_key=multiple_gen_key))
-		metric.add_metric(EmbSimilarityPrecisionRecallMetric(self, embed, \
+		metric.add_metric(EmbSimilarityPrecisionRecallMetric(self, word2vec, \
 			'extrema', generated_num_per_context, multiple_gen_key=multiple_gen_key))
 		return metric

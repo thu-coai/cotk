@@ -67,3 +67,27 @@ class Glove(WordVector):
 			wordvec.append(vec)
 		print("wordvec cannot cover %f vocab" % (float(oov_cnt)/len(vocab_list)))
 		return np.array(wordvec)
+
+	def load_pretrained_embed(self, n_dims, vocab_list):
+		r'''
+		Refer to :meth:`.WordVector.load_pretrain_embed`.
+		'''
+		raw_word2vec = {}
+		if self.file_path:
+			file_path = self.file_path
+			if os.path.isdir(file_path):
+				file_path = "%s/glove.txt" % (file_path)
+			with open(file_path, 'r') as glove_file:
+				lines = glove_file.readlines()
+			for line in lines:
+				word, vec = line.split(" ", 1)
+				raw_word2vec[word] = vec
+
+		word2vec = {}
+		for vocab in vocab_list:
+			str_vec = raw_word2vec.get(vocab, None)
+			if str_vec is not None:
+				tmp = np.fromstring(str_vec, sep=" ")
+				now_dims = min(len(tmp), n_dims)
+				word2vec[vocab] = tmp[:now_dims]
+		return word2vec

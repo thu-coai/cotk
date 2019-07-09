@@ -287,6 +287,7 @@ class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
 		self.ngram = ngram
 		self.weights = [1 / ngram] * ngram
 		self.res_prefix = 'BLEU-{}'.format(ngram)
+		self._hash_relevant_data([ngram, generated_num_per_context])
 
 	def _score(self, gen, reference):
 		r'''Score function of BLEU-ngram precision and recall.
@@ -310,8 +311,7 @@ class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
 
 	Arguments:
 		{_PrecisionRecallMetric.ARGUMENTS}
-		embed (:class:`numpy.ndarray`): A 2-d array of word embeddings.
-			Size: ``[dataloader.vocab_size, dims of embedding]``.
+		word2vec (dict): Maps a word (str) to its pretrained embedding (:class:`numpy.ndarray` or list)
 		mode (str): Specifies the operation that computes the bag-of-word representation.
 			Must be ``avg`` or ``extrema``:
 
@@ -321,22 +321,26 @@ class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
 	'''
 
 	def __init__(self, dataloader, \
-				 embed, \
+				 word2vec, \
 				 mode, \
 				 generated_num_per_context, \
 				 candidates_allvocabs_key='candidate_allvocabs', \
 				 multiple_gen_key='multiple_gen'):
 		super().__init__(dataloader, generated_num_per_context, \
 			candidates_allvocabs_key, multiple_gen_key)
-		if not isinstance(embed, np.ndarray) or len(np.shape(embed)) != 2:
-			raise ValueError("embed has invalid type or shape.")
+		if not isinstance(word2vec, dict):
+			raise ValueError("word2vec has invalid type")
+		if word2vec:
+			embed_shape = np.array(list(word2vec.values())).shape
+			if len(embed_shape) != 2 or embed_shape[1] == 0:
+				raise ValueError("word embeddings have inconsistent embedding size or are empty")
 		if mode not in ['avg', 'extrema']:
 			raise ValueError("mode should be 'avg' or 'extrema'.")
-		if len(embed) != self.dataloader.vocab_size:
-			raise ValueError("embed size not equal to vocab size.")
-		self.embed = embed
+		self.word2vec = word2vec
 		self.mode = mode
 		self.res_prefix = '{}-bow'.format(mode)
+		self._hash_relevant_data([mode, generated_num_per_context] + \
+				[(word, list(emb)) for word, emb in self.word2vec.items()])
 
 	def _score(self, gen, reference):
 		r'''Score function of cosine similarity precision and recall.
@@ -350,20 +354,14 @@ class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
 		'''
 		gen_vec = []
 		ref_vec = []
-		for i in gen:
-			if i < 0:
-				raise ValueError("gen index out of range.")
-			elif i >= self.dataloader.vocab_size:
-				gen_vec.append(self.embed[self.dataloader.unk_id])
-			else:
-				gen_vec.append(self.embed[i])
-		for i in reference:
-			if i < 0:
-				raise ValueError("reference index out of range.")
-			elif i >= self.dataloader.vocab_size:
-				ref_vec.append(self.embed[self.dataloader.unk_id])
-			else:
-				ref_vec.append(self.embed[i])
+		for word in self.dataloader.convert_ids_to_tokens(gen):
+			if word in self.word2vec:
+				gen_vec.append(self.word2vec[word])
+		for word in self.dataloader.convert_ids_to_tokens(reference):
+			if word in self.word2vec:
+				ref_vec.append(self.word2vec[word])
+		if not gen_vec or not ref_vec:
+			return 0
 		if self.mode == 'avg':
 			gen_embed = np.average(gen_vec, 0)
 			ref_embed = np.average(ref_vec, 0)
@@ -841,6 +839,10 @@ class SelfBleuCorpusMetric(MetricBase):
 		{MetricBase.GEN_KEY_ARGUMENTS}
 		sample (int): Number of examples sampled from the generated sentences. Default: ``1000``.
 		seed (int): random seed for sampling. Default: ``1229``.
+
+	Warning:
+		the calculation of ``hashvalue`` considers the actual sample size of hypotheses which
+			will be less than ``sample`` if the size of hypotheses is smaller than ``sample``
 	'''
 
 	def __init__(self, dataloader, \
@@ -910,7 +912,9 @@ class SelfBleuCorpusMetric(MetricBase):
 		elif self.sample > 1:
 			for i in range(self.sample):
 				bleu_irl.append(self._run_f((ref[:i]+ref[i+1:], ref[i])))
-		res.update({"self-bleu" : 1.0 * sum(bleu_irl) / len(bleu_irl)})
+		self._hash_relevant_data([self.seed, self.sample])
+		res.update({"self-bleu" : 1.0 * sum(bleu_irl) / len(bleu_irl),
+					"self-bleu hashvalue": self._hashvalue()})
 		return res
 
 class FwBwBleuCorpusMetric(MetricBase):
@@ -923,6 +927,10 @@ class FwBwBleuCorpusMetric(MetricBase):
 		{MetricBase.GEN_KEY_ARGUMENTS}
 		sample (int): Number of examples sampled from the generated sentences. Default: ``1000``.
 		seed (int): random seed for sampling. Default: ``1229``.
+
+	Warning:
+		the calculation of ``hashvalue`` considers the actual sample size of hypotheses and references which
+			will be less than ``sample`` if the size of hypotheses or references is smaller than ``sample``
 	'''
 
 	def __init__(self, dataloader, \
@@ -1023,7 +1031,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 			"fw-bw-bleu" : fw_bw_bleu \
 		})
 
-		self._hash_relevant_data(self.refs)
+		self._hash_relevant_data(self.refs + [self.seed, sample_hyps, sample_refs])
 		res.update({"fw-bw-bleu hashvalue" : self._hashvalue()})
 		return res
 

@@ -54,6 +54,9 @@ def main(args):
 		embed = try_cache(lambda wv, ez, vl: wordvec_class(wv).load(ez, vl),
 						  (args.wvpath, args.word_embedding_size, vocab),
 						  args.cache_dir, wordvec_class.__name__)
+		word2vec = try_cache(lambda wv, ez, vl: wordvec_class(wv).load_pretrained_embed(ez, vl),
+						  (args.wvpath, args.word_embedding_size, vocab),
+						  args.cache_dir, wordvec_class.__name__)
 	else:
 		data = data_class(args.datapath,
 				min_vocab_times=args.min_vocab_times,
@@ -62,6 +65,7 @@ def main(args):
 		wv = wordvec_class(args.wvpath)
 		vocab = data.vocab_list
 		embed = wv.load(args.word_embedding_size, vocab)
+		word2vec = wv.load_pretrained_embed(args.word_embedding_size, vocab)
 
 	embed = np.array(embed, dtype = np.float32)
 
@@ -70,7 +74,7 @@ def main(args):
 		if args.mode == "train":
 			model.train_process(sess, data, args)
 		else:
-			multi_ref_res = model.test_multi_ref(sess, data, embed, args)
+			multi_ref_res = model.test_multi_ref(sess, data, word2vec, args)
 			test_res = model.test_process(sess, data, args)
 			test_res.update(multi_ref_res)
 
