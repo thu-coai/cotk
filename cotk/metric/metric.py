@@ -201,8 +201,8 @@ class _PrecisionRecallMetric(MetricBase):
 		Arguments:
 			data (dict): A dict at least contains the following keys:
 
-				* **data[candidate_allvocabs_key]** (list):
-				  A 3-dimension jagged list of index. Multiple reference sentences for a single context.
+				* **data[candidate_allvocabs_key]** (list or :class:`numpy.ndarray`):
+				  A 3-d jagged list of index. Multiple reference sentences for a single context.
 				  Does not contain start token (eg: ``<go>``) and end token (eg: ``<eos>``).
 				  Size: ``[batch_size, ~sentence_num, ~word_num]``, where "~" means different sizes
 				  in this dimension is allowed.
@@ -214,10 +214,18 @@ class _PrecisionRecallMetric(MetricBase):
 				  where "~" means different sizes in this dimension is allowed.
 		'''
 		super().forward(data)
+		candidate_allvocabs = data[self.candidate_allvocabs_key]
+		multiple_gen = data[self.multiple_gen_key]
+
+		if not isinstance(candidate_allvocabs, (np.ndarray, list)):
+			raise TypeError("Unknown type for candidate_allvocabs.")
+		if not isinstance(multiple_gen, (np.ndarray, list)):
+			raise TypeError("Unknown type for multiple_gen")
+
 		references = [[self.dataloader.trim_index(cand[1:]) for cand in inst] \
-					  for inst in data[self.candidate_allvocabs_key]]
+					  for inst in candidate_allvocabs]
 		gens = [[self.dataloader.trim_index(cand) for cand in inst] \
-					  for inst in data[self.multiple_gen_key]]
+					  for inst in multiple_gen]
 
 		if len(references) != len(gens):
 			raise ValueError("Batch num is not matched.")
@@ -702,7 +710,8 @@ class MultiTurnPerplexityMetric(MetricBase):
 
 				{MetricBase.FORWARD_MULTI_TURN_REFERENCE_ALLVOCABS_ARGUMENTS_WITH_TORCH}
 				{MetricBase.FORWARD_MULTI_TURN_REFERENCE_LEN_ARGUMENTS}
-				* **data[gen_log_prob_key]** (list or :class:`numpy.ndarray` or :class:`torch.Tensor`):
+				* **data[multi_turn_gen_log_prob_key]** (list or :class:`numpy.ndarray` or \
+					:class:`torch.Tensor`):
 				  Sentence generations model outputs of
 				  A 4-d jagged or padded array. **log softmax** probability.
 				  Contains end token (eg:``<eos>``), but without start token (eg: ``<go>``).
@@ -711,15 +720,23 @@ class MultiTurnPerplexityMetric(MetricBase):
 				  where "~" means different sizes in this dimension is allowed.
 				  If :class:`torch.Tensor` is used, the following data should also be
 				  :class:`torch.Tensor`.
-
 		Warning:
-			``data[gen_log_prob_key]`` must be processed after log_softmax. That means,
-			``np.sum(np.exp(gen_log_prob), -1)`` equals ``np.ones((batch_size, gen_sentence_length))``
+			``data[multi_turn_gen_log_prob_key]`` must be processed after log_softmax. That means,
+			``np.sum(np.exp(multi_turn_gen_log_prob_key), -1)`` equals
+			``np.ones((batch_size, gen_sentence_length))``
 		'''
 		super().forward(data)
 		reference_allvocabs = data[self.multi_turn_reference_allvocabs_key]
 		length = data[self.multi_turn_reference_len_key]
 		gen_log_prob = data[self.multi_turn_gen_log_prob_key]
+
+		if not isinstance(reference_allvocabs, (torch.Tensor, np.ndarray, list)):
+			raise TypeError("Unknown type for reference_allvocabs.")
+		if not isinstance(length, (np.ndarray, list)):
+			raise TypeError("Unknown type for length")
+		if not isinstance(gen_log_prob, (torch.Tensor, list, np.ndarray)):
+			raise TypeError("Unknown type for gen_log_prob")
+
 		if len(length) != len(reference_allvocabs) or len(length) != len(gen_log_prob):
 			raise ValueError("Batch num is not matched.")
 
@@ -776,6 +793,12 @@ class BleuCorpusMetric(MetricBase):
 		super().forward(data)
 		gen = data[self.gen_key]
 		resp = data[self.reference_allvocabs_key]
+
+		if not isinstance(gen, (np.ndarray, list)):
+			raise TypeError("Unknown type for gen.")
+		if not isinstance(resp, (np.ndarray, list)):
+			raise TypeError("Unknown type for resp")
+
 		if len(resp) != len(gen):
 			raise ValueError("Batch num is not matched.")
 
@@ -842,6 +865,9 @@ class SelfBleuCorpusMetric(MetricBase):
 		'''
 		super().forward(data)
 		gen = data[self.gen_key]
+
+		if not isinstance(gen, (np.ndarray, list)):
+			raise TypeError("Unknown type for gen.")
 
 		for gen_sen in gen:
 			self.hyps.append(self.dataloader.trim_index(gen_sen))
@@ -922,6 +948,10 @@ class FwBwBleuCorpusMetric(MetricBase):
 				{MetricBase.FORWARD_GEN_ARGUMENTS}
 		'''
 		gen = data[self.gen_key]
+
+		if not isinstance(gen, (np.ndarray, list)):
+			raise TypeError("Unknown type for gen.")
+
 		for gen_sen in gen:
 			self.hyps.append(list(self.dataloader.trim_index(gen_sen)))
 
@@ -1034,6 +1064,14 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 		reference_allvocabs = data[self.multi_turn_reference_allvocabs_key]
 		length = data[self.turn_len_key]
 		gen = data[self.multi_turn_gen_key]
+
+		if not isinstance(reference_allvocabs, (np.ndarray, list)):
+			raise TypeError("Unknown type for reference_allvocabs.")
+		if not isinstance(length, (np.ndarray, list)):
+			raise TypeError("Unknown type for length")
+		if not isinstance(gen, (np.ndarray, list)):
+			raise TypeError("Unknown type for gen")
+
 		if len(length) != len(reference_allvocabs) or len(length) != len(gen):
 			raise ValueError("Batch num is not matched.")
 
@@ -1105,6 +1143,14 @@ class SingleTurnDialogRecorder(MetricBase):
 		post_allvocabs = data[self.post_allvocabs_key]
 		resp_allvocabs = data[self.resp_allvocabs_key]
 		gen = data[self.gen_key]
+
+		if not isinstance(post_allvocabs, (np.ndarray, list)):
+			raise TypeError("Unknown type for post_allvocabs.")
+		if not isinstance(resp_allvocabs, (np.ndarray, list)):
+			raise TypeError("Unknown type for resp_allvocabs")
+		if not isinstance(gen, (np.ndarray, list)):
+			raise TypeError("Unknown type for gen")
+
 		if len(post_allvocabs) != len(resp_allvocabs) or len(resp_allvocabs) != len(gen):
 			raise ValueError("Batch num is not matched.")
 		for i, post_sen in enumerate(post_allvocabs):
@@ -1173,8 +1219,21 @@ class MultiTurnDialogRecorder(MetricBase):
 		reference_allvocabs = data[self.multi_turn_reference_allvocabs_key]
 		gen = data[self.multi_turn_gen_key]
 		turn_length = data[self.turn_len_key]
-		if len(gen) != len(reference_allvocabs):
+
+		if not isinstance(context_allvocabs, (np.ndarray, list)):
+			raise TypeError("Unknown type for context_allvocabs.")
+		if not isinstance(reference_allvocabs, (np.ndarray, list)):
+			raise TypeError("Unknown type for reference_allvocabs")
+		if not isinstance(gen, (np.ndarray, list)):
+			raise TypeError("Unknown type for gen")
+		if not isinstance(turn_length, (np.ndarray, list)):
+			raise TypeError("Unknown type for turn_length")
+
+		if len(turn_length) != len(context_allvocabs) or \
+			len(turn_length) != len(reference_allvocabs) or \
+			len(turn_length) != len(gen):
 			raise ValueError("Batch num is not matched.")
+
 		for i, context_sen in enumerate(context_allvocabs):
 			self.context_list.append(self.dataloader.convert_multi_turn_ids_to_tokens( \
 				np.array(context_sen), ignore_first_token=True))
@@ -1231,6 +1290,10 @@ class LanguageGenerationRecorder(MetricBase):
 		'''
 		super().forward(data)
 		gen = data[self.gen_key]
+
+		if not isinstance(gen, (np.ndarray, list)):
+			raise TypeError("Unknown type for gen")
+
 		for sen in gen:
 			self.gen_list.append(self.dataloader.convert_ids_to_tokens(sen))
 
