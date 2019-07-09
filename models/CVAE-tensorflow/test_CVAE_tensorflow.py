@@ -77,13 +77,13 @@ def test_train(mocker):
 		args.cache = True
 		main(args)
 	mock = mocker.patch('main.main', side_effect=side_effect_train)
-	run([])
+	run()
 	tf.reset_default_graph()
 	mock.side_effect = side_effect_restore
-	run([])
+	run()
 	tf.reset_default_graph()
 	mock.side_effect = side_effect_cache
-	run([])
+	run()
 	tf.reset_default_graph()
 
 def test_test(mocker):
@@ -92,10 +92,10 @@ def test_test(mocker):
 		args.mode = 'test'
 		main(args)
 	mock = mocker.patch('main.main', side_effect=side_effect_test)
-	run([])
+	run()
 	old_res = json.load(open("./result.json", "r"))
 	tf.reset_default_graph()
-	run([])
+	run()
 	new_res = json.load(open("./result.json", "r"))
 	for key in old_res:
 		if key[-9:] == 'hashvalue':

@@ -913,7 +913,7 @@ class SelfBleuCorpusMetric(MetricBase):
 			for i in range(self.sample):
 				bleu_irl.append(self._run_f((ref[:i]+ref[i+1:], ref[i])))
 		self._hash_relevant_data([self.seed, self.sample])
-		res.update({"self-bleu" : 1.0 * sum(bleu_irl) / len(bleu_irl),
+		res.update({"self-bleu" : 1.0 * sum(bleu_irl) / len(bleu_irl),\
 					"self-bleu hashvalue": self._hashvalue()})
 		return res
 
@@ -929,8 +929,9 @@ class FwBwBleuCorpusMetric(MetricBase):
 		seed (int): random seed for sampling. Default: ``1229``.
 
 	Warning:
-		the calculation of ``hashvalue`` considers the actual sample size of hypotheses and references which
-			will be less than ``sample`` if the size of hypotheses or references is smaller than ``sample``
+		The calculation of ``hashvalue`` considers the actual sample size of hypotheses and 
+		references. Therefore ``hashvalue`` may vary with the size of hypothesis or references
+		if the size of them is smaller than ``sample``.
 	'''
 
 	def __init__(self, dataloader, \

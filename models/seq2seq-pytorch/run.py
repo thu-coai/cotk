@@ -1,6 +1,6 @@
 # coding:utf-8
 
-def run(argv):
+def run(*argv):
 	import argparse
 	import time
 
@@ -118,4 +118,4 @@ def run(argv):
 
 if __name__ == '__main__':
 	import sys
-	run(sys.argv[1:])
+	run(*sys.argv[1:])

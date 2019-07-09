@@ -69,11 +69,11 @@ def test_train(mocker):
 		args.cache = True
 		main(args, *others)
 	mock = mocker.patch('main.main', side_effect=side_effect_train)
-	run([])
+	run()
 	mock.side_effect = side_effect_restore
-	run([])
+	run()
 	mock.side_effect = side_effect_cache
-	run([])
+	run()
 
 def test_test(mocker):
 	def side_effect_test(args, *others):
@@ -81,9 +81,9 @@ def test_test(mocker):
 		args.mode = 'test'
 		main(args, *others)
 	mock = mocker.patch('main.main', side_effect=side_effect_test)
-	run([])
+	run()
 	old_res = json.load(open("./result.json", "r"))
-	run([])
+	run()
 	new_res = json.load(open("./result.json", "r"))
 	for key in old_res:
 		if key[-9:] == 'hashvalue':
