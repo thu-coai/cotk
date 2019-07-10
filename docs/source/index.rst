@@ -14,11 +14,14 @@ pretrained baseline models and other useful utilities for evaluating
 your models fairly with baselines.
 
 .. toctree::
-   :glob:
    :maxdepth: 2
    :caption: Notes
 
-   notes/*
+   notes/quickstart
+   notes/tutorial_core
+   notes/tutorial_cli
+   notes/extend
+   notes/FAQ
 
 .. toctree::
    :maxdepth: 2

@@ -719,22 +719,29 @@ class TestPerplexityMetric():
 								   resp_len='>=2')
 		pm = PerplexityMetric(dataloader, invalid_vocab=gen_prob_vocab == "all_vocab", full_check=False)
 		pm_shuffle = PerplexityMetric(dataloader, invalid_vocab=gen_prob_vocab == "all_vocab", full_check=False)
+		pm_shuffle2 = PerplexityMetric(dataloader, invalid_vocab=gen_prob_vocab == "all_vocab", full_check=False)
 
 		data_shuffle = copy.deepcopy(data)
 		indices = list(range(len(data_shuffle[reference_key])))
 		np.random.shuffle(indices)
-		data_shuffle[reference_key] = torch.LongTensor(np.array(data_shuffle[reference_key])[indices])
 		data_shuffle[reference_len_key] = list(np.array(data_shuffle[reference_len_key])[indices])
 		data_shuffle[gen_prob_key] = torch.Tensor(np.array(data_shuffle[gen_prob_key])[indices])
 
 		pm.forward(data)
 		res = pm.close()
 
+		data_shuffle[reference_key] = np.array(data_shuffle[reference_key])[indices]
 		pm_shuffle.forward(data_shuffle)
 		res_shuffle = pm_shuffle.close()
 
+		data_shuffle[reference_key] = torch.LongTensor(data_shuffle[reference_key])
+		pm_shuffle2.forward(data_shuffle)
+		res_shuffle2 = pm_shuffle2.close()
+
 		assert res['perplexity hashvalue'] == res_shuffle['perplexity hashvalue']
+		assert res['perplexity hashvalue'] == res_shuffle2['perplexity hashvalue']
 		assert np.isclose(res['perplexity'], res_shuffle['perplexity'])
+		assert np.isclose(res['perplexity'], res_shuffle2['perplexity'])
 
 	@pytest.mark.parametrize( \
 		'argument, shape, type, batch_len, check, ref_len, ref_vocab, gen_prob_vocab, resp_len, include_invalid', \

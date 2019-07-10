@@ -225,7 +225,7 @@ for dir1, submodels in models.items():
     index_file.write("%s\n=========================================\n" % dir1)
     index_file.write(".. toctree::\n\n")
     for rstname, modelname in submodels.items():
-        index_file.write("   %s/readme.md\n" % modelname)
+        index_file.write("   %s/readme\n" % modelname)
         os.makedirs(os.path.join("./models", dir1, modelname), exist_ok=True)
         shutil.copy(os.path.join("../../", "models", modelname, "Readme.md"), 
             os.path.join("./models", dir1, modelname, "Readme.md"))

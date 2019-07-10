@@ -319,11 +319,9 @@ class UbuntuCorpus(MultiTurnDialog):
 	Refer to :class:`.MultiTurnDialog` for attributes and methods.
 
 	References:
-		[1] http://dataset.cs.mcgill.ca/ubuntu-corpus-1.0
+		[1] https://github.com/rkadlec/ubuntu-ranking-dataset-creator
 
-		[2] https://github.com/rkadlec/ubuntu-ranking-dataset-creator
-
-		[3] Lowe R, Pow N, Serban I, et al. The Ubuntu Dialogue Corpus: A Large Dataset
+		[2] Lowe R, Pow N, Serban I, et al. The Ubuntu Dialogue Corpus: A Large Dataset
 		for Research in Unstructured Multi-Turn Dialogue Systems. SIGDIAL 2015.
 	'''
 

@@ -2,6 +2,9 @@ Data Loader
 ===================================
 .. automodule:: cotk.dataloader
 
+
+.. _vocab_ref:
+
 Vocabulary
 ----------------------------------
 

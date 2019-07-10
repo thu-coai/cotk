@@ -494,7 +494,7 @@ class PerplexityMetric(MetricBase):
 
 		if self.engine_version == "pytorch":
 			if not isinstance(resp_allvocabs, torch.Tensor):
-				resp_allvocabs = gen_log_prob.new_tensor(resp_allvocabs)
+				resp_allvocabs = gen_log_prob.new_tensor(resp_allvocabs).long()
 			with torch.no_grad():
 				self._pytorch_forward(resp_allvocabs, resp_length, gen_log_prob)
 		else:
