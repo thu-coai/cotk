@@ -83,6 +83,15 @@ class SwitchboardCorpusResourceProcessor(BaseResourceProcessor):
 		'''
 		return self.basepreprocess(local_path, 'switchboard_corpus')
 
+
+class SSTResourceProcessor(BaseResourceProcessor):
+	'''Processor for SwitchboardCorpus dataset
+	'''
+	def preprocess(self, local_path):
+		'''Preprocess after download and before save.
+		'''
+		return self.basepreprocess(local_path, 'trees')
+
 class GloveResourceProcessor(ResourceProcessor):
 	'''Base Class for all dimension version of glove wordvector.
 	'''

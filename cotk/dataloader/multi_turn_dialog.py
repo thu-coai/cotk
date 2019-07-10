@@ -9,14 +9,14 @@ import json
 import numpy as np
 
 from .._utils.file_utils import get_resource_file_path
-from .dataloader import GenerationBase
+from .dataloader import LanguageProcessingBase
 from ..metric import MetricChain, MultiTurnPerplexityMetric, MultiTurnBleuCorpusMetric, \
 	MultiTurnDialogRecorder
 from ..metric import BleuPrecisionRecallMetric, EmbSimilarityPrecisionRecallMetric
 from ..wordvector import Glove
 
 # pylint: disable=W0223
-class MultiTurnDialog(GenerationBase):
+class MultiTurnDialog(LanguageProcessingBase):
 	r"""Base class for multi-turn dialog datasets. This is an abstract class.
 
 	Arguments:{ARGUMENTS}
@@ -24,8 +24,8 @@ class MultiTurnDialog(GenerationBase):
 	Attributes:{ATTRIBUTES}
 	"""
 
-	ARGUMENTS = GenerationBase.ARGUMENTS
-	ATTRIBUTES = GenerationBase.ATTRIBUTES
+	ARGUMENTS = LanguageProcessingBase.ARGUMENTS
+	ATTRIBUTES = LanguageProcessingBase.ATTRIBUTES
 
 	def __init__(self, \
 				 ext_vocab=None, \

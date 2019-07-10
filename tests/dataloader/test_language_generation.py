@@ -6,7 +6,7 @@ from pytest_mock import mocker
 from cotk.dataloader import LanguageGeneration, MSCOCO
 from cotk.metric import MetricBase
 from cotk.dataloader import Dataloader
-from cotk.dataloader import GenerationBase
+from cotk.dataloader import LanguageProcessingBase
 
 def setup_module():
 	import random
@@ -55,12 +55,12 @@ class TestLanguageGeneration():
 
 
 		with pytest.raises(NotImplementedError):
-			basic = GenerationBase()
+			basic = LanguageProcessingBase()
 
 
 
 		with pytest.raises(NotImplementedError):
-			class MyLanguageGeneration(GenerationBase):
+			class MyLanguageGeneration(LanguageProcessingBase):
 				def __init__(self):
 					pass
 			MyLanguageGeneration().get_batch(None, None)

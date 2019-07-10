@@ -102,9 +102,9 @@ We offer some tips for you to further understand how vocabularies work.
 
     Index and ``vocab_list``
         * Token's index is always equal to the position that the token in
-          :attr:`.GenerationBase.vocab_list`.
+          :attr:`.LanguageProcessingBase.vocab_list`.
         * Special tokens like ``<pad>``, ``<unk>``, ``<go>``, ``<eos>`` are always at
-          the front of :attr:`.GenerationBase.vocab_list`.
+          the front of :attr:`.LanguageProcessingBase.vocab_list`.
         * Valid vocabularies are following the special tokens. 
           Thus ``vocab_list[:valid_vocab_size]`` includes valid words and special tokens.
         * Invalid vocabularies are the left. ``vocab_list[valid_vocab_size:]`` are
@@ -121,7 +121,7 @@ Basic Classes
     .. automethod:: get_all_subclasses
     .. automethod:: load_class
 
-.. autoclass:: GenerationBase
+.. autoclass:: LanguageProcessingBase
 
     .. autoattribute:: vocab_list
     .. autoattribute:: vocab_size

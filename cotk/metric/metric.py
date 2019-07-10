@@ -8,6 +8,7 @@ import multiprocessing
 from multiprocessing import Pool
 import numpy as np
 import tqdm
+import nltk
 from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunction
 from .._utils.unordered_hash import UnorderedSha256
 from .._utils.imports import DummyObject
@@ -23,7 +24,7 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 	'''
 
 	DATALOADER_ARGUMENTS = \
-		r"""dataloader (:class:`.dataloader.GenerationBase`): A language generation dataloader."""
+		r"""dataloader (:class:`.dataloader.LanguageProcessingBase`): A language generation dataloader."""
 	REFERENCE_ALLVOCABS_KEY_ARGUMENTS = \
 		r"""reference_allvocabs_key (str):
 			The key of reference sentences. Default: ``ref_allvocabs``."""
@@ -42,6 +43,22 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 	FORWARD_RESP_ALLVOCABS_ARGUMENTS = \
 		FORWARD_REFERENCE_ALLVOCABS_ARGUMENTS.replace("reference_allvocabs_key", \
 			"resp_allvocabs_key")
+
+	LABEL_KEY_ARGUMENTS = \
+		r"""label_key (str):
+			The key of reference sentence labels. Default: ``label``."""
+	LABEL_ARGUMENTS = r"""* **data[label_key]** (list or :class:`numpy.ndarray`):
+				  A 1-d array of int.
+				  Size: ``[batch_size]``,
+				  each element refers to label of one sample"""
+
+	PREDICTION_KEY_ARGUMENTS = \
+		r"""prediction_key (str):
+			The key of reference sentence predictions. Default: ``prediction``."""
+	PREDICTION_ARGUMENTS = r"""* **data[prediction_key]** (list or :class:`numpy.ndarray`):
+				  A 1-d array of int.
+				  Size: ``[batch_size]``,
+				  each element refers to prediction for one sample"""
 
 	MULTI_TURN_REFERENCE_ALLVOCABS_KEY_ARGUMENTS = \
 		r"""multi_turn_reference_allvocabs_key (str):
@@ -1365,3 +1382,53 @@ class MetricChain(MetricBase):
 		for metric in self.metric_list:
 			res.update(metric.close())
 		return res
+
+class AccuracyMetric(MetricBase):
+	'''Metric for calculating BLEU.
+
+	Arguments:
+		{MetricBase.DATALOADER_ARGUMENTS}
+		{MetricBase.LABEL_KEY_ARGUMENTS}
+		{MetricBase.PREDICTION_KEY_ARGUMENTS}
+	'''
+
+	def __init__(self, dataloader,\
+			label_key="label", prediction_key="prediction"):
+		super().__init__()
+		self.dataloader = dataloader
+		self.label_key = label_key
+		self.prediction_key = prediction_key
+		self.refs = []
+		self.hyps = []
+
+	def forward(self, data):
+		'''Processing a batch of data.
+
+		Arguments:
+			data (dict): A dict at least contains the following keys:
+
+				{MetricBase.LABEL_ARGUMENTS}
+				{MetricBase.PREDICTION_ARGUMENTS}
+		'''
+		super().forward(data)
+		self.hyps.extend(data[self.prediction_key])
+		self.refs.extend(data[self.label_key])
+		if len(data[self.prediction_key]) != len(data[self.label_key]):
+			raise ValueError("Batch num is not matched.")
+
+		self._hash_relevant_data(data[self.label_key])
+
+	def close(self):
+		'''
+		Returns:
+			(dict): Return a dict which contains
+
+			* **accuracy**: accuracy value.
+			* **accuracy hashvalue**: hash value for accuracy metric, same hash value stands
+			  for same evaluation settings.
+		'''
+		result = super().close()
+		result.update({"accuracy": \
+			nltk.classify.accuracy(self.refs, self.hyps), \
+			"accuracy hashvalue": self._hashvalue()})
+		return result

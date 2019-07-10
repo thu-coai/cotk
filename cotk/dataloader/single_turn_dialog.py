@@ -7,11 +7,11 @@ from itertools import chain
 import numpy as np
 
 from .._utils.file_utils import get_resource_file_path
-from .dataloader import GenerationBase
+from .dataloader import LanguageProcessingBase
 from ..metric import MetricChain, PerplexityMetric, BleuCorpusMetric, SingleTurnDialogRecorder
 
 # pylint: disable=W0223
-class SingleTurnDialog(GenerationBase):
+class SingleTurnDialog(LanguageProcessingBase):
 	r"""Base class for single-turn dialog datasets. This is an abstract class.
 
 	This class is supported for sequence to sequence generation tasks, especially
@@ -22,8 +22,8 @@ class SingleTurnDialog(GenerationBase):
 	Attributes:{ATTRIBUTES}
 	"""
 
-	ARGUMENTS = GenerationBase.ARGUMENTS
-	ATTRIBUTES = GenerationBase.ATTRIBUTES
+	ARGUMENTS = LanguageProcessingBase.ARGUMENTS
+	ATTRIBUTES = LanguageProcessingBase.ATTRIBUTES
 
 	def get_batch(self, key, index):
 		'''Get a batch of specified `index`.

@@ -41,10 +41,10 @@ from .metric import MetricBase, PerplexityMetric, BleuCorpusMetric, SelfBleuCorp
                     FwBwBleuCorpusMetric, SingleTurnDialogRecorder, LanguageGenerationRecorder, \
                     MetricChain, MultiTurnDialogRecorder, MultiTurnPerplexityMetric, \
                     MultiTurnBleuCorpusMetric, BleuPrecisionRecallMetric, \
-                    EmbSimilarityPrecisionRecallMetric
+                    EmbSimilarityPrecisionRecallMetric, AccuracyMetric
 
 __all__ = ["MetricBase", "PerplexityMetric", "BleuCorpusMetric", "SelfBleuCorpusMetric", \
         "FwBwBleuCorpusMetric", "SingleTurnDialogRecorder", "LanguageGenerationRecorder", \
         "MetricChain", "MultiTurnDialogRecorder", "MultiTurnPerplexityMetric", \
         "MultiTurnBleuCorpusMetric", "BleuPrecisionRecallMetric", \
-        "EmbSimilarityPrecisionRecallMetric"]
+        "EmbSimilarityPrecisionRecallMetric", "AccuracyMetric"]

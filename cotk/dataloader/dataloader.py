@@ -11,8 +11,8 @@ class Dataloader(LoadClassInterface, metaclass=DocStringInheritor):
 	def __init__(self):
 		pass
 
-class GenerationBase(Dataloader):
-	r"""Base class for all language generation datasets. This is an abstract class.
+class LanguageProcessingBase(Dataloader):
+	r"""Base class for all language processing tasks. This is an abstract class.
 
 	Arguments:{ARGUMENTS}
 
