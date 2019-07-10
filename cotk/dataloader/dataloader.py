@@ -4,6 +4,7 @@ A module for dataloader
 import random
 from .._utils import trim_before_target
 from .._utils.metaclass import DocStringInheritor, LoadClassInterface
+from ..metric import MetricChain, PerplexityMetric, BleuCorpusMetric, SingleTurnDialogRecorder
 
 class Dataloader(LoadClassInterface, metaclass=DocStringInheritor):
 	'''Base class of Dataloader.
@@ -44,10 +45,10 @@ class LanguageProcessingBase(Dataloader):
 
 		# initialize by default value. (can be overwritten by subclass)
 		self.ext_vocab = ext_vocab or ["<pad>", "<unk>", "<go>", "<eos>"]
-		self.pad_id = self.ext_vocab.index("<pad>")
-		self.unk_id = self.ext_vocab.index("<unk>")
-		self.go_id = self.ext_vocab.index("<go>")
-		self.eos_id = self.ext_vocab.index("<eos>")
+		self.pad_id = 0
+		self.unk_id = 1
+		self.go_id = 2
+		self.eos_id = 3
 		self.key_name = key_name or ["train", "dev", "test"]
 
 		# initialize by subclass
@@ -285,3 +286,243 @@ class LanguageProcessingBase(Dataloader):
 		if trim:
 			index = self.trim_index(index)
 		return list(map(lambda word: self.all_vocab_list[word], index))
+
+
+try:
+	from pytorch_pretrained_bert import BertTokenizer
+	import numpy as np
+except ImportError as err:
+	from .._utils.imports import DummyObject
+	BertTokenizer = DummyObject(err)
+
+class BERTLanguageProcessingBase(LanguageProcessingBase):
+	r"""Base class for all BERT-based language processing with BERT tokenizer.
+	This is an abstract class.
+
+	Arguments:{ARGUMENTS}
+
+	Attributes:{ATTRIBUTES}
+	"""
+
+	ARGUMENTS = LanguageProcessingBase.ARGUMENTS
+	ATTRIBUTES = LanguageProcessingBase.ATTRIBUTES
+
+	def __init__(self, \
+					key_name=None, \
+					bert_vocab='bert-base-uncased'):
+
+		# initialize by default value. (can be overwritten by subclass)
+		self.ext_vocab = ["[PAD]", "[UNK]", "[CLS]", "[SEP]"]
+
+		self.tokenizer = BertTokenizer.from_pretrained(bert_vocab)
+		self._build_bert_vocab()
+
+		self.bert_data = {}
+
+		super().__init__(self.ext_vocab, key_name)
+
+		self.pad_id = self.ext_vocab.index("[PAD]")
+		self.unk_id = self.ext_vocab.index("[UNK]")
+		self.go_id = self.ext_vocab.index("[CLS]")
+		self.eos_id = self.ext_vocab.index("[SEP]")
+
+		self._build_ids_to_bert_ids()
+
+	def _build_bert_vocab(self):
+		self.bert_word2id = dict(self.tokenizer.vocab)
+		self.bert_id2word = [None] * len(self.bert_word2id)
+		for key, value in self.bert_word2id.items():
+			self.bert_id2word[value] = key
+
+		self.bert_pad_id = self.bert_word2id["[PAD]"]
+		self.bert_unk_id = self.bert_word2id["[UNK]"]
+		self.bert_go_id = self.bert_word2id["[CLS]"]
+		self.bert_eos_id = self.bert_word2id["[SEP]"]
+
+	def _build_ids_to_bert_ids(self):
+		self.id2bertid = {}
+		self.bertid2id = {}
+		for key, value in self.bert_word2id.items():
+			self.id2bertid[self.word2id[key]] = value
+			self.bertid2id[value] = self.word2id[key]
+
+	def tokenize(self, sentence):
+		'''Convert sentence(str) to list of token(str)
+
+		Arguments:
+				sentence (str)
+
+		Returns:
+				sent (list): list of token(str)
+		'''
+		return self.tokenizer.tokenize(sentence)
+
+	def convert_tokens_to_bert_ids(self, sent):
+		'''Convert list of token(str) to list of bert id(int)
+
+		Arguments:
+				sent (list): list of token(str)
+
+		Returns:
+				bert_ids (list): list of bert id(int)
+		'''
+		return self.tokenizer.convert_tokens_to_ids(sent)
+
+	def convert_bert_ids_to_ids(self, sent, invalid_vocab=False):
+		'''Convert list of bert id(int) to list of id(int)
+
+		Arguments:
+				sent (list): list of bert id(int)
+
+		Returns:
+				ids (list): list of id(int)
+		'''
+		new_sent = []
+		for bert_id in sent:
+			new_id = self.bertid2id[bert_id]
+			if new_id >= self.vocab_size and not invalid_vocab:
+				new_id = self.unk_id
+			new_sent.append(new_id)
+		return new_sent
+
+	def convert_tokens_to_ids(self, sent, invalid_vocab=False):
+		'''Convert list of token(str) to list of id(int)
+
+		Arguments:
+				sent (list): list of token(str)
+
+		Returns:
+				ids (list): list of id(int)
+		'''
+		return self.sen_to_index(sent, invalid_vocab=invalid_vocab)
+
+	def convert_ids_to_tokens(self, index, trim=True):
+		'''Convert list of id(int) to list of token(str)
+
+		Arguments:
+				index (list): list of id(int)
+
+		Returns:
+				sent (list): list of token(str)
+		'''
+		return self.index_to_sen(index, trim=trim)
+
+	def convert_ids_to_bert_ids(self, index):
+		'''Convert list of id(int) to list of bert id(int)
+
+		Arguments:
+				index (list): list of id(int)
+
+		Returns:
+				bert_ids (list): list of bert id(int)
+		'''
+		return list(map(lambda word: self.id2bertid[word], index))
+
+	def convert_bert_ids_to_tokens(self, sent, trim=True):
+		'''Convert list of bert id(int) to list of token(str)
+
+		Arguments:
+				sent (list): list of bert id(int)
+
+		Returns:
+				(list): list of token(str)
+		'''
+		if trim:
+			sent = trim_before_target(list(sent), self.bert_eos_id)
+			idx = len(sent)
+			while idx > 0 and sent[idx-1] == self.bert_pad_id:
+				idx -= 1
+			sent = sent[:idx]
+		return list(map(lambda word: self.bert_id2word[word], sent))
+
+	def get_batch(self, key, index):
+		'''Get a batch of specified `index`.
+
+		Arguments:
+			key (str): must be contained in `key_name`
+			index (list): a list of specified index
+
+		Returns:
+			(dict): A dict at least contains:
+
+				* post_length (:class:`numpy.array`): A 1-d array, the length of post in each batch.
+			  	  Size: `[batch_size]`
+				* post (:class:`numpy.array`): A 2-d padding array containing id of words in posts.
+			  	  Only provide valid words. `unk_id` will be used if a word is not valid.
+			  	  Size: `[batch_size, max(sent_length)]`
+				* post_allvocabs (:class:`numpy.array`): A 2-d padding array containing id of words in posts.
+			  	  Provide both valid and invalid vocabs.
+			  	  Size: `[batch_size, max(sent_length)]`
+			  	* post_bert (:class:`numpy.array`): A 2-d padding array containing BERT id of words in posts.
+			  	  Size: `[batch_size, max(sent_length)]`
+				* resp_length (:class:`numpy.array`): A 1-d array, the length of response in each batch.
+			  	  Size: `[batch_size]`
+				* resp (:class:`numpy.array`): A 2-d padding array containing id of words in responses.
+			  	  Only provide valid vocabs. `unk_id` will be used if a word is not valid.
+			  	  Size: `[batch_size, max(sent_length)]`
+				* resp_allvocabs (:class:`numpy.array`):
+				  A 2-d padding array containing id of words in responses.
+			  	  Provide both valid and invalid vocabs.
+			  	  Size: `[batch_size, max(sent_length)]`
+			  	* resp_bert (:class:`numpy.array`):
+			  	  A 2-d padding array containing BERT id of words in responses.
+			  	  Size: `[batch_size, max(sent_length)]`
+		'''
+		if key not in self.key_name:
+			raise ValueError("No set named %s." % key)
+		res = {}
+		batch_size = len(index)
+		res["post_length"] = np.array(list(map(lambda i: len(self.data[key]['post'][i]), index)))
+		res["resp_length"] = np.array(list(map(lambda i: len(self.data[key]['resp'][i]), index)))
+		res_post = res["post"] = np.zeros((batch_size, np.max(res["post_length"])), dtype=int)
+		res_resp = res["resp"] = np.zeros((batch_size, np.max(res["resp_length"])), dtype=int)
+		res_post_bert = res["post_bert"] = np.zeros((batch_size, np.max(res["post_length"])), dtype=int)
+		res_resp_bert = res["resp_bert"] = np.zeros((batch_size, np.max(res["resp_length"])), dtype=int)
+		for i, j in enumerate(index):
+			post = self.data[key]['post'][j]
+			resp = self.data[key]['resp'][j]
+			res_post[i, :len(post)] = post
+			res_resp[i, :len(resp)] = resp
+
+			post_bert = self.data[key]['post_bert'][j]
+			resp_bert = self.data[key]['resp_bert'][j]
+			res_post_bert[i, :len(post_bert)] = post_bert
+			res_resp_bert[i, :len(resp_bert)] = resp_bert
+
+		res["post_allvocabs"] = res_post.copy()
+		res["resp_allvocabs"] = res_resp.copy()
+		res_post[res_post >= self.valid_vocab_len] = self.unk_id
+		res_resp[res_resp >= self.valid_vocab_len] = self.unk_id
+
+		return res
+
+	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob"):
+		'''Get metric for teacher-forcing mode.
+
+		It contains:
+
+		* :class:`.metric.PerplexityMetric`
+
+		Arguments:
+			gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerplexityMetric`
+		'''
+		metric = MetricChain()
+		metric.add_metric(PerplexityMetric(self, gen_log_prob_key=gen_log_prob_key))
+		return metric
+
+	def get_inference_metric(self, gen_key="gen"):
+		'''Get metric for inference.
+
+		It contains:
+
+		* :class:`.metric.BleuCorpusMetric`
+		* :class:`.metric.SingleDialogRecorder`
+
+		Arguments:
+			gen_key (str): default: "gen". Refer to :class:`.metric.BleuCorpusMetric` or
+			               :class:`.metric.SingleDialogRecorder`
+		'''
+		metric = MetricChain()
+		metric.add_metric(BleuCorpusMetric(self, gen_key=gen_key))
+		metric.add_metric(SingleTurnDialogRecorder(self, gen_key=gen_key))
+		return metric

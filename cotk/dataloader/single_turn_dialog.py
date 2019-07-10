@@ -1,13 +1,17 @@
 '''
 A module for single turn dialog.
 '''
+import time
 from collections import Counter
 from itertools import chain
+import multiprocessing
+from multiprocessing import Pool
+import tqdm
 
 import numpy as np
 
 from .._utils.file_utils import get_resource_file_path
-from .dataloader import LanguageProcessingBase
+from .dataloader import LanguageProcessingBase, BERTLanguageProcessingBase
 from ..metric import MetricChain, PerplexityMetric, BleuCorpusMetric, SingleTurnDialogRecorder
 
 # pylint: disable=W0223
@@ -224,6 +228,138 @@ class OpenSubtitles(SingleTurnDialog):
 		data_size = {}
 		for key in self.key_name:
 			data[key] = {}
+
+			data[key]['post'] = list(map(line2id, origin_data[key]['post']))
+			data[key]['resp'] = list(map(line2id, origin_data[key]['resp']))
+			data_size[key] = len(data[key]['post'])
+			vocab = list(chain(*(origin_data[key]['post'] + origin_data[key]['resp'])))
+			vocab_num = len(vocab)
+			oov_num = len(list(filter(lambda word: word not in word2id, vocab)))
+			invalid_num = len( \
+				list( \
+					filter( \
+						lambda word: word not in valid_vocab_set, \
+						vocab))) - oov_num
+			length = list(map(len, origin_data[key]['post'] + origin_data[key]['resp']))
+			cut_num = np.sum(np.maximum(np.array(length) - self._max_sent_length + 1, 0))
+			print("%s set. invalid rate: %f, unknown rate: %f, max length before cut: %d, \
+					cut word rate: %f" % \
+					(key, invalid_num / vocab_num, oov_num / vocab_num, max(length), cut_num / vocab_num))
+		return vocab_list, valid_vocab_len, data, data_size
+
+class BERTOpenSubtitles(BERTLanguageProcessingBase):
+	'''A dataloader for OpenSubtitles dataset.
+
+	Arguments:
+		file_id (str): a str indicates the source of OpenSubtitles dataset.
+		min_vocab_times (int): A cut-off threshold of `UNK` tokens. All tokens appear
+			less than `min_vocab_times`	will be replaced by `<unk>`. Default: 10.
+		max_sent_length (int): All sentences longer than `max_sen_length` will be shortened
+			to first `max_sen_length` tokens. Default: 50.
+		invalid_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
+			not less than `invalid_vocab_times` in the **whole dataset** (except valid words) will be
+			marked as invalid vocabs. Otherwise, they are unknown words, both in training or
+			testing stages. Default: 0 (No unknown words).
+		bert_vocab (str): The vocab file of BERT used for this task. It should be a bert model name
+							or local path. Default: `bert-base-uncased`.
+
+	Refer to :class:`.BERTLanguageProcessingBase` for attributes and methods.
+
+	References:
+		[1] http://opus.nlpl.eu/OpenSubtitles.php
+
+		[2] P. Lison and J. Tiedemann, OpenSubtitles2016: Extracting Large Parallel Corpora from
+		Movie and TV Subtitles. LREC 2016.
+	'''
+
+	def __init__(self, file_id, min_vocab_times=10, \
+			max_sent_length=50, invalid_vocab_times=0, \
+			bert_vocab='bert-base-uncased'):
+		self._file_id = file_id
+		self._file_path = get_resource_file_path(file_id)
+		self._min_vocab_times = min_vocab_times
+		self._max_sent_length = max_sent_length
+		self._invalid_vocab_times = invalid_vocab_times
+		super(BERTOpenSubtitles, self).__init__(bert_vocab=bert_vocab)
+
+	@classmethod
+	def _run_tokenize(cls, ele):
+		def _tokenize(tokenizer, line):
+			tokens = tokenizer.tokenize('[CLS] %s [SEP]' % (line))
+			bert_ids = tokenizer.convert_tokens_to_ids(tokens)
+			return tokens, bert_ids
+		(post, resp) = ele
+		post_tokens, post_bert_ids = _tokenize(cls.tokenizer, post)
+		resp_tokens, resp_bert_ids = _tokenize(cls.tokenizer, resp)
+		return post_tokens, post_bert_ids, resp_tokens, resp_bert_ids
+
+	@classmethod
+	def _set_tokenizer(cls, tokenizer):
+		cls.tokenizer = tokenizer
+
+	def _mp_process(self, posts, resps):
+		tasks = ((post, resp) for post, resp in zip(posts, resps))
+
+		post_tokens, post_bert_ids = [], []
+		resp_tokens, resp_bert_ids = [], []
+		pool = Pool(multiprocessing.cpu_count(), \
+	      initializer=self._set_tokenizer, initargs=(self.tokenizer, ))
+		for _post_tokens, _post_bert_ids, _resp_tokens, _resp_bert_ids in \
+			tqdm.tqdm(pool.imap_unordered(self._run_tokenize, tasks, chunksize=500), \
+			total=len(posts)):
+			post_tokens.append(_post_tokens)
+			post_bert_ids.append(_post_bert_ids[:self._max_sent_length])
+			resp_tokens.append(_resp_tokens)
+			resp_bert_ids.append(_resp_bert_ids[:self._max_sent_length])
+		pool.close()
+		pool.join()
+
+		return post_tokens, post_bert_ids, resp_tokens, resp_bert_ids
+
+	def _load_data(self):
+		r'''Loading dataset, invoked by `BERTLanguageProcessingBase.__init__`
+		'''
+		print('begin load data...')
+		begin_time = time.time()
+		origin_data = {}
+		for key in self.key_name:
+			f_file = open("%s/opensub_pair_%s.post" % (self._file_path, key))
+			g_file = open("%s/opensub_pair_%s.response" % (self._file_path, key))
+			post_tokens, post_bert_ids, resp_tokens, resp_bert_ids = \
+						self._mp_process(f_file.readlines(), g_file.readlines())
+			origin_data[key] = {}
+			origin_data[key]['post'] = post_tokens
+			origin_data[key]['resp'] = resp_tokens
+			origin_data[key]['post_bert'] = post_bert_ids
+			origin_data[key]['resp_bert'] = resp_bert_ids
+
+		print('finish tokenizing sentences...%f' % (time.time() - begin_time))
+
+		raw_vocab_list = list(chain(*(origin_data['train']['post'] + origin_data['train']['resp'])))
+		# Important: Sort the words preventing the index changes between different runs
+		vocab = sorted(Counter(raw_vocab_list).most_common(), key=lambda pair: (-pair[1], pair[0]))
+		left_vocab = list(filter(lambda x: x[1] >= self._min_vocab_times, vocab))
+		vocab_list = self.ext_vocab + [x[0] for x in left_vocab if x[0] not in self.ext_vocab]
+		valid_vocab_len = len(vocab_list)
+		valid_vocab_set = set(vocab_list)
+
+		left_vocab = list(filter(lambda x: x not in valid_vocab_set, self.bert_id2word))
+		vocab_list.extend(left_vocab)
+
+		print("valid vocab list length = %d" % valid_vocab_len)
+		print("vocab list length = %d" % len(vocab_list))
+
+		word2id = {w: i for i, w in enumerate(vocab_list)}
+		line2id = lambda line: ( \
+						list(map(lambda word: word2id[word], line)) \
+					)[:self._max_sent_length]
+
+		data = {}
+		data_size = {}
+		for key in self.key_name:
+			data[key] = {}
+			data[key]['post_bert'] = origin_data[key]['post_bert']
+			data[key]['resp_bert'] = origin_data[key]['resp_bert']
 
 			data[key]['post'] = list(map(line2id, origin_data[key]['post']))
 			data[key]['resp'] = list(map(line2id, origin_data[key]['resp']))
