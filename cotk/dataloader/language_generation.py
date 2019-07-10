@@ -103,7 +103,7 @@ class LanguageGeneration(LanguageProcessingBase):
 					gen_log_prob_key=gen_log_prob_key))
 		return metric
 
-	def get_inference_metric(self, gen_key="gen", sample=1000, seed=1229):
+	def get_inference_metric(self, gen_key="gen", sample=1000, seed=1229, cpu_count=None):
 		'''Get metrics for inference. In other words, this function provides metrics for
 		language generation tasks.
 
@@ -122,17 +122,23 @@ class LanguageGeneration(LanguageProcessingBase):
 				Refer to :class:`.metric.SelfBleuCorpusMetric`. Default: ``1000``.
 			seed (int): Random seed for sampling.
 				Refer to :class:`.metric.SelfBleuCorpusMetric`. Default: ``1229``.
-
+			cpu_count (int): Number of used cpu for multiprocessing.
+				Refer to :class:`.metric.SelfBleuCorpusMetric`. Default: ``None``.
 		Returns:
 			A :class:`.metric.MetricChain` object.
 		'''
 		metric = MetricChain()
-		metric.add_metric(SelfBleuCorpusMetric(self, gen_key=gen_key, sample=sample, seed=seed))
+		metric.add_metric(SelfBleuCorpusMetric(self, \
+					gen_key=gen_key, \
+					sample=sample, \
+					seed=seed, \
+					cpu_count=cpu_count))
 		metric.add_metric(FwBwBleuCorpusMetric(self, \
 					reference_test_key="sent", \
 					gen_key=gen_key, \
 					sample=sample, \
-					seed=seed))
+					seed=seed, \
+					cpu_count=cpu_count))
 		metric.add_metric(LanguageGenerationRecorder(self, gen_key=gen_key))
 		return metric
 
