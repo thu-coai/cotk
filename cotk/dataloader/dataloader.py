@@ -385,28 +385,6 @@ class BERTLanguageProcessingBase(LanguageProcessingBase):
 			new_sent.append(new_id)
 		return new_sent
 
-	def convert_tokens_to_ids(self, sent, invalid_vocab=False):
-		'''Convert list of token(str) to list of id(int)
-
-		Arguments:
-				sent (list): list of token(str)
-
-		Returns:
-				ids (list): list of id(int)
-		'''
-		return self.sen_to_index(sent, invalid_vocab=invalid_vocab)
-
-	def convert_ids_to_tokens(self, index, trim=True):
-		'''Convert list of id(int) to list of token(str)
-
-		Arguments:
-				index (list): list of id(int)
-
-		Returns:
-				sent (list): list of token(str)
-		'''
-		return self.index_to_sen(index, trim=trim)
-
 	def convert_ids_to_bert_ids(self, index):
 		'''Convert list of id(int) to list of bert id(int)
 
