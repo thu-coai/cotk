@@ -306,6 +306,22 @@ class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
 		self.res_prefix = 'BLEU-{}'.format(ngram)
 		self._hash_relevant_data([ngram, generated_num_per_context])
 
+	def _replace_unk(self, _input, _target=-1):
+		'''Auxiliary function for replacing the unknown words:
+
+		Arguments:
+			_input (list): the references or hypothesis.
+			_target: the target word index used to replace the unknown words.
+
+		Returns:
+
+			* list: processed result.
+		'''
+		output = []
+		for ele in _input:
+			output.append(_target if ele == self.dataloader.unk_id else ele)
+		return output
+
 	def _score(self, gen, reference):
 		r'''Score function of BLEU-ngram precision and recall.
 
@@ -316,6 +332,8 @@ class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
 		Returns:
 			int: score \in [0, 1].
 		'''
+		print(gen)
+		gen = self._replace_unk(gen)
 		return sentence_bleu([reference], gen, self.weights, SmoothingFunction().method1)
 
 class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
@@ -825,6 +843,25 @@ class BleuCorpusMetric(MetricBase):
 			self.refs.append([reference])
 		self._hash_relevant_data(relevant_data)
 
+	def _replace_unk(self, _input, _target=-1):
+		'''Auxiliary function for replacing the unknown words:
+
+		Arguments:
+			_input (list): the references or hypothesis.
+			_target: the target word index used to replace the unknown words.
+
+		Returns:
+
+			* list: processed result.
+		'''
+		output = []
+		for _list in _input:
+			_output = []
+			for ele in _list:
+				_output.append(_target if ele == self.dataloader.unk_id else ele)
+			output.append(_output)
+		return output
+
 	def close(self):
 		'''
 		Returns:
@@ -835,6 +872,7 @@ class BleuCorpusMetric(MetricBase):
 			  for same evaluation settings.
 		'''
 		result = super().close()
+		self.hyps = self._replace_unk(self.hyps)
 		try:
 			result.update({"bleu": \
 				corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction().method7), \
@@ -891,7 +929,8 @@ class SelfBleuCorpusMetric(MetricBase):
 		for gen_sen in gen:
 			self.hyps.append(self.dataloader.trim_index(gen_sen))
 
-	def _run_f(self, ele):
+	@classmethod
+	def _run_f(cls, ele):
 		'''Auxiliary function for computing sentence bleu:
 
 		Arguments:
@@ -902,6 +941,25 @@ class SelfBleuCorpusMetric(MetricBase):
 			* int: **sentence-bleu** value.
 		'''
 		return sentence_bleu(ele[0], ele[1], smoothing_function=SmoothingFunction().method1)
+
+	def _replace_unk(self, _input, _target=-1):
+		'''Auxiliary function for replacing the unknown words:
+
+		Arguments:
+			_input (list): the references or hypothesis.
+			_target: the target word index used to replace the unknown words.
+
+		Returns:
+
+			* list: processed result.
+		'''
+		output = []
+		for _list in _input:
+			_output = []
+			for ele in _list:
+				_output.append(_target if ele == self.dataloader.unk_id else ele)
+			output.append(_output)
+		return output
 
 	def close(self):
 		'''
@@ -917,10 +975,11 @@ class SelfBleuCorpusMetric(MetricBase):
 		random.seed(self.seed)
 		random.shuffle(self.hyps)
 		ref = self.hyps[:self.sample]
+		_ref = self._replace_unk(ref)
 
 		bleu_irl = []
 		if self.sample >= 1000:
-			tasks = ((ref[:i]+ref[i+1:self.sample], ref[i]) for i in range(self.sample))
+			tasks = ((ref[:i]+ref[i+1:self.sample], _ref[i]) for i in range(self.sample))
 			pool = Pool(multiprocessing.cpu_count())
 			for ans in tqdm.tqdm(pool.imap_unordered(self._run_f, tasks, chunksize=20), total=self.sample):
 				bleu_irl.append(ans)
@@ -928,7 +987,7 @@ class SelfBleuCorpusMetric(MetricBase):
 			pool.join()
 		elif self.sample > 1:
 			for i in range(self.sample):
-				bleu_irl.append(self._run_f((ref[:i]+ref[i+1:], ref[i])))
+				bleu_irl.append(self._run_f((ref[:i]+ref[i+1:], _ref[i])))
 		self._hash_relevant_data([self.seed, self.sample])
 		res.update({"self-bleu" : 1.0 * sum(bleu_irl) / len(bleu_irl),\
 					"self-bleu hashvalue": self._hashvalue()})
@@ -946,7 +1005,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 		seed (int): random seed for sampling. Default: ``1229``.
 
 	Warning:
-		The calculation of ``hashvalue`` considers the actual sample size of hypotheses and 
+		The calculation of ``hashvalue`` considers the actual sample size of hypotheses and
 		references. Therefore ``hashvalue`` may vary with the size of hypothesis or references
 		if the size of them is smaller than ``sample``.
 	'''
@@ -981,7 +1040,8 @@ class FwBwBleuCorpusMetric(MetricBase):
 		for gen_sen in gen:
 			self.hyps.append(list(self.dataloader.trim_index(gen_sen)))
 
-	def _run_f(self, ele):
+	@classmethod
+	def _run_f(cls, ele):
 		'''Auxiliary function for computing sentence bleu:
 
 		Arguments:
@@ -992,6 +1052,25 @@ class FwBwBleuCorpusMetric(MetricBase):
 			* int: **sentence-bleu** value.
 		'''
 		return sentence_bleu(ele[0], ele[1], smoothing_function=SmoothingFunction().method1)
+
+	def _replace_unk(self, _input, _target=-1):
+		'''Auxiliary function for replacing the unknown words:
+
+		Arguments:
+			_input (list): the references or hypothesis.
+			_target: the target word index used to replace the unknown words.
+
+		Returns:
+
+			* list: processed result.
+		'''
+		output = []
+		for _list in _input:
+			_output = []
+			for ele in _list:
+				_output.append(_target if ele == self.dataloader.unk_id else ele)
+			output.append(_output)
+		return output
 
 	def close(self):
 		'''
@@ -1014,6 +1093,8 @@ class FwBwBleuCorpusMetric(MetricBase):
 		random.seed(self.seed)
 		random.shuffle(self.hyps)
 		random.shuffle(self.refs)
+
+		self.hyps = self._replace_unk(self.hyps)
 
 		bleu_irl_fw, bleu_irl_bw = [], []
 		if sample_hyps >= 1000:
@@ -1108,6 +1189,25 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 				self.hyps.append(list(self.dataloader.trim_index(gen_session[j])))
 				self.refs.append([list(self.dataloader.trim_index(ref_session[j])[1:])])
 
+	def _replace_unk(self, _input, _target=-1):
+		'''Auxiliary function for replacing the unknown words:
+
+		Arguments:
+			_input (list): the references or hypothesis.
+			_target: the target word index used to replace the unknown words.
+
+		Returns:
+
+			* list: processed result.
+		'''
+		output = []
+		for _list in _input:
+			_output = []
+			for ele in _list:
+				_output.append(_target if ele == self.dataloader.unk_id else ele)
+			output.append(_output)
+		return output
+
 	def close(self):
 		'''
 		Returns:
@@ -1119,6 +1219,8 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 		'''
 		result = super().close()
 		self._hash_relevant_data(self.refs)
+
+		self.hyps = self._replace_unk(self.hyps)
 
 		try:
 			result.update({"bleu": \

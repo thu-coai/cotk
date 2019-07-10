@@ -301,6 +301,14 @@ def generate_testcase(*args):
 	for p in itertools.product(*res):
 		yield tuple(itertools.chain(*p))
 
+def _replace_unk( _input, _target=-1):
+	output = []
+	for _list in _input:
+		_output = []
+		for ele in _list:
+			_output.append(_target if ele == 1 else ele)
+		output.append(_output)
+	return output
 
 bleu_precision_recall_test_parameter = generate_testcase(\
 	(zip(test_argument), "add"),
@@ -940,6 +948,7 @@ class TestBleuCorpusMetric:
 			resp_sen_processed = dataloader.trim_index(resp_sen[1:])
 			refs.append([resp_sen_processed])
 			gens.append(gen_sen_processed)
+		gens = _replace_unk(gens)
 		return corpus_bleu(refs, gens, smoothing_function=SmoothingFunction().method7)
 
 	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
@@ -1008,8 +1017,8 @@ class TestBleuCorpusMetric:
 
 	def test_bleu_bug(self):
 		dataloader = FakeDataLoader()
-		ref = [[2, 1, 3]]
-		gen = [[1]]
+		ref = [[2, 5, 3]]
+		gen = [[5]]
 		data = {self.default_reference_key: ref, self.default_gen_key: gen}
 		bcm = BleuCorpusMetric(dataloader)
 
@@ -1031,10 +1040,11 @@ class TestSelfBleuCorpusMetric:
 			gen_sen_processed = dataloader.trim_index(gen_sen)
 			gens.append(gen_sen_processed)
 		refs = copy.deepcopy(gens)
+		_refs = _replace_unk(refs)
 		bleu_irl = []
 		for i in range(len(gens)):
 			bleu_irl.append(sentence_bleu(
-				refs[:i]+refs[i+1:],refs[i], smoothing_function=SmoothingFunction().method1))
+				refs[:i]+refs[i+1:], _refs[i], smoothing_function=SmoothingFunction().method1))
 		return 1.0 * sum(bleu_irl) / len(bleu_irl)
 
 	def test_hashvalue(self):
@@ -1117,6 +1127,7 @@ class TestFwBwBleuCorpusMetric:
 			resp_sen_processed = dataloader.trim_index(resp_sen[1:])
 			refs.append(resp_sen_processed)
 			gens.append(gen_sen_processed)
+		gens = _replace_unk(gens)
 		bleu_irl_bw, bleu_irl_fw = [], []
 		for i in range(len(gens)):
 			bleu_irl_fw.append(sentence_bleu(refs, gens[i], smoothing_function=SmoothingFunction().method1))
@@ -1226,6 +1237,7 @@ class TestMultiTurnBleuCorpusMetric:
 				resp_sen_processed = dataloader.trim_index(resp_sen)
 				gens.append(gen_sen_processed)
 				refs.append([resp_sen_processed[1:]])
+		gens = _replace_unk(gens)
 		return corpus_bleu(refs, gens, smoothing_function=SmoothingFunction().method7)
 
 	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
@@ -1299,8 +1311,8 @@ class TestMultiTurnBleuCorpusMetric:
 
 	def test_bleu(self):
 		dataloader = FakeMultiDataloader()
-		ref = [[[2, 1, 3]]]
-		gen = [[[1]]]
+		ref = [[[2, 5, 3]]]
+		gen = [[[5]]]
 		turn_len = [1]
 		data = {self.default_reference_key: ref, self.default_gen_key: gen, self.default_turn_len_key: turn_len}
 		mtbcm = MultiTurnBleuCorpusMetric(dataloader)
