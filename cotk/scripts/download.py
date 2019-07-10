@@ -81,8 +81,8 @@ r"""A string indicates model path. It can be one of following:
 		entry.LOGGER.info("Codes from id %d fetched.")
 	else:
 		# download from online git repo
-		patterns_2 = r'(?:https?://github\.com/)?(\w+)/(\w+)/?'
-		patterns_3 = r'(?:https?://github\.com/)?(\w+)/(\w+)/(?:(?:tree|commit)/)?(\w+)/?'
+		patterns_2 = r'(?:https?://github\.com/)?([^\s/]+)/([^\s/]+)/?'
+		patterns_3 = r'(?:https?://github\.com/)?([^\s/]+)/([^\s/]+)/(?:(?:tree|commit)/)?([^\s/]+)/?'
 		match_res = re.fullmatch(patterns_2, cargs.model)
 		if match_res:
 			git_user, git_repo = match_res.groups()
