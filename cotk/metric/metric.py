@@ -31,7 +31,8 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 			The key of reference sentences. Default: ``ref_allvocabs``."""
 	FORWARD_REFERENCE_ALLVOCABS_ARGUMENTS = \
 				r"""* **data[reference_allvocabs_key]** (list or :class:`numpy.ndarray`):
-				  A 2-d jagged or padded array of int. Reference sentences with allvocabs in index form.
+				  A 2-d jagged or padded array of int. Reference sentences with
+				  :ref:`allvocabs <vocab_ref>` in index form.
 				  Contains start token (eg: ``<go>``) and end token (eg: ``<eos>``).
 				  Size: ``[batch_size, ~ref_sentence_length]``,
 				  where "~" means different sizes in this dimension is allowed."""
@@ -66,9 +67,9 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 			The key of reference sentences. Default: ``multi_turn_ref_allvocabs``."""
 	FORWARD_MULTI_TURN_REFERENCE_ALLVOCABS_ARGUMENTS = \
 				r"""* **data[multi_turn_reference_allvocabs_key]** (list or :class:`numpy.ndarray`):
-				  A 3-d jagged or padded array of int. Multi-turn reference sentences with all vocabs
-				  with all vocabs. Contains start token (eg: ``<go>``) and end token (eg: ``<eos>``).
-				  Size: ``[batch_size, ~turn_length, ~sentence_length]``,
+				  A 3-d jagged or padded array of int. Multi-turn reference sentences with
+				  :ref:`all vocabs <vocab_ref>`. Contains start token (eg: ``<go>``) and
+				  end token (eg: ``<eos>``). Size: ``[batch_size, ~turn_length, ~sentence_length]``,
 				  where "~" means different sizes in this dimension is allowed."""
 	FORWARD_MULTI_TURN_REFERENCE_ALLVOCABS_ARGUMENTS_WITH_TORCH = \
 		FORWARD_MULTI_TURN_REFERENCE_ALLVOCABS_ARGUMENTS.replace("list or :class:`numpy.ndarray`", \
@@ -423,7 +424,8 @@ class PerplexityMetric(MetricBase):
 		{MetricBase.REFERENCE_LEN_KEY_ARGUMENTS}
 		gen_log_prob_key (str): The key of **log** probability over words.
 			Default: ``gen_log_prob``.
-		invalid_vocab (bool): Whether ``gen_log_prob`` contains invalid vocab. Default: ``False``.
+		invalid_vocab (bool): Whether ``gen_log_prob`` contains :ref:`invalid vocab <vocab_ref>`.
+			Default: ``False``.
 		full_check (bool): Whether perform a full check on ``gen_log_prob`` to make sure the sum
 			of probability is 1. Otherwise, a random check will be performed for efficiency.
 			If pytorch is used, a full check is always performed and this argument will be ignored.
@@ -454,8 +456,8 @@ class PerplexityMetric(MetricBase):
 		self.gen_unk_log_prob = []
 
 	def forward(self, data):
-		'''Processing a batch of data. Smoothing will be performed for invalid vocabs.
-		Unknowns vocabs will be ignored.
+		'''Processing a batch of data. Smoothing will be performed for :ref:`invalid vocabs <vocab_ref>`.
+		:ref:`Unknowns vocabs <vocab_ref>` will be ignored.
 
 		Arguments:
 			data (dict): A dict at least contains the following keys:
@@ -713,7 +715,8 @@ class MultiTurnPerplexityMetric(MetricBase):
 		{MetricBase.MULTI_TURN_REFERENCE_LEN_KEY_ARGUMENTS}
 		gen_log_prob_key (str): The key of **log** probability over words.
 			Default: ``multi_turn_gen_log_prob``.
-		invalid_vocab (bool): whether ``gen_log_prob`` contains invalid vocab. Default: ``False``.
+		invalid_vocab (bool): whether ``gen_log_prob`` contains :ref:`invalid vocab <vocab_ref>`.
+			Default: ``False``.
 		full_check (bool): whether perform full checks on ``gen_log_prob`` to make sure the sum
 			of probability is 1. Otherwise, a random check will be performed for efficiency.
 			Default: ``False``.
@@ -1008,7 +1011,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 
 	Arguments:
 		{MetricBase.DATALOADER_ARGUMENTS}
-		reference_test_key (str): Reference sentences with all vocabs in test data
+		reference_test_key (str): Reference sentences with :ref:`all vocabs <vocab_ref>` in test data
 			are passed to :func:`forward` by ``dataloader.data["test"][self.reference_test_key]``.
 		{MetricBase.GEN_KEY_ARGUMENTS}
 		sample (int): Number of examples sampled from the generated sentences. Default: ``1000``.
@@ -1257,9 +1260,9 @@ class SingleTurnDialogRecorder(MetricBase):
 
 	Arguments:
 		{MetricBase.DATALOADER_ARGUMENTS}
-		post_allvocabs_key (str): The key of dialog posts with allvocabs.
+		post_allvocabs_key (str): The key of dialog posts with :ref:`allvocabs <vocab_ref>`.
 			Default: ``post_allvocabs``.
-		resp_allvocabs_key (str): The key of dialog responses with allvocabs.
+		resp_allvocabs_key (str): The key of dialog responses with :ref:`allvocabs <vocab_ref>`.
 			Default: ``resp_allvocabs``.
 		{MetricBase.GEN_KEY_ARGUMENTS}
 	'''
@@ -1327,10 +1330,10 @@ class MultiTurnDialogRecorder(MetricBase):
 
 	Arguments:
 		{MetricBase.DATALOADER_ARGUMENTS}
-		multi_turn_context_allvocabs_key (str): The key of dialog context with allvocabs.
-			Default: ``multi_turn_context_allvocabs``.
-		multi_turn_reference_allvocabs_key (str): The key of dialog references with allvocabs.
-			Default: ``multi_turn_ref_allvocabs``.
+		multi_turn_context_allvocabs_key (str): The key of dialog context with
+			:ref:`allvocabs <vocab_ref>`. Default: ``multi_turn_context_allvocabs``.
+		multi_turn_reference_allvocabs_key (str): The key of dialog references with
+			:ref:`allvocabs <vocab_ref>`. Default: ``multi_turn_ref_allvocabs``.
 		{MetricBase.MULTI_TURN_GEN_KEY_ARGUMENTS}
 		{MetricBase.MULTI_TURN_LENGTH_KEY_ARGUMENTS}
 	'''
