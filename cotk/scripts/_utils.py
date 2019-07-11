@@ -39,11 +39,11 @@ def get_repo_remote():
 			"@{upstream}"], stdout=PIPE, stderr=PIPE)
 	err = git_upstream.stderr.decode()
 	if err:
-		if re.match(r"fatal: no upstream configured for branch '\s*?'", err):
+		if re.match(r"fatal: no upstream configured for branch", err):
 			raise RuntimeError("No upstream branch, you have to set upstream branch for your repo. \
 E.g. git push -u origin master. ")
 		else:
-			raise RuntimeError("Unkown error when getting upstream branch：%s" % err)
+			raise RuntimeError("Unkown error when getting upstream branch: %s" % err)
 
 	upstream_out = git_upstream.stdout.decode().split('/')
 	remote_name, remote_branch = upstream_out[0], upstream_out[1] #pylint: disable=unused-variable
@@ -75,7 +75,7 @@ def get_repo_commit():
 def assert_commit_exist(git_user, git_repo, git_commit):
 	'''Assert commit is available'''
 	url = "https://github.com/{}/{}/archive/{}.zip".format(git_user, git_repo, git_commit)
-	res = requests.head(url)
+	res = requests.head(url, allow_redirects=True)
 	if not res.ok:
 		raise RuntimeError("Commit {} does not exist on github:{}/{}. \
 It should be public.".format( \

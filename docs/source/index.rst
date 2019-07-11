@@ -18,6 +18,7 @@ your models fairly with baselines.
    :caption: Tutorials
 
    notes/installation
+   notes/quickstart
    notes/tutorial_core
    notes/tutorial_cli
    notes/extend

@@ -21,8 +21,10 @@ However, this tutorial constructs neural networks with
 - pytorch >= 1.0.0
 - livelossplot (optional, just for showing loss)
 
-If you don't have a suitable environment, you can also run the codes
-on google colab. #TODO: FIX THE LINK
+
+You can click `here <https://github.com/thu-coai/cotk/blob/master/docs/notes/tutorial_core_1.ipynb>`__ for ipynb files. If you don't have a suitable environment,
+you can also run `the code <http://colab.research.google.com/github/thu-coai/cotk/blob/master/docs/source/notes/tutorial_core_1.ipynb>`__
+on google colab.
 
 Preparing the data
 ----------------------------------------
@@ -52,7 +54,7 @@ Therefore, we first construct a :class:`cotk.dataloader.MSCOCO` to load MSCOCO d
     INFO: source: default
     INFO: processor type: MSCOCO
 
-    100%|██████████| 1020154/1020154 [00:00<00:00, 1821805.36B/s]
+    100%|██████████| 1020154/1020154 [00:00<00:00, 1853831.54B/s]
 
     INFO: resource cached at /root/.cotk_cache/9e4c0afe33d98fa249e472206a39e5553d739234d0a27e055044ae8880e314b1_unzip/mscoco
     valid vocab list length = 2588
@@ -63,9 +65,11 @@ Therefore, we first construct a :class:`cotk.dataloader.MSCOCO` to load MSCOCO d
     Vocab Size: 2588
     First 10 tokens: ['<pad>', '<unk>', '<go>', '<eos>', '.', 'a', 'A', 'on', 'of', 'in']
     Dataset is split into: ['train', 'dev', 'test']
-    {'sent_length': array([15]), 'sent': array([[  2,   6,  67, 651, 549,  11,   5,  65,  89,  10, 115, 349,  83,
-            4,   3]]), 'sent_allvocabs': array([[  2,   6,  67, 651, 549,  11,   5,  65,  89,  10, 115, 349,  83,
-            4,   3]])}
+    {'sent': array([[  2,   6,  67, 651, 549,  11,   5,  65,  89,  10, 115, 349,  83,
+            4,   3]]),
+    'sent_allvocabs': array([[  2,   6,  67, 651, 549,  11,   5,  65,  89,  10, 115, 349,  83,
+            4,   3]]),
+    'sent_length': array([15])}
     ['<go>', 'A', 'blue', 'lamp', 'post', 'with', 'a', 'sign', 'for', 'the', 'yellow', 'brick', 'road', '.']
 
 
@@ -166,9 +170,14 @@ the help of ``cotk``. (It may takes several minites too train the model.)
 
  Out:
 
- .. code-block:: none
-    
+.. image:: training_loss.png
 
+
+.. code-block:: none
+
+    loss:
+        training   (min:    3.147, max:    6.560, cur:    3.235)
+    epoch 100/100
 
 Evaluations
 -----------------------------------------
@@ -202,6 +211,10 @@ section, we use it right now.
 
  .. code-block:: none
 
+    test set restart, 78 batches and 2 left
+    {'perplexity': 33.99345315581511,\n",
+     'perplexity hashvalue': b'O\\x10\\x1c)\\x86\\xf1\\xfe\\x10\\xce\\x1d!\\x97\\xc3\\x08m6Y\\xae\\xc3\\xe6I_8\\x1dg\\xf0\\x0bM\\xbb@\\xa58'}
+
 The codes above evaluated the model in teacher forcing mode, where every input
 token is the real data. 
 
@@ -216,7 +229,8 @@ Free Run
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A language model can also generate sentences by sending the
-generated token back to input in each step. We call it "freerun" or "inference" mode.
+generated token back to input in each step. We call it "freerun"
+or "inference" mode.
 
 ``Pytorch`` doesn't provide a convenience api for freerun, here we implement a
 simple version that all the prefixes will be recalculated at every step.
@@ -240,13 +254,40 @@ simple version that all the prefixes will be recalculated at every step.
         metric.forward({"gen": data['sent'][:, 1:].tolist()})
     pprint(metric.close(), width=250)
 
+Out:
+
+.. code-block:: none
+
+    100%|██████████| 1000/1000 [00:00<00:00, 1153.17it/s]
+    {'bw-bleu': 0.054939232761090494,
+     'fw-bleu': 0.2643063370185712,\n",
+     'fw-bw-bleu': 0.09096938998850655,\n",
+     'fw-bw-bleu hashvalue': b'0\\x18\\xdc1\\x7f\\x82\\xb6\\x01?\\x01\\x1c\\x1f\\x8c\\xcd\\x90\\xc5\\xaf\\xfe\\xd7\\x10\\xb7\\xd7\\xd0jr5\\xcfE\\\\#5B',
+     'gen': [['A', 'black', 'fire', 'hydrant', 'with', 'broccoli', 'on', 'a', 'plate', '.'],
+            ['A', 'small', 'cat', 'that', 'drinking', 'are', 'sitting', 'from', 'a', 'screen', '.'],
+            ['This', 'was', 'hydrant', 'at', 'a', 'kitchen', 'by', 'a', 'meal', '.'],
+            ['A', 'bath', 'room', 'with', 'a', 'bicycle', 'are', 'antique', '<unk>', ',', 'sink', 'and', 'patterned', 'photograph', 'and', 'fork', 'look', 'on', 'the', 'bed'],
+            ['Large', 'yellow', 'kitchen', 'with', 'one', 'and', '<unk>', 'neat', ',', 'kite', '.'],
+            ['A', 'young', 'girl', 'are', 'kneeling', 'a', 'tennis', 'match', 'during', 'tennis', 'of', 'her', 'bat', '.'],
+            ['A', 'zebra', 'leaned', 'across', 'a', 'city', 'street', '.'],
+            ['A', 'tennis', 'player', 'looks', 'by', 'a', 'wii', 'chocolate', 'strip', '.'],
+            ['A', 'woman', 'sitting', 'up', 'on', 'the', 'edge', 'of', 'luggage', '.'],
+            ['Old', '<unk>', 'right', 'driving', 'along', 'from', 'the', 'stairs', '.'],
+            ['A', 'close', 'up', 'with', 'a', 'colorful', 'heart', 'next', 'to', 'a', 'skateboard', '.'],
+            ['A', 'man', 'holding', 'a', 'skate', 'boarding', 'a', 'mountain', 'at', 'the', 'sun', 'man', 'flying', 'the', 'air', '.'],
+            ['An', 'airplane', 'with', 'speakers', 'on', 'a', 'surface', '.'],
+            ['A', '<unk>', '<unk>', 'on', 'the', 'two', 'conference', 'floors', '.'],
+            ['A', 'girl', 'holding', 'a', 'wii', 'screen', 'with', 'a', 'hot', 'Man', 'with', 'wii', 'face', 'in', 'formation', '.'],
+            ['Three', 'and', 'snowboards', 'a', 'video', 'game', 'during', 'the', 'beach', '.']],
+     'self-bleu': 0.04565576967736443,
+     'self-bleu hashvalue': b'\\x9f\\x11!\\xd3\\x98\\x8e\\xf4x\\x99C\\xef\\x18\\xc1\\xc0\\xb7I\\xee\\xc0\\xd8\\xee\\xe3\\xf1\"pg\\x16\\x05\\xceg\\x02%\\xf6'}
 
 Hash value
 ~~~~~~~~~~~~~~~~~~
 
 Hash value is for checking whether you use the test set correctly.
 We can refer to dashboard (TO BE ONLINE) for the state of art on this dataset,
-and we find our first hashvalue is correct.
+and we find our hashvalue is correct.
 
 However, if teacher forcing is tested as following codes, we will
 see a different hash value, which means the implementation is not correct.
@@ -256,13 +297,22 @@ see a different hash value, which means the implementation is not correct.
     metric = dataloader.get_teacher_forcing_metric(gen_log_prob_key="gen_log_prob")
     for i, data in enumerate(dataloader.get_batches("test", batch_size)):
         # convert numpy to torch.LongTensor
-        data['sent'] = torch.LongTensor(data['sent'][:, :10]) # shorten the input
-        data['sent_length'] = np.minimum(data['sent_length'], 10)
+        data['sent'] = torch.LongTensor(data['sent'])
         with torch.no_grad():
             net(data)
         assert "gen_log_prob" in data
         metric.forward(data)
+        if i >= 15: #ignore the following batches
+            break
     pprint(metric.close(), width=150)
+
+Out:
+
+.. code-block:: none
+
+    test set restart, 78 batches and 2 left
+    {'perplexity': 31.5929983966103, 'perplexity hashvalue': b\"\\x0c\\xfd9r\\xc7\\x8b_\\xf5\\xf7\\xf90\\xd1v\\x7f\\xd8Ua\\xc8g\\xdc\\xd3MV\\xeeH\\xe0\\x86\\xed@'\\x91\\x91\"}
+
 
 Additional: Word Vector
 ----------------------------------------
@@ -273,8 +323,13 @@ that help you downloading and get word vectors.
 
 .. code-block:: python
 
-    from cotk.wordvec import Glove
+    from cotk.wordvector import Glove
     wordvec = Glove("resources://Glove50d_small")
-    self.embedding_layer.weight = torch.Tensor(wordvec.load_matrix(dataloader.vocab_list, embedding_size))
+    self.embedding_layer.weight = nn.Parameter(torch.Tensor(wordvec.load(embedding_size, dataloader.vocab_list)))
 
 We can add these lines at the end of ``LanguageModel.__init__``.
+
+You can find the results and codes with pretrained word vector at
+`here <https://github.com/thu-coai/cotk/blob/master/docs/notes/tutorial_core_2.ipynb>`__ for ipynb files
+or run `the code <http://colab.research.google.com/github/thu-coai/cotk/blob/master/docs/source/notes/tutorial_core_2.ipynb>`__
+on google colab.

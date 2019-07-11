@@ -18,6 +18,7 @@ LOGGER = main.LOGGER
 REPORT_URL = main.REPORT_URL
 SHOW_URL = main.SHOW_URL
 QUERY_URL = main.QUERY_URL
+BACKUP_FILE = '.cotk_upload_backup'
 
 def run_model(entry, args):
 	'''Run the model and record the info of library'''
@@ -66,8 +67,8 @@ def upload_report(result_path, entry, args, \
 		"record_information": cotk_record_information, \
 		"result": json.dumps(result) \
 	}
-	LOGGER.info("Save your report locally at {}".format(entry.BACKUP_FILE))
-	json.dump(upload_information, open(entry.BACKUP_FILE, 'w'))
+	LOGGER.info("Save your report locally at {}".format(BACKUP_FILE))
+	json.dump(upload_information, open(BACKUP_FILE, 'w'))
 	LOGGER.info("Uploading your report...")
 	res = requests.post(REPORT_URL, {"data": upload_information, "token": token})
 	res = json.loads(res.text)
@@ -127,7 +128,7 @@ to check your changes.")
 		LOGGER.info("Your model has exited.")
 
 	if not cargs.only_run:
-		LOGGER.info("Collecting info for update...")
+		LOGGER.info("Collecting info for upload...")
 		upload_id = upload_report(cargs.result, cargs.entry, cargs.args, \
 			git_user, git_repo, git_commit, \
 			cotk_record_information, token)

@@ -6,6 +6,7 @@ import hashlib
 
 import numpy as np
 
+
 class UnorderedSha256:
 	'''
 		Using SHA256 on unordered elements
@@ -24,4 +25,4 @@ class UnorderedSha256:
 
 	def digest(self):
 		'''return unordered hashvalue'''
-		return bytes(self.result.tolist())
+		return bytes(self.result.tolist()).hex()

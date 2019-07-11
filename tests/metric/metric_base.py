@@ -238,6 +238,8 @@ test_hash_data = ['has_key', 'no_key']
 def same_data(A, B, exact_equal=True):
 	if type(A) != type(B):
 		return False
+	if isinstance(A, str):
+		return A == B
 	try:
 		if len(A) != len(B):
 			return False

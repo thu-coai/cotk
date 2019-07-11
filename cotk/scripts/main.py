@@ -14,7 +14,6 @@ SH.setFormatter(FORMAT)
 LOGGER.addHandler(SH)
 
 CONFIG_FILE = '.cotk_config'
-BACKUP_FILE = '.cotk_upload_backup'
 DASHBOARD_URL = os.getenv("COTK_DASHBOARD_URL", "") #TODO: add a online dash board url
 REPORT_URL = DASHBOARD_URL + "/upload"
 SHOW_URL = DASHBOARD_URL + "/show?id=%d"

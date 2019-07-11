@@ -6,3 +6,7 @@ new models fairly with baselines.
 """
 
 from ._utils import start_recorder, close_recorder
+
+from . import dataloader, metric, wordvector
+
+__all__ = ["dataloader", "metric", "wordvector", "start_recorder", "close_recorder"]
