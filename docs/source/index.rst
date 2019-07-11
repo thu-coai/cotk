@@ -15,9 +15,9 @@ your models fairly with baselines.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Notes
+   :caption: Tutorials
 
-   notes/quickstart
+   notes/installation
    notes/tutorial_core
    notes/tutorial_cli
    notes/extend
@@ -34,7 +34,7 @@ your models fairly with baselines.
 .. toctree::
    :glob:
    :maxdepth: 2
-   :caption: Model Tutorial
+   :caption: Model Zoo
 
    models/LanguageGeneration/index
    models/SingleTurnDialog/index

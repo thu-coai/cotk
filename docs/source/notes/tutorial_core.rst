@@ -33,12 +33,13 @@ Therefore, we first construct a :class:`cotk.dataloader.MSCOCO` to load MSCOCO d
 .. code-block:: python
 
     from cotk.dataloader import MSCOCO
+    from pprint import pprint
     dataloader = MSCOCO("resources://MSCOCO_small") # "resources://MSCOCO_small" is a predefined resources name
     print("Vocab Size:", dataloader.vocab_size)
     print("First 10 tokens:",  dataloader.vocab_list[:10])
     print("Dataset is split into:", dataloader.key_name)
     data = dataloader.get_batch("train", [0]) # get the sample of id 0
-    print(data)
+    pprint(data, width=200)
     print(dataloader.convert_ids_to_tokens(data['sent'][0]))
 
 .. rst-class:: sphx-glr-script-out
@@ -125,27 +126,29 @@ First we construct a simple GRU Language model using ``pytorch``.
 
             data["gen_log_prob"] = nn.LogSoftmax(dim=-1)(incoming)
 
-            return torch.stack(loss).mean()
-
+            if len(loss) > 0:
+                return torch.stack(loss).mean()
+            else:
+                return 0
 
 If you are familiar with GRU, you can see the codes constructed a
 network for predicting next token. Then, we will train our model with
-the help of ``cotk``.
+the help of ``cotk``. (It may takes several minites too train the model.)
 
 .. code-block:: python
 
-    net = LanguageModel()
-    optimizer = torch.optim.Adam(net.parameters(), lr=1e-3)
-    epoch_num = 100
-
     from livelossplot import PlotLosses
-    plot = PlotLosses()
-
     import numpy as np
+
+    net = LanguageModel()
+    optimizer = torch.optim.Adam(net.parameters(), lr=5e-3)
+    epoch_num = 100
+    batch_size = 16
+    plot = PlotLosses()
 
     for j in range(epoch_num):
         loss_arr = []
-        for data in dataloader.get_batches("train", batch_size=64):
+        for i, data in enumerate(dataloader.get_batches("train", batch_size)):
             # convert numpy to torch.LongTensor
             data['sent'] = torch.LongTensor(data['sent'])
             net.zero_grad()
@@ -153,6 +156,8 @@ the help of ``cotk``.
             loss_arr.append(loss.tolist())
             loss.backward()
             optimizer.step()
+            if i >= 40:
+                break # break for shorten time of an epoch
         plot.update({"loss": np.mean(loss_arr)})
         plot.draw()
         print("epoch %d/%d" % (j+1, epoch_num))
@@ -182,13 +187,14 @@ section, we use it right now.
 .. code-block:: python
 
     metric = dataloader.get_teacher_forcing_metric(gen_log_prob_key="gen_log_prob")
-    for i, data in enumerate(dataloader.get_batches("train", batch_size=64)):
+    for i, data in enumerate(dataloader.get_batches("test", batch_size)):
         # convert numpy to torch.LongTensor
         data['sent'] = torch.LongTensor(data['sent'])
         with torch.no_grad():
             net(data)
         assert "gen_log_prob" in data
         metric.forward(data)
+    pprint(metric.close(), width=150)
 
 .. rst-class:: sphx-glr-script-out
 
@@ -218,9 +224,9 @@ simple version that all the prefixes will be recalculated at every step.
 .. code-block:: python
 
     metric = dataloader.get_inference_metric(gen_key="gen")
-    generate_sample_num = 100
-    batch_size = 64
-    max_sent_length = 30
+    generate_sample_num = 1
+    max_sent_length = 20
+
     for i in range(generate_sample_num):
         # convert numpy to torch.LongTensor
         data['sent'] = torch.LongTensor([[dataloader.go_id] for _ in range(batch_size)])
@@ -228,11 +234,11 @@ simple version that all the prefixes will be recalculated at every step.
         for j in range(max_sent_length):
             with torch.no_grad():
                 net(data)
-                generated_token = torch.multinomal(data[:, -1], 1)
+                generated_token = torch.multinomial(data['gen_log_prob'].exp()[:, -1], 1)
             data['sent'] = torch.cat([data['sent'], generated_token], dim=-1)
 
-        metric.forward({"gen": data['sent'].tolist()})
-    print(metric.close())
+        metric.forward({"gen": data['sent'][:, 1:].tolist()})
+    pprint(metric.close(), width=250)
 
 
 Hash value
@@ -248,14 +254,15 @@ see a different hash value, which means the implementation is not correct.
 .. code-block:: python
 
     metric = dataloader.get_teacher_forcing_metric(gen_log_prob_key="gen_log_prob")
-    for i, data in enumerate(dataloader.get_batches("train", batch_size=64)):
+    for i, data in enumerate(dataloader.get_batches("test", batch_size)):
         # convert numpy to torch.LongTensor
-        data['sent'] = torch.Tensor(data['sent'][:10]) # shorten the input
+        data['sent'] = torch.LongTensor(data['sent'][:, :10]) # shorten the input
+        data['sent_length'] = np.minimum(data['sent_length'], 10)
         with torch.no_grad():
             net(data)
         assert "gen_log_prob" in data
         metric.forward(data)
-    print(metric.close())
+    pprint(metric.close(), width=150)
 
 Additional: Word Vector
 ----------------------------------------

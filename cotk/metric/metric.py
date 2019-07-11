@@ -339,7 +339,6 @@ class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
 		Returns:
 			int: score \in [0, 1].
 		'''
-		print(gen)
 		gen = self._replace_unk(gen)
 		return sentence_bleu([reference], gen, self.weights, SmoothingFunction().method1)
 
@@ -700,9 +699,6 @@ class PerplexityMetric(MetricBase):
 			self.resp = []
 			self.gen_valid_log_prob = []
 			self.gen_unk_log_prob = []
-
-		print(self.word_loss)
-		print(self.length_sum)
 
 		res.update({"perplexity": np.exp(self.word_loss / self.length_sum), \
 				"perplexity hashvalue": self._hashvalue()})
@@ -1390,8 +1386,6 @@ class MultiTurnDialogRecorder(MetricBase):
 				np.array(reference_allvocabs[i]), turn_length=turn_length[i], ignore_first_token=True))
 			self.gen_list.append(self.dataloader.convert_multi_turn_ids_to_tokens( \
 				np.array(gen[i]), turn_length=turn_length[i]))
-			print(turn_length[i])
-			print(len(self.reference_list[-1]))
 
 			if len(self.reference_list[-1]) != len(self.gen_list[-1]):
 				raise ValueError("Reference turn num %d != gen turn num %d." % \
