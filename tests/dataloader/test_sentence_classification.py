@@ -3,7 +3,7 @@ import copy
 import pytest
 from pytest_mock import mocker
 
-from cotk.dataloader import SingleTurnDialog, OpenSubtitles
+from cotk.dataloader import SentenceClassification, SST
 from cotk.metric import MetricBase
 
 def setup_module():
@@ -12,9 +12,9 @@ def setup_module():
 	import numpy as np
 	np.random.seed(0)
 
-class TestSingleTurnDialog():
+class TestSentenceClassification():
 	def base_test_init(self, dl):
-		assert isinstance(dl, SingleTurnDialog)
+		assert isinstance(dl, SentenceClassification)
 		assert isinstance(dl.ext_vocab, list)
 		assert dl.ext_vocab[:4] == ["<pad>", "<unk>", "<go>", "<eos>"]
 		assert [dl.pad_id, dl.unk_id, dl.go_id, dl.eos_id] == [0, 1, 2, 3]
@@ -32,15 +32,12 @@ class TestSingleTurnDialog():
 			assert dl.word2id[word] == i
 		assert dl.all_vocab_size == len(dl.all_vocab_list)
 		for key in dl.key_name:
-			post = dl.data[key]['post']
-			resp = dl.data[key]['resp']
-			assert len(post) == len(resp)
-			assert isinstance(post[0], list)
-			assert isinstance(resp[0], list)
-			assert post[0][0] == dl.go_id
-			assert post[0][-1] == dl.eos_id
-			assert resp[0][0] == dl.go_id
-			assert resp[0][-1] == dl.eos_id
+			sent = dl.data[key]['sent']
+			label = dl.data[key]['label']
+			assert len(sent) == len(label)
+			assert isinstance(sent[0], list)
+			assert isinstance(label[0], int)
+			assert sent[0][0] == dl.go_id
 
 		# assert the data has valid token
 		assert dl.vocab_size > 4
@@ -74,33 +71,29 @@ class TestSingleTurnDialog():
 			dl.get_batch("unknown set", [0, 1])
 		for key in dl.key_name:
 			with pytest.raises(IndexError):
-				length = len(dl.data[key]['post'])
+				length = len(dl.data[key]['sent'])
 				dl.get_batch(key, [length-1, length])
 			assert len(dl.index[key]) >= 2
 			batch = dl.get_batch(key, [0, 1])
-			assert len(batch["post_length"]) == 2
-			assert len(batch["resp_length"]) == 2
-			assert batch["post"].shape[0] == 2
-			assert batch["resp"].shape[0] == 2
+			assert len(batch["sent_length"]) == 2
+			assert batch["sent"].shape[0] == 2
 
-			for sent, length in [("post", "post_length"), ("resp", "resp_length")]:
-				for idx in [0, 1]:
-					if batch[length][idx] < batch[sent].shape[1]:
-						assert batch[sent][idx][batch[length][idx]-1] == dl.eos_id
-					assert batch[sent][idx][0] == dl.go_id
+			sent, length = ("sent", "sent_length")
+			for idx in [0, 1]:
+				if batch[length][idx] < batch[sent].shape[1]:
+					assert batch[sent][idx][batch[length][idx]-1] == dl.eos_id
+				assert batch[sent][idx][0] == dl.go_id
 
 		# this is true, only when there is no unknown words in dl
 		# (Only valid & invalid words)
 		flag = False
 		for key in dl.key_name:
-			length = len(dl.data[key]['post'])
+			length = len(dl.data[key]['sent'])
 			for i in range(length):
 				batch = dl.get_batch(key, [i])
-				assert dl.unk_id not in batch["post_allvocabs"]
-				assert dl.unk_id not in batch["resp_allvocabs"]
+				assert dl.unk_id not in batch["sent_allvocabs"]
 				batch = dl.get_batch(key, [i])
-				if dl.unk_id in batch["post"] or \
-					dl.unk_id in batch["resp"]:
+				if dl.unk_id in batch["sent"]:
 					flag = True
 		assert flag
 
@@ -118,23 +111,23 @@ class TestSingleTurnDialog():
 				batch = dl.get_next_batch(key, ignore_left_samples=True)
 				if not batch:
 					break
-				assert batch["post"].shape[0] == 7
-				sample_num += batch["post"].shape[0]
-			assert sample_num + 7 >= len(dl.data[key]["post"])
+				assert batch["sent"].shape[0] == 7
+				sample_num += batch["sent"].shape[0]
+			assert sample_num + 7 >= len(dl.data[key]["sent"])
 
 			dl.restart(key, 7)
 			sample_num = 0
 			while True:
 				batch = dl.get_next_batch(key)
 				assert batch is not None # dummy dataset must not be multiple of 7
-				if batch["post"].shape[0] == 7:
+				if batch["sent"].shape[0] == 7:
 					sample_num += 7
 				else:
-					sample_num += batch["post"].shape[0]
+					sample_num += batch["sent"].shape[0]
 					batch = dl.get_next_batch(key)
 					assert not batch
 					break
-			assert sample_num == len(dl.data[key]["post"])
+			assert sample_num == len(dl.data[key]["sent"])
 
 	def base_test_convert(self, dl):
 		sent_id = [0, 1, 2]
@@ -173,49 +166,43 @@ class TestSingleTurnDialog():
 		assert sent == dl.convert_ids_to_tokens(sent_id, trim=False)
 		assert not dl.convert_ids_to_tokens(sent_id)
 
-	def base_test_teacher_forcing_metric(self, dl):
-		assert isinstance(dl.get_teacher_forcing_metric(), MetricBase)
-
-	def base_test_teacher_inference_metric(self, dl):
-		assert isinstance(dl.get_inference_metric(), MetricBase)
+	def base_test_accuracy_metric(self, dl):
+		assert isinstance(dl.get_accuracy_metric(), MetricBase)
 
 	def base_test_multi_runs(self, dl_list):
 		assert all(x.vocab_list == dl_list[0].vocab_list for x in dl_list)
 
 @pytest.fixture
-def load_opensubtitles():
-	def _load_opensubtitles(invalid_vocab_times=0):
-		return OpenSubtitles("./tests/dataloader/dummy_opensubtitles", invalid_vocab_times=invalid_vocab_times)
-	return _load_opensubtitles
+def load_sst():
+	def _load_sst(invalid_vocab_times=0):
+		return SST("./tests/dataloader/dummy_sst", invalid_vocab_times=invalid_vocab_times)
+	return _load_sst
 
-class TestOpenSubtitles(TestSingleTurnDialog):
+class TestSST(TestSentenceClassification):
 
 	@pytest.mark.dependency()
-	def test_init(self, load_opensubtitles):
-		super().base_test_init(load_opensubtitles())
-		super().base_test_all_unknown(load_opensubtitles(10000))
+	def test_init(self, load_sst):
+		super().base_test_init(load_sst())
+		super().base_test_all_unknown(load_sst(1000000))
 
-	def test_restart(self, load_opensubtitles):
-		super().base_test_restart(load_opensubtitles())
+	def test_restart(self, load_sst):
+		super().base_test_restart(load_sst())
 
-	@pytest.mark.dependency(depends=["TestOpenSubtitles::test_init"])
-	def test_get_batch(self, load_opensubtitles):
-		super().base_test_get_batch(load_opensubtitles())
+	@pytest.mark.dependency(depends=["TestSST::test_init"])
+	def test_get_batch(self, load_sst):
+		super().base_test_get_batch(load_sst())
 
-	@pytest.mark.dependency(depends=["TestOpenSubtitles::test_init"])
-	def test_get_next_batch(self, load_opensubtitles):
-		super().base_test_get_next_batch(load_opensubtitles())
+	@pytest.mark.dependency(depends=["TestSST::test_init"])
+	def test_get_next_batch(self, load_sst):
+		super().base_test_get_next_batch(load_sst())
 
-	@pytest.mark.dependency(depends=["TestOpenSubtitles::test_init"])
-	def test_convert(self, load_opensubtitles):
-		super().base_test_convert(load_opensubtitles())
+	@pytest.mark.dependency(depends=["TestSST::test_init"])
+	def test_convert(self, load_sst):
+		super().base_test_convert(load_sst())
 
-	def test_teacher_forcing_metric(self, load_opensubtitles):
-		super().base_test_teacher_forcing_metric(load_opensubtitles())
+	def test_accuracy_metric(self, load_sst):
+		super().base_test_accuracy_metric(load_sst())
 
-	def test_teacher_inference_metric(self, load_opensubtitles):
-		super().base_test_teacher_inference_metric(load_opensubtitles())
-
-	def test_init_multi_runs(self, load_opensubtitles):
-		super().base_test_multi_runs([load_opensubtitles() for i in range(3)])
+	def test_init_multi_runs(self, load_sst):
+		super().base_test_multi_runs([load_sst() for i in range(3)])
 

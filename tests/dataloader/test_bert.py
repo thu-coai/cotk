@@ -3,7 +3,7 @@ import copy
 import pytest
 from pytest_mock import mocker
 
-from cotk.dataloader import SingleTurnDialog, OpenSubtitles
+from cotk.dataloader import BERTLanguageProcessingBase, BERTOpenSubtitles
 from cotk.metric import MetricBase
 
 def setup_module():
@@ -12,11 +12,11 @@ def setup_module():
 	import numpy as np
 	np.random.seed(0)
 
-class TestSingleTurnDialog():
+class TestBertBase():
 	def base_test_init(self, dl):
-		assert isinstance(dl, SingleTurnDialog)
+		assert isinstance(dl, BERTLanguageProcessingBase)
 		assert isinstance(dl.ext_vocab, list)
-		assert dl.ext_vocab[:4] == ["<pad>", "<unk>", "<go>", "<eos>"]
+		assert dl.ext_vocab[:4] == ["[PAD]", "[UNK]", "[CLS]", "[SEP]"]
 		assert [dl.pad_id, dl.unk_id, dl.go_id, dl.eos_id] == [0, 1, 2, 3]
 		assert isinstance(dl.key_name, list)
 		assert dl.key_name
@@ -38,18 +38,12 @@ class TestSingleTurnDialog():
 			assert isinstance(post[0], list)
 			assert isinstance(resp[0], list)
 			assert post[0][0] == dl.go_id
-			assert post[0][-1] == dl.eos_id
 			assert resp[0][0] == dl.go_id
-			assert resp[0][-1] == dl.eos_id
 
 		# assert the data has valid token
 		assert dl.vocab_size > 4
 		# assert the data has invalid token
 		assert dl.all_vocab_size > dl.vocab_size
-
-	def base_test_all_unknown(self, dl):
-		# if invalid_vocab_times very big, there is no invalid words.
-		assert dl.vocab_size == dl.all_vocab_size
 
 	def base_test_restart(self, dl):
 		with pytest.raises(ValueError):
@@ -138,12 +132,12 @@ class TestSingleTurnDialog():
 
 	def base_test_convert(self, dl):
 		sent_id = [0, 1, 2]
-		sent = ["<pad>", "<unk>", "<go>"]
+		sent = ["[PAD]", "[UNK]", "[CLS]"]
 		assert sent == dl.convert_ids_to_tokens(sent_id)
 		assert sent_id == dl.convert_tokens_to_ids(sent)
 
-		sent = ["<unk>", "<go>", "<pad>", "<unkownword>", "<pad>", "<go>"]
-		sent_id = [1, 2, 0, 1, 0, 2]
+		sent = ["[UNK]", "[CLS]", "[PAD]", "<bertunkownword>", "[PAD]", "[SEP]"]
+		sent_id = [1, 2, 0, 1, 0, 3]
 		assert sent_id == dl.convert_tokens_to_ids(sent)
 		assert sent_id == dl.convert_tokens_to_ids(sent, invalid_vocab=True)
 
@@ -153,25 +147,35 @@ class TestSingleTurnDialog():
 
 
 		sent_id = [0, 1, 2, 0, 0, 3, 1, 0, 0]
-		sent = ["<pad>", "<unk>", "<go>", "<pad>", "<pad>", "<eos>", "<unk>", "<pad>", "<pad>"]
+		sent = ["[PAD]", "[UNK]", "[CLS]", "[PAD]", "[PAD]", "[SEP]", "[UNK]", "[PAD]", "[PAD]"]
 		assert sent == dl.convert_ids_to_tokens(sent_id, trim=False)
-		sent = ["<pad>", "<unk>", "<go>"]
+		sent = ["[PAD]", "[UNK]", "[CLS]"]
 		assert sent == dl.convert_ids_to_tokens(sent_id)
 
 		sent_id = [0, 0, 3]
-		sent = ["<pad>", "<pad>", "<eos>"]
+		sent = ["[PAD]", "[PAD]", "[SEP]"]
 		assert sent == dl.convert_ids_to_tokens(sent_id, trim=False)
 		assert not dl.convert_ids_to_tokens(sent_id)
 
 		sent_id = [3, 3, 3]
-		sent = ["<eos>", "<eos>", "<eos>"]
+		sent = ["[SEP]", "[SEP]", "[SEP]"]
 		assert sent == dl.convert_ids_to_tokens(sent_id, trim=False)
 		assert not dl.convert_ids_to_tokens(sent_id)
 
 		sent_id = [0, 0, 0]
-		sent = ["<pad>", "<pad>", "<pad>"]
+		sent = ["[PAD]", "[PAD]", "[PAD]"]
 		assert sent == dl.convert_ids_to_tokens(sent_id, trim=False)
 		assert not dl.convert_ids_to_tokens(sent_id)
+
+	def base_test_convert_bert(self, dl):
+		origin_sent = ["[UNK]", "[CLS]", "[PAD]", "[PAD]", "[SEP]"]
+		bert_id = dl.convert_tokens_to_bert_ids(origin_sent)
+		new_sent = dl.convert_bert_ids_to_tokens(bert_id)
+		assert new_sent == origin_sent[:2]
+
+		sent_id = [1, 2, 0, 0, 3]
+		assert sent_id == dl.convert_bert_ids_to_ids(bert_id)
+		assert bert_id == dl.convert_ids_to_bert_ids(sent_id)
 
 	def base_test_teacher_forcing_metric(self, dl):
 		assert isinstance(dl.get_teacher_forcing_metric(), MetricBase)
@@ -185,30 +189,35 @@ class TestSingleTurnDialog():
 @pytest.fixture
 def load_opensubtitles():
 	def _load_opensubtitles(invalid_vocab_times=0):
-		return OpenSubtitles("./tests/dataloader/dummy_opensubtitles", invalid_vocab_times=invalid_vocab_times)
+		return BERTOpenSubtitles("./tests/dataloader/dummy_opensubtitles", \
+					invalid_vocab_times=invalid_vocab_times, \
+					bert_vocab="bert-base-uncased")
 	return _load_opensubtitles
 
-class TestOpenSubtitles(TestSingleTurnDialog):
+class TestBertOpenSubtitles(TestBertBase):
 
 	@pytest.mark.dependency()
 	def test_init(self, load_opensubtitles):
 		super().base_test_init(load_opensubtitles())
-		super().base_test_all_unknown(load_opensubtitles(10000))
 
 	def test_restart(self, load_opensubtitles):
 		super().base_test_restart(load_opensubtitles())
 
-	@pytest.mark.dependency(depends=["TestOpenSubtitles::test_init"])
+	@pytest.mark.dependency(depends=["TestBertOpenSubtitles::test_init"])
 	def test_get_batch(self, load_opensubtitles):
 		super().base_test_get_batch(load_opensubtitles())
 
-	@pytest.mark.dependency(depends=["TestOpenSubtitles::test_init"])
+	@pytest.mark.dependency(depends=["TestBertOpenSubtitles::test_init"])
 	def test_get_next_batch(self, load_opensubtitles):
 		super().base_test_get_next_batch(load_opensubtitles())
 
-	@pytest.mark.dependency(depends=["TestOpenSubtitles::test_init"])
+	@pytest.mark.dependency(depends=["TestBertOpenSubtitles::test_init"])
 	def test_convert(self, load_opensubtitles):
 		super().base_test_convert(load_opensubtitles())
+
+	@pytest.mark.dependency(depends=["TestBertOpenSubtitles::test_init"])
+	def test_convert_bert(self, load_opensubtitles):
+		super().base_test_convert_bert(load_opensubtitles())
 
 	def test_teacher_forcing_metric(self, load_opensubtitles):
 		super().base_test_teacher_forcing_metric(load_opensubtitles())
