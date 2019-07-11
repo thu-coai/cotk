@@ -42,9 +42,11 @@ from .metric import MetricBase, PerplexityMetric, BleuCorpusMetric, SelfBleuCorp
                     MetricChain, MultiTurnDialogRecorder, MultiTurnPerplexityMetric, \
                     MultiTurnBleuCorpusMetric, BleuPrecisionRecallMetric, \
                     EmbSimilarityPrecisionRecallMetric, AccuracyMetric
+from .ngram_perplexity import NgramFwBwPerplexityMetric
 
 __all__ = ["MetricBase", "PerplexityMetric", "BleuCorpusMetric", "SelfBleuCorpusMetric", \
         "FwBwBleuCorpusMetric", "SingleTurnDialogRecorder", "LanguageGenerationRecorder", \
         "MetricChain", "MultiTurnDialogRecorder", "MultiTurnPerplexityMetric", \
         "MultiTurnBleuCorpusMetric", "BleuPrecisionRecallMetric", \
-        "EmbSimilarityPrecisionRecallMetric", "AccuracyMetric"]
+        "EmbSimilarityPrecisionRecallMetric", "AccuracyMetric", \
+		"NgramFwBwPerplexityMetric"]

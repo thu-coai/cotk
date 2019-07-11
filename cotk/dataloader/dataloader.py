@@ -295,6 +295,7 @@ except ImportError as err:
 	from .._utils.imports import DummyObject
 	BertTokenizer = DummyObject(err)
 
+#pylint: disable=abstract-method
 class BERTLanguageProcessingBase(LanguageProcessingBase):
 	r"""Base class for all BERT-based language processing with BERT tokenizer.
 	This is an abstract class.

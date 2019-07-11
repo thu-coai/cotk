@@ -12,13 +12,12 @@ import traceback
 
 import requests
 import cotk
-from cotk.scripts import _utils
-from cotk.scripts import entry
+from . import _utils, main
 
-LOGGER = entry.LOGGER
-REPORT_URL = entry.REPORT_URL
-SHOW_URL = entry.SHOW_URL
-QUERY_URL = entry.QUERY_URL
+LOGGER = main.LOGGER
+REPORT_URL = main.REPORT_URL
+SHOW_URL = main.SHOW_URL
+QUERY_URL = main.QUERY_URL
 
 def run_model(entry, args):
 	'''Run the model and record the info of library'''
@@ -78,8 +77,8 @@ def upload_report(result_path, entry, args, \
 
 def get_local_token():
 	'''Read locally-saved token'''
-	if os.path.exists(entry.CONFIG_FILE):
-		return json.load(open(entry.CONFIG_FILE, 'r'))['token']
+	if os.path.exists(main.CONFIG_FILE):
+		return json.load(open(main.CONFIG_FILE, 'r'))['token']
 	else:
 		raise RuntimeError("Please config your token, \n" + \
 						   "either by setting it temporarily in cotk\n" + \

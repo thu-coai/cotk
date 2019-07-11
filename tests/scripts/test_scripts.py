@@ -1,6 +1,6 @@
 import os
 import pytest
-from cotk.scripts import entry
+from cotk.scripts.main import dispatch
 import re
 import json
 import subprocess
@@ -17,11 +17,11 @@ class TestScripts():
 		])
 	def test_download_error(self, url, error, match):
 		with pytest.raises(error, match=match):
-			entry.dispatch('download', [url])
+			dispatch('download', [url])
 
 	def test_download(self):
 		# with pytest.raises(FileNotFoundError) as excinfo:
 		# 	report.dispatch('download', \
 		# 					['--zip_url', 'https://github.com/thu-coai/cotk-test-CVAE/archive/no_output.zip'])
 		# assert "New result file not found." == str(excinfo.value)
-		entry.dispatch('download', ['https://github.com/thu-coai/cotk-test-CVAE/tree/run_and_test'])
+		dispatch('download', ['https://github.com/thu-coai/cotk-test-CVAE/tree/run_and_test'])

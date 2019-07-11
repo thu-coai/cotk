@@ -2,7 +2,6 @@
 A command library help user upload their results to dashboard.
 '''
 #!/usr/bin/env python
-import logging
 import os
 import os.path
 import json
@@ -12,13 +11,12 @@ import shutil
 import zipfile
 
 import requests
-from cotk._utils import file_utils
-from cotk.scripts import _utils
-from cotk.scripts import entry
+from .._utils import file_utils
+from . import main, _utils
 
 def get_result_from_id(query_id):
 	'''Query uploaded info from id'''
-	query = requests.get(entry.QUERY_URL % query_id)
+	query = requests.get(main.QUERY_URL % query_id)
 	if not query.ok:
 		raise RuntimeError("Cannot fetch result from id %d" % query_id)
 	else:
@@ -70,15 +68,15 @@ r"""A string indicates model path. It can be one of following:
 	if cargs.model.isalnum():
 		# download from dashboard
 		board_id = int(cargs.model)
-		entry.LOGGER.info("Collecting info from id %d...", board_id)
+		main.LOGGER.info("Collecting info from id %d...", board_id)
 		info = get_result_from_id(board_id)
 		json.dump(info, open(cargs.result, "w"))
-		entry.LOGGER.info("Info from id %d saved to %s.", board_id, cargs.result)
+		main.LOGGER.info("Info from id %d saved to %s.", board_id, cargs.result)
 		extract_dir = "{}".format(cargs.id)
 
 		code_dir = clone_codes_from_commit(info['git_user'], info['git_repo'], \
 												  info['git_commit'], extract_dir)
-		entry.LOGGER.info("Codes from id %d fetched.")
+		main.LOGGER.info("Codes from id %d fetched.")
 	else:
 		# download from online git repo
 		patterns_2 = r'(?:https?://github\.com/)?([^\s/]+)/([^\s/]+)/?'
@@ -93,10 +91,10 @@ r"""A string indicates model path. It can be one of following:
 				raise ValueError("'%s' can't match any pattern." % cargs.model)
 			git_user, git_repo, git_commit = match_res.groups()
 
-		entry.LOGGER.info("Fetching {}/{}/{}".format(git_user, git_repo, git_commit))
+		main.LOGGER.info("Fetching {}/{}/{}".format(git_user, git_repo, git_commit))
 		extract_dir = '{}_{}'.format(git_repo, git_commit)
 		code_dir = clone_codes_from_commit(git_user, git_repo, git_commit, extract_dir)
-		entry.LOGGER.info("Codes from {}/{}/{} fetched.".format(git_user, git_repo, git_commit))
+		main.LOGGER.info("Codes from {}/{}/{} fetched.".format(git_user, git_repo, git_commit))
 		config_path = "{}/config.json".format(code_dir)
 		if not os.path.isfile(config_path):
 			raise FileNotFoundError("Config file ({}) is not found.".format(config_path))
@@ -113,7 +111,7 @@ r"""A string indicates model path. It can be one of following:
 			raise RuntimeError("Undefined keys in `config.json`: {}".format(", ".join(undefined_keys)))
 
 	# cmd construction
-	cmd = "cd {}/{} && cotk run --only-run --entry {}".format(code_dir, info['working_dir'], info['entry'])
+	cmd = "cd {}/{} && cotk run --only-run --main {}".format(code_dir, info['working_dir'], info['entry'])
 	if not info['args']:
 		info['args'] = []
 	else:
@@ -123,7 +121,7 @@ r"""A string indicates model path. It can be one of following:
 	cmd += " {}".format(" ".join(info['args']))
 	with open("{}/run_model.sh".format(extract_dir), "w") as file:
 		file.write(cmd)
-	entry.LOGGER.info("Model running cmd written in {}".format("run_model.sh"))
+	main.LOGGER.info("Model running cmd written in {}".format("run_model.sh"))
 	print("Model running cmd: \t{}".format(cmd))
 
 	# run model

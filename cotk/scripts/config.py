@@ -4,13 +4,13 @@ A command library help user upload their results to dashboard.
 #!/usr/bin/env python
 import json
 import argparse
-from cotk._utils import file_utils
-from cotk.scripts import entry
+from .._utils import file_utils
+from . import main
 
 def save_token(token):
 	'''Save token locally'''
-	json.dump({'token': token}, open(entry.CONFIG_FILE, "w"))
-	entry.LOGGER.info("Save your configuration locally at {}".format(entry.CONFIG_FILE))
+	json.dump({'token': token}, open(main.CONFIG_FILE, "w"))
+	main.LOGGER.info("Save your configuration locally at {}".format(main.CONFIG_FILE))
 
 def config(args):
 	'''Entrance of configuration'''
@@ -34,4 +34,4 @@ def import_local_resources(args):
 	cargs = parser.parse_args(args)
 
 	file_utils.import_local_resources(cargs.file_id, cargs.file_path)
-	entry.LOGGER.info("Successfully import local resource {}.".format(cargs.file_id))
+	main.LOGGER.info("Successfully import local resource {}.".format(cargs.file_id))
