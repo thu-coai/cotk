@@ -14,3 +14,9 @@ __pycache__
 # Report files
 .cotk_upload_backup
 result.json
+
+# docs file
+docs/build
+!docs/build/LICENSE.txt
+!docs/build/README.md
+docs/source/models
