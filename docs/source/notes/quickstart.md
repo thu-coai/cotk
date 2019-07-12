@@ -66,6 +66,11 @@ or using ``while`` if you like
     ...    print(data)
 ```
 
+.. note::
+
+   If you want to know more about data loader, please refer to :mod:`docs <cotk.dataloader>`.
+
+
 ### Metrics
 
 We found there are different versions of the same metric in released codes on Github,
@@ -109,6 +114,11 @@ We also provide standard metrics for selected dataloader.
 ```
 
 ``Hash value`` is provided for checking whether the same dataset is used.
+
+.. note::
+
+   If you want to know more about metrics, please refer to :mod:`docs <cotk.metric>`.
+
 
 ### Publish and Reproduce Experiments
 
@@ -175,6 +185,7 @@ Model running cmd:  cd ./PATH && cotk run --only-run --main run
 
 ### Predefined Models
 
-We have provided some baselines for the classical tasks, see ``MODEL ZOO`` in docs for details.
+We have provided some baselines for the classical tasks, see :ref:`Model Zoo <model_zoo>` in docs for details.
+
 
 You can also use ``cotk download thu-coai/MODEL_NAME/master`` to get the codes.

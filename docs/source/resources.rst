@@ -8,18 +8,18 @@ resources. The string will be passed to :meth:`._utils.file_utils.get_resource_f
 The format  of ``file_id`` is ``resources://name[@source][#processor]``,
 where ``source`` and ``processor`` are optional.
 
-``name`` can be:
+* ``name`` can be:
 
     * A string start with "resources://", indicating predefined resources.
     * A string start with "https://" indicating online resources.
     * A string indicating local path, absolute or relative to cwd.
 
-``source`` only works when ``name`` indicating a predefined resources.
-It has to be one of a source defined for each resources, see the following
-sections for reference.
+* ``source`` only works when ``name`` indicating a predefined resources.
+  It has to be one of a source defined for each resources, see the following
+  sections for reference.
 
-``preprocessor`` is necessary when ``name`` is not a predefined resources.
-It has to be one of the subclass of :class:`._utils.file_utils.ResourceProcessor`.
+* ``preprocessor`` is necessary when ``name`` is not a predefined resources.
+  It has to be one of the subclass of :class:`._utils.file_utils.ResourceProcessor`.
 
 Examples:
 

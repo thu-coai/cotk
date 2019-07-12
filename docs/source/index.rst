@@ -33,6 +33,8 @@ your models fairly with baselines.
    metric
    resources
 
+.. _model_zoo:
+
 .. toctree::
    :glob:
    :maxdepth: 2

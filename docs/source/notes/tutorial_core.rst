@@ -22,7 +22,7 @@ However, this tutorial constructs neural networks with
 - livelossplot (optional, just for showing loss)
 
 
-You can click `here <https://github.com/thu-coai/cotk/blob/master/docs/notes/tutorial_core_1.ipynb>`__ for ipynb files. If you don't have a suitable environment,
+You can click `here <https://github.com/thu-coai/cotk/blob/master/docs/source/notes/tutorial_core_1.ipynb>`__ for ipynb files. If you don't have a suitable environment,
 you can also run `the code <http://colab.research.google.com/github/thu-coai/cotk/blob/master/docs/source/notes/tutorial_core_1.ipynb>`__
 on google colab.
 
@@ -176,7 +176,7 @@ the help of ``cotk``. (It may takes several minites too train the model.)
 .. code-block:: none
 
     loss:
-        training   (min:    3.147, max:    6.560, cur:    3.235)
+    training   (min:    3.126, max:    6.401, cur:    3.152)
     epoch 100/100
 
 Evaluations
@@ -212,8 +212,7 @@ section, we use it right now.
  .. code-block:: none
 
     test set restart, 78 batches and 2 left
-    {'perplexity': 33.99345315581511,\n",
-     'perplexity hashvalue': b'O\\x10\\x1c)\\x86\\xf1\\xfe\\x10\\xce\\x1d!\\x97\\xc3\\x08m6Y\\xae\\xc3\\xe6I_8\\x1dg\\xf0\\x0bM\\xbb@\\xa58'}
+    {'perplexity': 32.94079849259241, 'perplexity hashvalue': '4f101c2986f1fe10ce1d2197c3086d3659aec3e6495f381d67f00b4dbb40a538'}
 
 The codes above evaluated the model in teacher forcing mode, where every input
 token is the real data. 
@@ -258,29 +257,29 @@ Out:
 
 .. code-block:: none
 
-    100%|██████████| 1000/1000 [00:00<00:00, 1153.17it/s]
-    {'bw-bleu': 0.054939232761090494,
-     'fw-bleu': 0.2643063370185712,\n",
-     'fw-bw-bleu': 0.09096938998850655,\n",
-     'fw-bw-bleu hashvalue': b'0\\x18\\xdc1\\x7f\\x82\\xb6\\x01?\\x01\\x1c\\x1f\\x8c\\xcd\\x90\\xc5\\xaf\\xfe\\xd7\\x10\\xb7\\xd7\\xd0jr5\\xcfE\\\\#5B',
-     'gen': [['A', 'black', 'fire', 'hydrant', 'with', 'broccoli', 'on', 'a', 'plate', '.'],
-            ['A', 'small', 'cat', 'that', 'drinking', 'are', 'sitting', 'from', 'a', 'screen', '.'],
-            ['This', 'was', 'hydrant', 'at', 'a', 'kitchen', 'by', 'a', 'meal', '.'],
-            ['A', 'bath', 'room', 'with', 'a', 'bicycle', 'are', 'antique', '<unk>', ',', 'sink', 'and', 'patterned', 'photograph', 'and', 'fork', 'look', 'on', 'the', 'bed'],
-            ['Large', 'yellow', 'kitchen', 'with', 'one', 'and', '<unk>', 'neat', ',', 'kite', '.'],
-            ['A', 'young', 'girl', 'are', 'kneeling', 'a', 'tennis', 'match', 'during', 'tennis', 'of', 'her', 'bat', '.'],
-            ['A', 'zebra', 'leaned', 'across', 'a', 'city', 'street', '.'],
-            ['A', 'tennis', 'player', 'looks', 'by', 'a', 'wii', 'chocolate', 'strip', '.'],
-            ['A', 'woman', 'sitting', 'up', 'on', 'the', 'edge', 'of', 'luggage', '.'],
-            ['Old', '<unk>', 'right', 'driving', 'along', 'from', 'the', 'stairs', '.'],
-            ['A', 'close', 'up', 'with', 'a', 'colorful', 'heart', 'next', 'to', 'a', 'skateboard', '.'],
-            ['A', 'man', 'holding', 'a', 'skate', 'boarding', 'a', 'mountain', 'at', 'the', 'sun', 'man', 'flying', 'the', 'air', '.'],
-            ['An', 'airplane', 'with', 'speakers', 'on', 'a', 'surface', '.'],
-            ['A', '<unk>', '<unk>', 'on', 'the', 'two', 'conference', 'floors', '.'],
-            ['A', 'girl', 'holding', 'a', 'wii', 'screen', 'with', 'a', 'hot', 'Man', 'with', 'wii', 'face', 'in', 'formation', '.'],
-            ['Three', 'and', 'snowboards', 'a', 'video', 'game', 'during', 'the', 'beach', '.']],
-     'self-bleu': 0.04565576967736443,
-     'self-bleu hashvalue': b'\\x9f\\x11!\\xd3\\x98\\x8e\\xf4x\\x99C\\xef\\x18\\xc1\\xc0\\xb7I\\xee\\xc0\\xd8\\xee\\xe3\\xf1\"pg\\x16\\x05\\xceg\\x02%\\xf6'}
+    100%|██████████| 1000/1000 [00:00<00:00, 1063.21it/s]
+    {'bw-bleu': 0.04871277607530735,
+     'fw-bleu': 0.22873635755754274,
+     'fw-bw-bleu': 0.08032018568655393,
+     'fw-bw-bleu hashvalue': '3018dc317f82b6013f011c1f8ccd90c5affed710b7d7d06a7235cf455c233542',
+     'gen': [['A', 'red', 'bus', 'car', 'being', 'snow', 'behind', 'much', 'to', 'it', '.'],
+             ['The', 'pair', 'of', 'cover', 'position', 'two', 'vases', 'screen', '.'],
+             ['A', 'black', 'dog', 'walking', 'from', 'a', 'bush', '.'],
+             ['The', 'zebra', 'sits', 'in', 'front', 'of', 'a', 'bathroom', 'lamp', '.'],
+             ['<unk>', 'single', 'boys', 'using', 'a', 'baseball', 'game', ',', 'holds', 'her', 'dog', '.'],
+             ['A', 'picture', 'of', 'a', 'shopping', 'colored', 'restroom', 'with', 'broccoli', 'on', 'it', '.'],
+             ['A', 'people', 'that', 'is', 'stopped', 'seen', 'on', 'back', 'it', '.'],
+             ['A', 'street', 'holding', 'black', 'with', 'grass', 'up', 'up', 'at', 'a', 'white', 'mirror', '.'],
+             ['A', 'cow', 'sits', 'in', 'front', 'of', 'the', 'bowl', 'with', 'a', 'pan', 'are', 'playing'],
+             ['A', 'woman', 'looking', 'hardwood', '<unk>', 'of', 'some', 'is', 'open', '.'],
+             ['A', 'fire', 'hydrant', 'taking', 'a', 'red', 'toy', 'feet', '.'],
+             ['A', 'woman', 'is', 'flying', 'on', 'a', 'cell', 'phone', 'somewhere', '.'],
+             ['A', 'bear', 'holding', 'a', 'hill', 'suit', 'it', 'on', 'a', 'wooden', 'board', '.'],
+             ['Woman', 'playing', 'frisbee', 'below', 'food', 'across', 'the', 'ocean', '.'],
+             ['There', 'has', 'some', 'two', 'rice', 'screens', 'with', 'several', 'colorful', 'toy', 'on', 'a', 'white', 'tile', 'toilet', '.'],
+             ['Large', '<unk>', 'with', 'many', 'pretty', 'an', 'apple', '.']],
+     'self-bleu': 0.07416490324471028,
+     'self-bleu hashvalue': '9f1121d3988ef4789943ef18c1c0b749eec0d8eee3f12270671605ce670225f6'}
 
 Hash value
 ~~~~~~~~~~~~~~~~~~
@@ -311,7 +310,7 @@ Out:
 .. code-block:: none
 
     test set restart, 78 batches and 2 left
-    {'perplexity': 31.5929983966103, 'perplexity hashvalue': b\"\\x0c\\xfd9r\\xc7\\x8b_\\xf5\\xf7\\xf90\\xd1v\\x7f\\xd8Ua\\xc8g\\xdc\\xd3MV\\xeeH\\xe0\\x86\\xed@'\\x91\\x91\"}
+    {'perplexity': 31.883897093289583, 'perplexity hashvalue': '125a45af618245364a722ad3fcac59534f30e64aa7e2dfefd35402cd67a74cec'}
 
 
 Additional: Word Vector
@@ -330,6 +329,6 @@ that help you downloading and get word vectors.
 We can add these lines at the end of ``LanguageModel.__init__``.
 
 You can find the results and codes with pretrained word vector at
-`here <https://github.com/thu-coai/cotk/blob/master/docs/notes/tutorial_core_2.ipynb>`__ for ipynb files
+`here <https://github.com/thu-coai/cotk/blob/master/docs/source/notes/tutorial_core_2.ipynb>`__ for ipynb files
 or run `the code <http://colab.research.google.com/github/thu-coai/cotk/blob/master/docs/source/notes/tutorial_core_2.ipynb>`__
 on google colab.
