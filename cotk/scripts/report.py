@@ -114,7 +114,7 @@ def run(args):
 		_utils.assert_commit_exist(git_user, git_repo, git_commit)
 		LOGGER.info("git information detected.")
 		LOGGER.info("user: %s, repo: %s, commit sha1: %s", git_user, git_repo, git_commit)
-	if cargs.only_upload:
+	if not cargs.only_run and cargs.only_upload:
 		LOGGER.warning("Your model is not running, only upload existing result. \
 Some information will be missing and it is not recommended.")
 		cotk_record_information = None

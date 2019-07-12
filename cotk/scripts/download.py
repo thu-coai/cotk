@@ -30,13 +30,12 @@ def clone_codes_from_commit(git_user, git_repo, git_commit, extract_dirname):
 	if os.path.exists(zip_filename):
 		resp = input("{} exists. Do you want to overwrite it? (y or n)")
 		if resp == 'y':
-			shutil.rmtree(zip_filename)
+			os.remove(zip_filename)
 			file_utils._http_get(url, open(zip_filename, "wb"))
 	else:
 		file_utils._http_get(url, open(zip_filename, "wb"))
 	if not zipfile.is_zipfile(zip_filename):
 		raise RuntimeError("{} is not a zip file".format(zip_filename))
-	# shutil.rmtree(extract_dirname, ignore_errors=True)
 	zip_file = zipfile.ZipFile(zip_filename, 'r')
 	zip_file.extractall(extract_dirname)
 	relative_code_dir = extract_dirname + "/" + zip_file.namelist()[0].split("/")[0]
@@ -65,14 +64,14 @@ r"""A string indicates model path. It can be one of following:
 						help="Path to dump query result.")
 	cargs = parser.parse_args(args)
 
-	if cargs.model.isalnum():
+	if cargs.model.isdigit():
 		# download from dashboard
 		board_id = int(cargs.model)
 		main.LOGGER.info("Collecting info from id %d...", board_id)
 		info = get_result_from_id(board_id)
 		json.dump(info, open(cargs.result, "w"))
 		main.LOGGER.info("Info from id %d saved to %s.", board_id, cargs.result)
-		extract_dir = "{}".format(cargs.id)
+		extract_dir = "{}".format(board_id)
 
 		code_dir = clone_codes_from_commit(info['git_user'], info['git_repo'], \
 												  info['git_commit'], extract_dir)

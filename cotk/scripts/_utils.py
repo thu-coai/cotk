@@ -75,8 +75,20 @@ def get_repo_commit():
 def assert_commit_exist(git_user, git_repo, git_commit):
 	'''Assert commit is available'''
 	url = "https://github.com/{}/{}/archive/{}.zip".format(git_user, git_repo, git_commit)
-	res = requests.head(url, allow_redirects=True)
-	if not res.ok:
+	nonexist = True
+	err_msg = None
+	trial = 3
+	while trial:
+		try:
+			res = requests.head(url)
+			nonexist = not res.ok
+			break
+		except Exception as err:
+			err_msg = err
+			trial -= 1
+	if not trial:
+		raise RuntimeError("3 failed trials to query {}.\n{}".format(url, str(err_msg)))
+	if nonexist:
 		raise RuntimeError("Commit {} does not exist on github:{}/{}. \
 It should be public.".format( \
 			git_commit, git_repo, git_user \

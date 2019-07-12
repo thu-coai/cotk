@@ -41,8 +41,8 @@ def dispatch(sub_entrance, args):
 		from . import download
 		download.download(args)
 	elif sub_entrance == 'import':
-		from . import config
-		config.import_local_resources(args)
+		from . import import_local_resources
+		import_local_resources.import_local_resources(args)
 	elif sub_entrance == 'config':
 		from . import config
 		config.config(args)

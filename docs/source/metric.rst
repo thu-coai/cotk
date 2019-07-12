@@ -3,6 +3,8 @@ Metric
 .. automodule:: cotk.metric
 
 
+.. _hash_ref:
+
 Hash Value
 --------------------------------
 :meth:`.MetricBase.close` will return a dict containing hash value,
