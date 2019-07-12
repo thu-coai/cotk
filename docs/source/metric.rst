@@ -12,6 +12,8 @@ which can validate whether two models used the same test data and the
 same setting. Only two models using the same metric with the same hash 
 value returned, can compare with each other.
 
+.. _metric_ref:
+
 Basic Classes
 --------------------------------
 .. autoclass:: MetricBase

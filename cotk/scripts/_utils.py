@@ -17,7 +17,7 @@ def assert_repo_exist():
 make sure git command can be used.")
 
 	if in_git.stdout.decode().strip() != "true":
-		raise RuntimeError("You have to make a commit in your git repo first.")
+		raise RuntimeError("You have to create a git repo and make a commit first.")
 
 def check_repo_clean():
 	'''Check whether repo is clean.
@@ -32,6 +32,10 @@ def get_repo_workingdir():
 	'''Get relative path of cwd from git repo root.'''
 	git_prefix = subprocess.run(["git", "rev-parse", "--show-prefix"], stdout=PIPE, stderr=PIPE)
 	return git_prefix.stdout.decode().strip()
+
+def get_repo_root_path():
+	git_toplevel = subprocess.run(["git", "rev-parse", "--show-toplevel"], stdout=PIPE, stderr=PIPE)
+	return git_toplevel.stdout.decode().strip()
 
 def get_repo_remote():
 	'''Get remote repo name on github'''
@@ -93,3 +97,17 @@ def assert_commit_exist(git_user, git_repo, git_commit):
 It should be public.".format( \
 			git_commit, git_repo, git_user \
 		))
+
+def git_clone(git_user, git_repo):
+	url = "https://github.com/{}/{}.git".format(git_user, git_repo)
+	git_clone_msg = subprocess.run(["git", "clone", url], stdout=PIPE, stderr=PIPE)
+	if "fatal:" in git_clone_msg.stderr.decode():
+		raise RuntimeError(git_clone_msg.stderr.decode())
+
+def git_checkout_commit(git_commit):
+	git_fetch_msg = subprocess.run(["git", "fetch", "origin", git_commit], stdout=PIPE, stderr=PIPE)
+	if "fatal:" in git_fetch_msg.stderr.decode():
+		raise RuntimeError(git_fetch_msg.stderr.decode())
+	git_checkout_msg = subprocess.run(["git", "checkout", git_commit], stdout=PIPE, stderr=PIPE)
+	if "fatal:" in git_checkout_msg.stderr.decode():
+		raise RuntimeError(git_checkout_msg.stderr.decode())

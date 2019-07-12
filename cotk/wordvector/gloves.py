@@ -37,7 +37,7 @@ class Glove(WordVector):
 			file_path = self.file_path
 			if os.path.isdir(file_path):
 				file_path = "%s/glove.txt" % (file_path)
-			with open(file_path, 'r') as glove_file:
+			with open(file_path, 'r', encoding='utf-8') as glove_file:
 				lines = glove_file.readlines()
 			for line in lines:
 				word, vec = line.split(" ", 1)

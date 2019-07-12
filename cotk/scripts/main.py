@@ -5,6 +5,7 @@ A command library help user upload their results to dashboard.
 import logging
 import os.path
 import sys
+from pathlib import Path
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(level=logging.INFO)
@@ -13,7 +14,7 @@ SH = logging.StreamHandler(stream=sys.stdout)
 SH.setFormatter(FORMAT)
 LOGGER.addHandler(SH)
 
-CONFIG_FILE = '.cotk_config'
+CONFIG_FILE = os.path.join(Path.home(), '.cotk_config')
 DASHBOARD_URL = os.getenv("COTK_DASHBOARD_URL", "") #TODO: add a online dash board url
 REPORT_URL = DASHBOARD_URL + "/upload"
 SHOW_URL = DASHBOARD_URL + "/show?id=%d"

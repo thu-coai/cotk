@@ -11,8 +11,8 @@ import importlib
 import traceback
 
 import requests
-import cotk
 from . import _utils, main
+from .._utils import start_recorder, close_recorder
 
 LOGGER = main.LOGGER
 REPORT_URL = main.REPORT_URL
@@ -24,7 +24,8 @@ def run_model(entry, args):
 	'''Run the model and record the info of library'''
 	# before run model
 	# cotk recorder start
-	cotk.start_recorder()
+	import cotk
+	start_recorder()
 	sys.path.insert(0, os.getcwd())
 	model = importlib.import_module(entry)
 
@@ -39,14 +40,9 @@ def run_model(entry, args):
 
 	# after run model
 	# cotk recorder end
-	return cotk.close_recorder()
+	return close_recorder()
 
-def upload_report(result_path, entry, args, \
-	git_user, git_repo, git_commit, \
-	cotk_record_information, token):
-	'''Upload report to dashboard. Return id of the new record.'''
-	# check result file existence
-	# get git link
+def validate_result(result_path):
 	if not os.path.isfile(result_path):
 		raise ValueError("Result file ({}) is not found.".format(result_path))
 	try:
@@ -54,8 +50,16 @@ def upload_report(result_path, entry, args, \
 	except json.JSONDecodeError as err:
 		raise json.JSONDecodeError("{} is not a valid json. {}".format(result_path, err.msg),\
 				err.doc, err.pos)
+	return result
 
-	working_dir = _utils.get_repo_workingdir()
+
+def upload_report(result_path, entry, args, working_dir, \
+	git_user, git_repo, git_commit, \
+	cotk_record_information, token):
+	'''Upload report to dashboard. Return id of the new record.'''
+	# check result file existence
+	# get git link
+	result = validate_result(result_path)
 
 	upload_information = { \
 		"entry": entry, \
@@ -67,8 +71,8 @@ def upload_report(result_path, entry, args, \
 		"record_information": cotk_record_information, \
 		"result": json.dumps(result) \
 	}
-	LOGGER.info("Save your report locally at {}".format(BACKUP_FILE))
-	json.dump(upload_information, open(BACKUP_FILE, 'w'))
+	#LOGGER.info("Save your report locally at {}".format(BACKUP_FILE))
+	#json.dump(upload_information, open(BACKUP_FILE, 'w'))
 	LOGGER.info("Uploading your report...")
 	res = requests.post(REPORT_URL, {"data": upload_information, "token": token})
 	res = json.loads(res.text)
@@ -85,51 +89,85 @@ def get_local_token():
 						   "either by setting it temporarily in cotk\n" + \
 						   "or by calling `cotk config`")
 
+def verify_token_online(token):
+	#TODO: wait for api
+	return True
+
 def run(args):
 	'''Entrance of run'''
 	parser = argparse.ArgumentParser(prog="cotk run", \
-		description='Run model and report performance to cotk dashboard.')
-	parser.add_argument('--token', type=str, default=None)
+		description='Run model and report performance to cotk dashboard.\
+**More args can added at end of the command to pass to your model**.')
+	parser.add_argument('--token', type=str, default=None, \
+		help='Use a temporary token. (Specified your accounts on dashboard.)')
 	parser.add_argument('--result', type=str, default="result.json", \
-		help='Path to result file. Default: result.json')
+		help='Path to result file that your model generated. Default: result.json')
 	parser.add_argument("--only-run", action="store_true", \
-		help="Just run my model, don't collect any information or upload anything.")
+		help="Just run my model, save running information to local folder but do not upload anything.")
 	parser.add_argument('--only-upload', action="store_true", \
-		help="Don't run my model, just upload the existing result. \
-		(Some information will be missing and this option is not recommended.)")
+		help="Don't run my model, just upload the existing result.")
 	parser.add_argument('--entry', type=str, default="main", nargs='?',\
-		help="Entry of your model. Default: main")
-	parser.add_argument('args', nargs=argparse.REMAINDER)
+		help="Entry file of your model, suffix name '.py' should not be included. \
+			  Default: main")
+	#parser.add_argument('args', nargs='*', help="args passed to your model")
 
-	cargs = parser.parse_args(args)
+	cargs, extra_args = parser.parse_known_args(args)
 
 	if not cargs.only_run:
 		if cargs.token:
 			token = cargs.token
 		else:
 			token = get_local_token()
+		verify_token_online(token)
+
 		_utils.assert_repo_exist()
-		git_user, git_repo = _utils.get_repo_remote()
-		git_commit = _utils.get_repo_commit()
-		_utils.assert_commit_exist(git_user, git_repo, git_commit)
-		LOGGER.info("git information detected.")
-		LOGGER.info("user: %s, repo: %s, commit sha1: %s", git_user, git_repo, git_commit)
-	if not cargs.only_run and cargs.only_upload:
-		LOGGER.warning("Your model is not running, only upload existing result. \
-Some information will be missing and it is not recommended.")
-		cotk_record_information = None
-	else:
-		if not cargs.only_run and not _utils.check_repo_clean():
+		if not _utils.check_repo_clean():
 			raise RuntimeError("Your changes of code hasn't been committed. Use \"git status\" \
 to check your changes.")
 
-		LOGGER.info("Running your model at '%s' with arguments: %s.", cargs.entry, cargs.args)
-		cotk_record_information = run_model(cargs.entry, cargs.args)
+		git_user, git_repo = _utils.get_repo_remote()
+		git_commit = _utils.get_repo_commit()
+		#_utils.assert_commit_exist(git_user, git_repo, git_commit)
+		LOGGER.info("git information detected.")
+		LOGGER.info("user: %s, repo: %s, commit sha1: %s", git_user, git_repo, git_commit)
+
+	try:
+		_utils.assert_repo_exist()
+		root_path = _utils.get_repo_root_path()
+		config_file = os.path.join(root_path, ".model_config.json")
+		in_git = True
+	except RuntimeError:
+		config_file = ".model_config.json"
+		in_git = False
+
+
+	if not cargs.only_upload:
+		LOGGER.info("Running your model at '%s' with arguments: %s.", cargs.entry, extra_args)
+		cotk_record_information = run_model(cargs.entry, extra_args)
 		LOGGER.info("Your model has exited.")
+
+		if in_git:
+			working_dir = _utils.get_repo_workingdir()
+			data = {"entry": cargs.entry, "args": extra_args,\
+			"cotk_record_information": cotk_record_information, "working_dir": working_dir}
+		else:
+			data = {"entry": cargs.entry, "args": extra_args,\
+			"cotk_record_information": cotk_record_information}
+
+		json.dump(data, open(config_file, 'w'))
+		LOGGER.info("Runtime information has dumped into %s.", config_file)
+
+		validate_result(cargs.result)
+	else:
+
+		if not os.path.isfile(config_file):
+			raise RuntimeError(".model_config.json not found. It seems you have not run your \
+model with cotk. You can't use \"only-upload\" before \"only-run\".")
+		data = json.load(open(config_file))
 
 	if not cargs.only_run:
 		LOGGER.info("Collecting info for upload...")
-		upload_id = upload_report(cargs.result, cargs.entry, cargs.args, \
+		upload_id = upload_report(cargs.result, data["entry"], data["args"], data["working_dir"], \
 			git_user, git_repo, git_commit, \
-			cotk_record_information, token)
+			data["cotk_record_information"], token)
 		LOGGER.info("Upload complete. Check %s for your report.", SHOW_URL % upload_id)

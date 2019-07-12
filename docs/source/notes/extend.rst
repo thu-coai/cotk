@@ -26,9 +26,9 @@ The structure of your directory should be like:
 .. code-block:: none
 
     mscoco
-    |---mscoco_train.txt
-    |---mscoco_dev.txt
-    |---mscoco_test.txt
+    ├───mscoco_train.txt
+    ├───mscoco_dev.txt
+    └───mscoco_test.txt
 
 Then you can load your data using :class:`.dataloader.MSCOCO` with a local path.
 

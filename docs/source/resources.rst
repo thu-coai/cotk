@@ -34,6 +34,15 @@ https://cotk-data.s3-ap-northeast-1.amazonaws.com/mscoco.zip#MSCOCO           MS
 ./mscoco.zip#MSCOCO                                                           MSCOCO   None             MSCOCOResourceProcessor
 ============================================================================  =======  ===============  ===================================
 
+.. note::
+
+    If you already have the resources data at local, but ``cotk`` want to download them,
+    you can use the following command line to import local resources into cache.
+
+    ``cotk import --file_id <file_id> --file_path <file_path>``
+    
+    where **file_path** is the path to the local resource.
+
 Word Vector
 ----------------------------------
 

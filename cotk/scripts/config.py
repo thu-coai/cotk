@@ -7,19 +7,39 @@ import argparse
 from .._utils import file_utils
 from . import main
 
-def save_token(token):
-	'''Save token locally'''
-	json.dump({'token': token}, open(main.CONFIG_FILE, "w"))
+def load_config():
+	try:
+		config = json.load(open(main.CONFIG_FILE))
+	except (FileNotFoundError, json.JSONDecodeError):
+		config = {}
+	return config
+
+
+def config_set(variable, value):
+	config = load_config()
+	config[variable] = value
+	json.dump(config, open(main.CONFIG_FILE, 'w'))
 	main.LOGGER.info("Save your configuration locally at {}".format(main.CONFIG_FILE))
+
+
+def config_load(variable):
+	config = load_config()
+	return config.get(variable, None)
 
 def config(args):
 	'''Entrance of configuration'''
 	parser = argparse.ArgumentParser(prog="cotk config", \
 		description='Configuration (e.g. token)')
-	parser.add_argument('--token', type=str, default="")
+	parser.add_argument("action", type=str, choices=["set", "show"])
+	parser.add_argument("variable", type=str)
+	parser.add_argument("value", type=str, nargs="*")
 	cargs = parser.parse_args(args)
 
-	if cargs.token:
-		save_token(cargs.token)
+	if cargs.action == "set":
+		config_set(cargs.variable, " ".join(cargs.value))
+		main.LOGGER.info("%s = %s", cargs.variable, " ".join(cargs.value))
+	elif cargs.action =="show":
+		value = config_load(cargs.variable)
+		main.LOGGER.info("%s = %s", cargs.variable, value)
 	else:
 		raise RuntimeError("Token cannot be empty.")

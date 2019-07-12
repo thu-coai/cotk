@@ -11,9 +11,3 @@ Features include:
  * A dashboard to show the performance, compare your and others' models fairly.
  * Long-term maintenance and consistent development.
 """
-
-from ._utils import start_recorder, close_recorder
-
-from . import dataloader, metric, wordvector
-
-__all__ = ["dataloader", "metric", "wordvector", "start_recorder", "close_recorder"]
