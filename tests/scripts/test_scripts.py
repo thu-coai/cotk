@@ -6,7 +6,7 @@ import json
 import subprocess
 from subprocess import PIPE
 import shutil
-import time
+import argparse
 
 class TestScripts():
 	i = 0
@@ -22,7 +22,7 @@ class TestScripts():
 
 	@pytest.mark.parametrize('url, error, match', \
 		[("http://wrong_url", ValueError, "can't match any pattern"),\
-		('user/repo/commit/wrong_commit', RuntimeError, "not found"),\
+		('user/repo/commit/wrong_commit', RuntimeError, "fatal"),\
 		('http://github.com/thu-coai/cotk-test-CVAE/no_result_file/', FileNotFoundError, r"Config file .* is not found."),\
 		('https://github.com/thu-coai/cotk-test-CVAE/tree/invalid_json', json.JSONDecodeError, ""),\
 		])
@@ -37,16 +37,12 @@ class TestScripts():
 		# assert "New result file not found." == str(excinfo.value)
 		dispatch('download', ['https://github.com/thu-coai/cotk-test-CVAE/tree/run_and_test'])
 
-	def test_config_error(self):
-		with pytest.raises(RuntimeError, match="Token cannot be empty."):
-			dispatch('config', [])
-
 	def test_config(self):
-		dispatch('config', ['--token', 'token'])
+		dispatch('config', ["set", 'token', "123"])
 
 	def test_import_local_resources(self):
 		shutil.copyfile('./tests/_utils/dummy_coai/test.json', './cotk/resource_config/test.json')
 
-		dispatch('import', ['--file_id', 'resources://test', '--file_path', './tests/_utils/data/test.zip'])
+		dispatch('import', ['resources://test', './tests/_utils/data/test.zip'])
 
 		os.remove('./cotk/resource_config/test.json')

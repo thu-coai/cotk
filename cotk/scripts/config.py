@@ -38,8 +38,8 @@ def config(args):
 	if cargs.action == "set":
 		config_set(cargs.variable, " ".join(cargs.value))
 		main.LOGGER.info("%s = %s", cargs.variable, " ".join(cargs.value))
-	elif cargs.action =="show":
+	elif cargs.action == "show":
 		value = config_load(cargs.variable)
 		main.LOGGER.info("%s = %s", cargs.variable, value)
 	else:
-		raise RuntimeError("Token cannot be empty.")
+		raise RuntimeError("Unkown action.")
