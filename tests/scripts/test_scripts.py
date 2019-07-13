@@ -6,15 +6,25 @@ import json
 import subprocess
 from subprocess import PIPE
 import shutil
+import time
 
 class TestScripts():
+	i = 0
+
+	def setup(self):
+		try:
+			shutil.rmtree("cotk-test-CVAE")
+		except FileNotFoundError:
+			pass
+		except PermissionError:
+			os.rename("cotk-test-CVAE", "cotk-test-CVAE" + str(TestScripts.i))
+			TestScripts.i += 1
 
 	@pytest.mark.parametrize('url, error, match', \
 		[("http://wrong_url", ValueError, "can't match any pattern"),\
-		('user/repo/commit/wrong_commit', RuntimeError, "It should be public."),\
+		('user/repo/commit/wrong_commit', RuntimeError, "not found"),\
 		('http://github.com/thu-coai/cotk-test-CVAE/no_result_file/', FileNotFoundError, r"Config file .* is not found."),\
 		('https://github.com/thu-coai/cotk-test-CVAE/tree/invalid_json', json.JSONDecodeError, ""),\
-		('thu-coai/cotk-test-CVAE/tree/keys_undefined', RuntimeError, "Undefined keys"),\
 		])
 	def test_download_error(self, url, error, match):
 		with pytest.raises(error, match=match):
