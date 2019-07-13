@@ -237,6 +237,15 @@ class _PrecisionRecallMetric(MetricBase):
 				  but without start token (eg: ``<go>``).
 				  Size: ``[batch_size, generated_num_per_context, ~gen_sentence_length]``,
 				  where "~" means different sizes in this dimension is allowed.
+
+				Here is an example for data:
+					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
+					>>> #   "been", "to", "China"]
+					>>> data = {
+					... 	candidate_allvocabs_key: [[[4], [5,6]], [[4,5,6]]]
+					...		multiple_gen_key: [[[5,6,3]], [[4,5,7,3], [8,3]]]
+					... }
+
 		'''
 		super().forward(data)
 		candidate_allvocabs = data[self.candidate_allvocabs_key]
@@ -280,7 +289,10 @@ class _PrecisionRecallMetric(MetricBase):
 			* ``res_prefix`` **recall**: average recall.
 			* ``res_prefix`` **hashvalue**: hash value for precision & recall metric, same hash value stands
 			  for same evaluation settings.
+
 		'''
+		if (not self.prec_list) or (not self.rec_list):
+			raise RuntimeError("The metric has not been forwarded data correctly.")
 		res = super().close()
 		res.update({'{} precision'.format(self.res_prefix): np.average(self.prec_list), \
 				'{} recall'.format(self.res_prefix): np.average(self.rec_list), \
@@ -339,6 +351,12 @@ class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
 
 		Returns:
 			int: score \in [0, 1].
+
+		Here is an Example:
+			>>> gen = [4,5]
+			>>> reference = [5,6]
+			>>> self._score(gen, reference)
+			0.150 # assume self.weights = [0.25,0.25,0.25,0.25]
 		'''
 		gen = self._replace_unk(gen)
 		return sentence_bleu([reference], gen, self.weights, SmoothingFunction().method1)
@@ -393,6 +411,12 @@ class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
 
 		Returns:
 			int: cosine similarity between two sentence embeddings \in [0, 1].
+
+		Here is an Example:
+			>>> gen = [4,5]
+			>>> reference = [5,6]
+			>>> self._score(gen, reference)
+			0.135 # assume self.mode = 'avg'
 		'''
 		gen_vec = []
 		ref_vec = []
@@ -465,8 +489,8 @@ class PerplexityMetric(MetricBase):
 				{MetricBase.FORWARD_REFERENCE_ALLVOCABS_ARGUMENTS_WITH_TORCH}
 				{MetricBase.FORWARD_REFERENCE_LEN_ARGUMENTS}
 				* **data[gen_log_prob_key]** (list or :class:`numpy.ndarray` or :class:`torch.Tensor`):
-				  Sentence generations model outputs of
-				  A 3-d jagged or padded array of int. **log softmax** probability.
+				  The **log softmax** probability of the sentence generations model outputs.
+				  A 3-d jagged or padded array of float.
 				  Contains end token (eg:``<eos>``), but without start token (eg: ``<go>``).
 				  Size: ``[batch_size, ~gen_sentence_length, vocab_size]`` for ``invalid_vocab = False``, or
 				  ``[batch_size, ~gen_sentence_length, all_vocab_size]`` for ``invalid_vocab = True``,
@@ -474,6 +498,15 @@ class PerplexityMetric(MetricBase):
 				  If :class:`torch.Tensor` is used, the following data should also be
 				  :class:`torch.Tensor`.
 
+				Here is an example for data:
+					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
+					>>> #   "been", "to", "China"]
+					>>> data = {
+					... 	reference_allvocabs_key: [[2,4,3], [2,5,6,3]]
+					...		reference_len_key: [3,4]
+					...		gen_log_prob_key: [[[-3.80666249, -3.11351531, -2.7080502 , -2.42036813, -2.19722458,
+								-2.01490302, -1.86075234, -1.72722095, -1.60943791],...],...]
+					... }
 		Warning:
 			``data[gen_log_prob_key]`` must be processed after log_softmax. That means,
 			``np.sum(np.exp(gen_log_prob), -1)`` equals ``np.ones((batch_size, gen_sentence_length))``
@@ -677,8 +710,12 @@ class PerplexityMetric(MetricBase):
 
 		if self.engine_version == "pytorch":
 			# pytorch is finished when forward
-			pass
+			if self.length_sum == 0:
+				raise RuntimeError("The metric has not been forwarded data correctly.")
 		else:
+			if not self.gen_valid_log_prob:
+				raise RuntimeError("The metric has not been forwarded data correctly.")
+
 			loader = self.dataloader
 			tasks = ((self.gen_valid_log_prob[i], self.gen_unk_log_prob[i], self.resp[i], \
 							self.invalid_vocab, loader.vocab_size, loader.all_vocab_size, loader.unk_id) \
@@ -751,7 +788,7 @@ class MultiTurnPerplexityMetric(MetricBase):
 				{MetricBase.FORWARD_MULTI_TURN_REFERENCE_LEN_ARGUMENTS}
 				* **data[multi_turn_gen_log_prob_key]** (list or :class:`numpy.ndarray` or \
 					:class:`torch.Tensor`):
-				  Sentence generations model outputs of
+				  The **log softmax** probability of the sentence generations model outputs.
 				  A 4-d jagged or padded array. **log softmax** probability.
 				  Contains end token (eg:``<eos>``), but without start token (eg: ``<go>``).
 				  Size: ``[batch_size, ~gen_sentence_length, vocab_size]`` for ``invalid_vocab = False``, or
@@ -759,10 +796,21 @@ class MultiTurnPerplexityMetric(MetricBase):
 				  where "~" means different sizes in this dimension is allowed.
 				  If :class:`torch.Tensor` is used, the following data should also be
 				  :class:`torch.Tensor`.
+
+				Here is an example for data:
+					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
+					>>> #   "been", "to", "China"]
+					>>> data = {
+					... 	multi_turn_reference_allvocabs_key: [[[2,4,3], [2,5,6,3]], [[2,7,6,8,3]]]
+					...		multi_turn_reference_len_key: [[3, 4], [5]]
+					...		multi_turn_gen_log_prob_key: [[[[-3.80666249, -3.11351531, -2.7080502,
+								-2.42036813, -2.19722458, -2.01490302, -1.86075234, -1.72722095,
+								-1.60943791], ...], ...], ...]
+					... }
 		Warning:
 			``data[multi_turn_gen_log_prob_key]`` must be processed after log_softmax. That means,
 			``np.sum(np.exp(multi_turn_gen_log_prob_key), -1)`` equals
-			``np.ones((batch_size, gen_sentence_length))``
+			``np.ones((batch_size, ~gen_sentence_length))``
 		'''
 		super().forward(data)
 		reference_allvocabs = data[self.multi_turn_reference_allvocabs_key]
@@ -828,6 +876,14 @@ class BleuCorpusMetric(MetricBase):
 
 				{MetricBase.FORWARD_REFERENCE_ALLVOCABS_ARGUMENTS}
 				{MetricBase.FORWARD_GEN_ARGUMENTS}
+
+				Here is an example for data:
+					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
+					>>> #   "been", "to", "China"]
+					>>> data = {
+					... 	reference_allvocabs_key: [[2,4,3], [2,5,6,3]]
+					...		gen_key: [[4,5,3], [6,7,8,3]]
+					... }
 		'''
 		super().forward(data)
 		gen = data[self.gen_key]
@@ -878,6 +934,9 @@ class BleuCorpusMetric(MetricBase):
 			  for same evaluation settings.
 		'''
 		result = super().close()
+		if (not self.hyps) or (not self.refs):
+			raise RuntimeError("The metric has not been forwarded data correctly.")
+
 		self.hyps = self._replace_unk(self.hyps)
 		try:
 			result.update({"bleu": \
@@ -901,6 +960,7 @@ class SelfBleuCorpusMetric(MetricBase):
 		sample (int): Number of examples sampled from the generated sentences. Default: ``1000``.
 		seed (int): Random seed for sampling. Default: ``1229``.
 		{MetricBase.CPU_COUNT_ARGUMENTS}
+
 	Warning:
 		the calculation of ``hashvalue`` considers the actual sample size of hypotheses which
 			will be less than ``sample`` if the size of hypotheses is smaller than ``sample``
@@ -915,7 +975,6 @@ class SelfBleuCorpusMetric(MetricBase):
 		self.dataloader = dataloader
 		self.gen_key = gen_key
 		self.sample = sample
-		self.refs = []
 		self.hyps = []
 		self.seed = seed
 		if cpu_count is not None:
@@ -932,6 +991,13 @@ class SelfBleuCorpusMetric(MetricBase):
 			data (dict): A dict at least contains the following keys:
 
 				{MetricBase.FORWARD_GEN_ARGUMENTS}
+
+				Here is an example for data:
+					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
+					>>> #   "been", "to", "China"]
+					>>> data = {
+					...		gen_key: [[4,5,3], [6,7,8,3]]
+					... }
 		'''
 		super().forward(data)
 		gen = data[self.gen_key]
@@ -982,6 +1048,10 @@ class SelfBleuCorpusMetric(MetricBase):
 			* **self-bleu**: self-bleu value.
 		'''
 		res = super().close()
+		if not self.hyps:
+			raise RuntimeError("The metric has not been forwarded data correctly.")
+		if len(self.hyps) == 1:
+			raise RuntimeError("Self-Bleu can't be computed because there is only 1 generated sentence.")
 
 		if self.sample > len(self.hyps):
 			self.sample = len(self.hyps)
@@ -1051,6 +1121,13 @@ class FwBwBleuCorpusMetric(MetricBase):
 			data (dict): A dict at least contains the following keys:
 
 				{MetricBase.FORWARD_GEN_ARGUMENTS}
+
+				Here is an example for data:
+					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
+					>>> #   "been", "to", "China"]
+					>>> data = {
+					...		gen_key: [[4,5,3], [6,7,8,3]]
+					... }
 		'''
 		gen = data[self.gen_key]
 
@@ -1102,6 +1179,8 @@ class FwBwBleuCorpusMetric(MetricBase):
 			  for same evaluation settings.
 		'''
 		res = super().close()
+		if not self.hyps:
+			raise RuntimeError("The metric has not been forwarded data correctly.")
 
 		resp = self.dataloader.data["test"][self.reference_test_key]
 		for resp_sen in resp:
@@ -1186,6 +1265,15 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 				{MetricBase.FORWARD_MULTI_TURN_REFERENCE_ALLVOCABS_ARGUMENTS}
 				{MetricBase.FORWARD_MULTI_TURN_GEN_ARGUMENTS}
 				{MetricBase.FORWARD_MULTI_TURN_LENGTH_ARGUMENTS}
+
+				Here is an example for data:
+					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
+					>>> #   "been", "to", "China"]
+					>>> data = {
+					...		multi_turn_reference_allvocabs_key: [[[2,4,3], [2,5,6,3]], [[2,7,6,8,3]]]
+					...		turn_len_key: [2, 1]
+					...		gen_key: [[[6,7,8,3], [4,5,3]], [[7,3]]]
+					... }
 		'''
 		super().forward(data)
 		reference_allvocabs = data[self.multi_turn_reference_allvocabs_key]
@@ -1238,6 +1326,9 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 			  for same evaluation settings.
 		'''
 		result = super().close()
+		if (not self.hyps) or (not self.refs):
+			raise RuntimeError("The metric has not been forwarded data correctly.")
+
 		self._hash_relevant_data(self.refs)
 
 		self.hyps = self._replace_unk(self.hyps)
@@ -1286,6 +1377,15 @@ class SingleTurnDialogRecorder(MetricBase):
 				{MetricBase.FORWARD_POST_ALLVOCABS_ARGUMENTS}
 				{MetricBase.FORWARD_RESP_ALLVOCABS_ARGUMENTS}
 				{MetricBase.FORWARD_GEN_ARGUMENTS}
+
+				Here is an example for data:
+					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
+					>>> #   "been", "to", "China"]
+					>>> data = {
+					...		post_allvocabs_key: [[2,4,3], [2,5,6,3]]
+					...		resp_allvocabs_key: [[2,5,4,3], [2,6,3]]
+					...		gen_key: [[6,7,8,3], [4,5,3]]
+					... }
 		'''
 		super().forward(data)
 		post_allvocabs = data[self.post_allvocabs_key]
@@ -1361,6 +1461,16 @@ class MultiTurnDialogRecorder(MetricBase):
 				{MetricBase.FORWARD_MULTI_TURN_REFERENCE_ALLVOCABS_ARGUMENTS}
 				{MetricBase.FORWARD_MULTI_TURN_GEN_ARGUMENTS}
 				{MetricBase.FORWARD_MULTI_TURN_LENGTH_ARGUMENTS}
+
+				Here is an example for data:
+					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
+					>>> #   "been", "to", "China"]
+					>>> data = {
+					...		multi_turn_context_allvocabs_key: [[[2,4,3], [2,5,6,3]], [[2,7,6,8,3]]]
+					...		multi_turn_reference_allvocabs_key: [[[2,6,7,3], [2,5,3]], [[2,7,6,8,3]]]
+					...		multi_turn_gen_key: [[[6,7,8,3], [4,5,3]], [[7,3]]]
+					...		turn_len_key: [2,1]
+					... }
 		'''
 		super().forward(data)
 		context_allvocabs = data[self.multi_turn_context_allvocabs_key]
@@ -1433,6 +1543,13 @@ class LanguageGenerationRecorder(MetricBase):
 			data (dict): A dict at least contains the following keys:
 
 				{MetricBase.FORWARD_GEN_ARGUMENTS}
+
+				Here is an example for data:
+					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
+					>>> #   "been", "to", "China"]
+					>>> data = {
+					...		gen_key: [[6,7,8,3], [4,5,3]]
+					... }
 		'''
 		super().forward(data)
 		gen = data[self.gen_key]
@@ -1504,7 +1621,7 @@ class MetricChain(MetricBase):
 		return res
 
 class AccuracyMetric(MetricBase):
-	'''Metric for calculating BLEU.
+	'''Metric for calculating accuracy.
 
 	Arguments:
 		{MetricBase.DATALOADER_ARGUMENTS}
@@ -1529,6 +1646,12 @@ class AccuracyMetric(MetricBase):
 
 				{MetricBase.LABEL_ARGUMENTS}
 				{MetricBase.PREDICTION_ARGUMENTS}
+
+				Here is an example for data:
+					>>> data = {
+					...		label_key: [1,2,2,1]
+					...		prediction_key: [1,2,1,2]
+					... }
 		'''
 		super().forward(data)
 		self.hyps.extend(data[self.prediction_key])
@@ -1548,6 +1671,8 @@ class AccuracyMetric(MetricBase):
 			  for same evaluation settings.
 		'''
 		result = super().close()
+		if (not self.hyps) or (not self.refs):
+			raise RuntimeError("The metric has not been forwarded data correctly.")
 		result.update({"accuracy": \
 			nltk.classify.accuracy(self.refs, self.hyps), \
 			"accuracy hashvalue": self._hashvalue()})
