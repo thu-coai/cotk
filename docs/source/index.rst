@@ -32,6 +32,7 @@ your models fairly with baselines.
    wordvector
    metric
    resources
+   downloader
 
 .. _model_zoo:
 

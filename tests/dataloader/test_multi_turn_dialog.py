@@ -296,7 +296,7 @@ class TestSwitchboardCorpus(TestMultiTurnDialog):
 	def test_teacher_precision_recall_metric(self, load_switchboardcorpus):
 		dl = load_switchboardcorpus()
 		glove = Glove("./tests/wordvector/dummy_glove/300d/")
-		embed = glove.load_pretrained_embed(300, dl.vocab_list)
+		embed = glove.load_dict(dl.vocab_list)
 		assert isinstance(dl.get_multi_ref_metric(generated_num_per_context=3, word2vec=embed), MetricBase)
 
 	def test_init_multi_runs(self, load_switchboardcorpus):

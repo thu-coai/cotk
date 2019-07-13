@@ -34,7 +34,7 @@ def main(args, load_exclude_set, restoreCallback):
 	def load_dataset(data_arg, wvpath, embedding_size):
 		wv = wordvec_class(wvpath)
 		dm = data_class(**data_arg)
-		return dm, wv.load(embedding_size, dm.vocab_list) 
+		return dm, wv.load_matrix(embedding_size, dm.vocab_list) 
 
 	if args.cache:
 		dm, volatile.wordvec = try_cache(load_dataset, (data_arg, args.wvpath, args.embedding_size),

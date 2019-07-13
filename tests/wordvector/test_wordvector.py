@@ -26,7 +26,7 @@ class TestWordVector():
 	def base_test_load(self, dl):
 		vocab_list = ['the', 'of']
 		n_dims = 300
-		wordvec = dl.load(n_dims, vocab_list)
+		wordvec = dl.load_matrix(n_dims, vocab_list)
 		assert isinstance(wordvec, np.ndarray)
 		assert wordvec.shape == (len(vocab_list), n_dims)
 		print(wordvec[1])
@@ -35,7 +35,7 @@ class TestWordVector():
 
 		vocab_list = ['the', 'word_not_exist']
 		n_dims = 300
-		wordvec = dl.load(n_dims, vocab_list)
+		wordvec = dl.load_matrix(n_dims, vocab_list)
 		assert isinstance(wordvec, np.ndarray)
 		assert wordvec.shape == (len(vocab_list), n_dims)
 		assert wordvec[0][0] == 0.04656

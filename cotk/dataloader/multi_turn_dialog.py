@@ -624,7 +624,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 		metric = MetricChain()
 		if word2vec is None:
 			glove = Glove("resources://Glove300d")
-			word2vec = glove.load_pretrained_embed(300, self.vocab_list)
+			word2vec = glove.load_dict(self.vocab_list)
 		for ngram in range(1, 5):
 			metric.add_metric(BleuPrecisionRecallMetric(self, ngram, generated_num_per_context,\
 			multiple_gen_key=multiple_gen_key))

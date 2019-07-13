@@ -1,10 +1,13 @@
 """
 Utilities for working with the local dataset cache.
-This file is adapted from the AllenNLP library at https://github.com/allenai/allennlp
-Copyright by the AllenNLP authors.
 """
 
 from ._utils.file_utils import load_file_from_url as _load_file_from_url
+
+r"""
+This file is adapted from the AllenNLP library at https://github.com/allenai/allennlp
+Copyright by the AllenNLP authors.
+""" #pylint: disable=pointless-string-statement
 
 def load_file_from_url(url, force=False, cache_dir=None):
 	'''Download a file from the given ``url``. If the file has been downloaded, it will be
@@ -14,9 +17,9 @@ def load_file_from_url(url, force=False, cache_dir=None):
 
 	Arguments:
 		url(str): A url indicating the file online.
-		force(bool): Force to download and ignore the existing file.
-		cache_dir(str, option): A path indicating where the cache place.
-		If ``None``, a default cache path is used.
+		force(bool): Force to download and ignore the existing file. Default: ``False``
+		cache_dir(str, optional): A path indicating where the cache place.
+			Default: if ``None``, a default cache path is used.
 
 	Returns:
 		(str) The local path of downloaded model.

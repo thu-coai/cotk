@@ -48,7 +48,7 @@ def main(args):
 	if args.cache:
 		data = try_cache(data_class, (args.datapath,), args.cache_dir)
 		vocab = data.vocab_list
-		embed = try_cache(lambda wv, ez, vl: wordvec_class(wv).load(ez, vl),
+		embed = try_cache(lambda wv, ez, vl: wordvec_class(wv).load_matrix(ez, vl),
 						  (args.wvpath, args.embedding_size, vocab),
 						  args.cache_dir, wordvec_class.__name__)
 	else:
@@ -58,7 +58,7 @@ def main(args):
 				max_turn_length=args.max_turn_length)
 		wv = wordvec_class(args.wvpath)
 		vocab = data.vocab_list
-		embed = wv.load(args.embedding_size, vocab)
+		embed = wv.load_matrix(args.embedding_size, vocab)
 
 	embed = np.array(embed, dtype = np.float32)
 
