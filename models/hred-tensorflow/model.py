@@ -360,17 +360,23 @@ class HredModel(object):
 				if isinstance(value, float):
 					print("\t%s:\t%f" % (key, value))
 					f.write("%s:\t%f\n" % (key, value))
-			for i in range(len(res['context'])):
-				f.write("batch number:\t%d\n" % i)
-				for j in range(min(len(res['context'][i]), len(res['reference'][i]))):
-					if j > 0 and " ".join(res['context'][i][j]) != " ".join(res['reference'][i][j-1]):
-						f.write("\n")
-					f.write("post:\t%s\n" % " ".join(res['context'][i][j]))
-					f.write("resp:\t%s\n" % " ".join(res['reference'][i][j]))
-					if j < len(res['gen'][i]):
-						f.write("gen:\t%s\n" % " ".join(res['gen'][i][j]))
-					else:
-						f.write("gen:\n")
+			for i, reference in enumerate(res['reference']):
+				f.write("session: \t%d\n" % i)
+				for j in range(len(reference)):
+					f.write("\tresp:\t%s\n" % " ".join(reference[j]))
+					f.write("\tgen:\t%s\n\n" % " ".join(res['gen'][i][j]))
+				f.write("\n")
+			# for i in range(len(res['context'])):
+			# 	f.write("batch number:\t%d\n" % i)
+			# 	for j in range(min(len(res['context'][i]), len(res['reference'][i]))):
+			# 		if j > 0 and " ".join(res['context'][i][j]) != " ".join(res['reference'][i][j-1]):
+			# 			f.write("\n")
+			# 		f.write("post:\t%s\n" % " ".join(res['context'][i][j]))
+			# 		f.write("resp:\t%s\n" % " ".join(res['reference'][i][j]))
+			# 		if j < len(res['gen'][i]):
+			# 			f.write("gen:\t%s\n" % " ".join(res['gen'][i][j]))
+			# 		else:
+			# 			f.write("gen:\n")
 
 		print("result output to %s" % test_file)
 		return {key: val for key, val in res.items() if type(val) in [bytes, int, float]}

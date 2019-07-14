@@ -303,8 +303,7 @@ class MultiTurnDialog(LanguageProcessingBase):
 		metric.add_metric(MultiTurnBleuCorpusMetric(self, multi_turn_gen_key=multi_turn_gen_key,\
 			multi_turn_reference_allvocabs_key="sent_allvocabs", turn_len_key="turn_length"))
 		metric.add_metric(MultiTurnDialogRecorder(self, multi_turn_gen_key=multi_turn_gen_key,\
-			multi_turn_reference_allvocabs_key="sent_allvocabs", turn_len_key="turn_length", \
-			multi_turn_context_allvocabs_key="sent_allvocabs"))
+			multi_turn_reference_allvocabs_key="sent_allvocabs", turn_len_key="turn_length"))
 		return metric
 
 class UbuntuCorpus(MultiTurnDialog):

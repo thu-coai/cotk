@@ -491,16 +491,15 @@ class CVAEModel(object):
 				if isinstance(value, float) or isinstance(value, int):
 					print("\t%s:\t%f" % (key, value))
 					f.write("%s:\t%f\n" % (key, value))
-			for i, context in enumerate(res['context']):
+			for i, reference in enumerate(res['reference']):
 				f.write("session: \t%d\n" % i)
-				for j in range(len(context)):
-					f.write("\tpost:\t%s\n" % " ".join(context[j]))
-					f.write("\tresp:\t%s\n" % " ".join(res['reference'][i][j]))
+				for j in range(len(reference)):
+					f.write("\tresp:\t%s\n" % " ".join(reference[j]))
 					f.write("\tgen:\t%s\n\n" % " ".join(res['gen'][i][j]))
 				f.write("\n")
 
 		print("result output to %s" % test_file)
-		return {key: val for key, val in res.items() if key not in ['context', 'reference', 'gen']}
+		return {key: val for key, val in res.items() if key not in ['reference', 'gen']}
 
 	def test_multi_ref(self, sess, data, word2vec, args):
 		def process_cands(candidates):

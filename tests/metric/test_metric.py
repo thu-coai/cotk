@@ -1042,22 +1042,13 @@ multi_turn_dialog_test_parameter = generate_testcase(\
 )
 
 class TestMultiTurnDialogRecorder:
-	default_context_key = 'multi_turn_context_allvocabs'
 	default_ref_key = 'multi_turn_ref_allvocabs'
 	default_gen_key = "multi_turn_gen"
 	default_turn_len_key= "turn_length"
-	default_keywords = [default_context_key, default_ref_key, default_gen_key, default_turn_len_key]
-	def check(self, ans, dataloader, data, context_key=default_context_key, \
+	default_keywords = [default_ref_key, default_gen_key, default_turn_len_key]
+	def check(self, ans, dataloader, data, \
 			  resp_key=default_ref_key, gen_key=default_gen_key, turn_length=default_turn_len_key):
-		_ans = {'context': [], 'reference': [], 'gen': []}
-		for i, context_turn in enumerate(data[context_key]):
-			context_now = []
-			for j, context in enumerate(context_turn):
-				t = dataloader.trim_index(context[1:])
-				if len(t) == 0:
-					break
-				context_now.append(t)
-			_ans['context'].append(context_now)
+		_ans = {'reference': [], 'gen': []}
 
 		for i, resp_turn in enumerate(data[resp_key]):
 			resp_now = []
@@ -1083,13 +1074,8 @@ class TestMultiTurnDialogRecorder:
 				gen_now.append(t)
 			_ans['gen'].append(gen_now)
 
-		print('_ans[\'context\']: ', _ans['context'])
-		print('ans[\'context\']: ', ans['context'])
-		assert len(ans['context']) == len(_ans['context'])
 		assert len(ans['reference']) == len(_ans['reference'])
 		assert len(ans['gen']) == len(_ans['gen'])
-		for i, turn in enumerate(ans['context']):
-			assert len(_ans['context'][i]) == len(turn)
 		for i, turn in enumerate(ans['reference']):
 			assert len(_ans['reference'][i]) == len(turn)
 		for i, turn in enumerate(ans['gen']):
@@ -1105,16 +1091,16 @@ class TestMultiTurnDialogRecorder:
 		# 'random', 'non-empty', 'empty'
 		# 'random', 'non-empty', 'empty'
 		dataloader = FakeMultiDataloader()
-		context_key, reference_key, gen_key, turn_len_key = self.default_keywords \
-			if argument == 'default' else ('ck', 'rk', 'gk', 'tk')
-		data = dataloader.get_data(context_key=context_key, turn_len_key=turn_len_key, reference_key=reference_key, gen_key=gen_key, \
+		reference_key, gen_key, turn_len_key = self.default_keywords \
+			if argument == 'default' else ('rk', 'gk', 'tk')
+		data = dataloader.get_data(turn_len_key=turn_len_key, reference_key=reference_key, gen_key=gen_key, \
 								   to_list=(type == 'list'), pad=(shape == 'pad'), \
 								   gen_len=gen_len, ref_len=ref_len)
 		_data = copy.deepcopy(data)
 		if argument == 'default':
 			mtbr = MultiTurnDialogRecorder(dataloader)
 		else:
-			mtbr = MultiTurnDialogRecorder(dataloader, context_key, reference_key, gen_key,
+			mtbr = MultiTurnDialogRecorder(dataloader, reference_key, gen_key,
 										   turn_len_key)
 
 		if batch_len == 'unequal':
@@ -1131,7 +1117,7 @@ class TestMultiTurnDialogRecorder:
 			else:
 				mtbr.forward(data)
 				self.check(mtbr.close(), dataloader, \
-					data, context_key, reference_key, gen_key, turn_len_key)
+					data, reference_key, gen_key, turn_len_key)
 
 		assert same_dict(data, _data)
 

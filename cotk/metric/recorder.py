@@ -88,20 +88,17 @@ class MultiTurnDialogRecorder(MetricBase):
 
 	Arguments:
 		{MetricBase.DATALOADER_ARGUMENTS}
-		multi_turn_context_allvocabs_key (str): The key of dialog context with
-			:ref:`allvocabs <vocab_ref>`. Default: ``multi_turn_context_allvocabs``.
 		multi_turn_reference_allvocabs_key (str): The key of dialog references with
 			:ref:`allvocabs <vocab_ref>`. Default: ``multi_turn_ref_allvocabs``.
 		{MetricBase.MULTI_TURN_GEN_KEY_ARGUMENTS}
 		{MetricBase.MULTI_TURN_LENGTH_KEY_ARGUMENTS}
 	'''
-	def __init__(self, dataloader, multi_turn_context_allvocabs_key="multi_turn_context_allvocabs", \
+	def __init__(self, dataloader,
 			multi_turn_reference_allvocabs_key="multi_turn_ref_allvocabs", \
 			multi_turn_gen_key="multi_turn_gen", \
 			turn_len_key="turn_length"):
 		super().__init__()
 		self.dataloader = dataloader
-		self.multi_turn_context_allvocabs_key = multi_turn_context_allvocabs_key
 		self.multi_turn_reference_allvocabs_key = multi_turn_reference_allvocabs_key
 		self.multi_turn_gen_key = multi_turn_gen_key
 		self.turn_len_key = turn_len_key
@@ -115,7 +112,6 @@ class MultiTurnDialogRecorder(MetricBase):
 		Arguments:
 			data (dict): A dict at least contains the following keys:
 
-				{MetricBase.FORWARD_MULTI_TURN_CONTEXT_ALLVOCABS_ARGUMENTS}
 				{MetricBase.FORWARD_MULTI_TURN_REFERENCE_ALLVOCABS_ARGUMENTS}
 				{MetricBase.FORWARD_MULTI_TURN_GEN_ARGUMENTS}
 				{MetricBase.FORWARD_MULTI_TURN_LENGTH_ARGUMENTS}
@@ -131,13 +127,10 @@ class MultiTurnDialogRecorder(MetricBase):
 					... }
 		'''
 		super().forward(data)
-		context_allvocabs = data[self.multi_turn_context_allvocabs_key]
 		reference_allvocabs = data[self.multi_turn_reference_allvocabs_key]
 		gen = data[self.multi_turn_gen_key]
 		turn_length = data[self.turn_len_key]
 
-		if not isinstance(context_allvocabs, (np.ndarray, list)):
-			raise TypeError("Unknown type for context_allvocabs.")
 		if not isinstance(reference_allvocabs, (np.ndarray, list)):
 			raise TypeError("Unknown type for reference_allvocabs")
 		if not isinstance(gen, (np.ndarray, list)):
@@ -145,14 +138,11 @@ class MultiTurnDialogRecorder(MetricBase):
 		if not isinstance(turn_length, (np.ndarray, list)):
 			raise TypeError("Unknown type for turn_length")
 
-		if len(turn_length) != len(context_allvocabs) or \
-			len(turn_length) != len(reference_allvocabs) or \
+		if len(turn_length) != len(reference_allvocabs) or \
 			len(turn_length) != len(gen):
 			raise ValueError("Batch num is not matched.")
 
-		for i, context_sen in enumerate(context_allvocabs):
-			self.context_list.append(self.dataloader.convert_multi_turn_ids_to_tokens( \
-				np.array(context_sen), ignore_first_token=True))
+		for i, _ in enumerate(reference_allvocabs):
 			self.reference_list.append(self.dataloader.convert_multi_turn_ids_to_tokens( \
 				np.array(reference_allvocabs[i]), turn_length=turn_length[i], ignore_first_token=True))
 			self.gen_list.append(self.dataloader.convert_multi_turn_ids_to_tokens( \
@@ -167,9 +157,6 @@ class MultiTurnDialogRecorder(MetricBase):
 		Returns:
 			(dict): Return a dict which contains
 
-			* **context**: a list of post sentences. A jagged 3-d array of int.
-			  Size:``[batch_size, ~turn_length, ~sent_length]``, where "~" means different
-			  sizes in this dimension is allowed.
 			* **reference**: a list of response sentences. A jagged 3-d array of int.
 			  Size:``[batch_size, ~turn_length, ~sent_length]``, where "~" means different
 			  sizes in this dimension is allowed.
@@ -178,7 +165,7 @@ class MultiTurnDialogRecorder(MetricBase):
 			  sizes in this dimension is allowed.
 		'''
 		res = super().close()
-		res.update({"context": self.context_list, "reference": self.reference_list, "gen": self.gen_list})
+		res.update({"reference": self.reference_list, "gen": self.gen_list})
 		return res
 
 class LanguageGenerationRecorder(MetricBase):
