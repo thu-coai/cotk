@@ -5,11 +5,6 @@ It provides a fair metric for every model.
 from .._utils.unordered_hash import UnorderedSha256
 from .._utils.imports import DummyObject
 from .._utils.metaclass import LoadClassInterface, DocStringInheritor
-try:
-	import torch
-except ImportError as err:
-	torch = DummyObject(err)
-	torch.Tensor = DummyObject(err)
 
 class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 	'''Base class for metrics.

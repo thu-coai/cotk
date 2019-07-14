@@ -23,6 +23,8 @@ class DummyObject(dict):
 	def __getattr__(self, key):
 		if key in self:
 			return self[key]
+		elif key == "__bases__":
+			return tuple()
 		else:
 			raise self["err"]
 
