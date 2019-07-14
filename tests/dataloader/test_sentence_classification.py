@@ -166,8 +166,8 @@ class TestSentenceClassification():
 		assert sent == dl.convert_ids_to_tokens(sent_id, trim=False)
 		assert not dl.convert_ids_to_tokens(sent_id)
 
-	def base_test_accuracy_metric(self, dl):
-		assert isinstance(dl.get_accuracy_metric(), MetricBase)
+	def base_test_metric(self, dl):
+		assert isinstance(dl.get_metric(), MetricBase)
 
 	def base_test_multi_runs(self, dl_list):
 		assert all(x.vocab_list == dl_list[0].vocab_list for x in dl_list)
@@ -200,8 +200,8 @@ class TestSST(TestSentenceClassification):
 	def test_convert(self, load_sst):
 		super().base_test_convert(load_sst())
 
-	def test_accuracy_metric(self, load_sst):
-		super().base_test_accuracy_metric(load_sst())
+	def test_metric(self, load_sst):
+		super().base_test_metric(load_sst())
 
 	def test_init_multi_runs(self, load_sst):
 		super().base_test_multi_runs([load_sst() for i in range(3)])

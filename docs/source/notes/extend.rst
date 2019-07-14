@@ -26,9 +26,9 @@ The structure of your directory should be like:
 .. code-block:: none
 
     mscoco
-    ├───mscoco_train.txt
-    ├───mscoco_dev.txt
-    └───mscoco_test.txt
+    ├── mscoco_train.txt
+    ├── mscoco_dev.txt
+    └── mscoco_test.txt
 
 Then you can load your data using :class:`.dataloader.MSCOCO` with a local path.
 
@@ -116,7 +116,7 @@ and some necessary function is necessary for your dataloader. You can click
 on the following links for its input and outputs.
 
 * ``__init__``
-* :meth:`.Dataloader._load_data`
+* :meth:`.LanguageProcessingBase._load_data`
 * :meth:`.LanguageProcessingBase.get_batch`
 * (Optional) some function like ``get_metric()`` to define the standard metric.
 

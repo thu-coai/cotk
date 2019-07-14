@@ -12,7 +12,8 @@ import numpy as np
 
 from nltk.tokenize import WordPunctTokenizer
 from .._utils.file_utils import get_resource_file_path
-from .dataloader import LanguageProcessingBase, BERTLanguageProcessingBase
+from .dataloader import LanguageProcessingBase
+from .bert_dataloader import BERTLanguageProcessingBase
 from ..metric import MetricChain, PerplexityMetric, BleuCorpusMetric, SingleTurnDialogRecorder
 
 # pylint: disable=W0223
@@ -30,31 +31,27 @@ class SingleTurnDialog(LanguageProcessingBase):
 	ARGUMENTS = LanguageProcessingBase.ARGUMENTS
 	ATTRIBUTES = LanguageProcessingBase.ATTRIBUTES
 
-	def get_batch(self, key, index):
-		'''Get a batch of specified `index`.
-
-		Arguments:
-			key (str): key name of dataset, must be contained in ``self.key_name``.
-			index (list): a list of specified index
+	def get_batch(self, key, indexes):
+		'''{LanguageProcessingBase.GET_BATCH_DOC_WITHOUT_RETURNS}
 
 		Returns:
 			(dict): A dict at least contains:
 
 			* **post_length** (:class:`numpy.ndarray`): A 1-d array, the length of post in each batch.
 			  Size: ``[batch_size]``
-			* **post** (:class:`numpy.ndarray`): A 2-d padded array containing words of index form in posts.
+			* **post** (:class:`numpy.ndarray`): A 2-d padded array containing words of id form in posts.
 			  Only provide valid words. ``unk_id`` will be used if a word is not valid.
 			  Size: ``[batch_size, max(sent_length)]``
-			* **post_allvocabs** (:class:`numpy.ndarray`): A 2-d padded array containing words of index
+			* **post_allvocabs** (:class:`numpy.ndarray`): A 2-d padded array containing words of id
 			  form in posts. Provide both valid and invalid vocabs.
 			  Size: ``[batch_size, max(sent_length)]``
 			* **resp_length** (:class:`numpy.ndarray`): A 1-d array, the length of response in each batch.
 			  Size: ``[batch_size]``
-			* **resp** (:class:`numpy.ndarray`): A 2-d padded array containing words of index form
+			* **resp** (:class:`numpy.ndarray`): A 2-d padded array containing words of id form
 			  in responses. Only provide valid vocabs. ``unk_id`` will be used if a word is not valid.
 			  Size: ``[batch_size, max(sent_length)]``
 			* **resp_allvocabs** (:class:`numpy.ndarray`):
-			  A 2-d padded array containing words of index form in responses.
+			  A 2-d padded array containing words of id form in responses.
 			  Provide both valid and invalid vocabs.
 			  Size: ``[batch_size, max(sent_length)]``
 
@@ -88,12 +85,12 @@ class SingleTurnDialog(LanguageProcessingBase):
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
 		res = {}
-		batch_size = len(index)
-		res["post_length"] = np.array(list(map(lambda i: len(self.data[key]['post'][i]), index)))
-		res["resp_length"] = np.array(list(map(lambda i: len(self.data[key]['resp'][i]), index)))
+		batch_size = len(indexes)
+		res["post_length"] = np.array(list(map(lambda i: len(self.data[key]['post'][i]), indexes)))
+		res["resp_length"] = np.array(list(map(lambda i: len(self.data[key]['resp'][i]), indexes)))
 		res_post = res["post"] = np.zeros((batch_size, np.max(res["post_length"])), dtype=int)
 		res_resp = res["resp"] = np.zeros((batch_size, np.max(res["resp_length"])), dtype=int)
-		for i, j in enumerate(index):
+		for i, j in enumerate(indexes):
 			post = self.data[key]['post'][j]
 			resp = self.data[key]['resp'][j]
 			res_post[i, :len(post)] = post
@@ -259,15 +256,119 @@ class OpenSubtitles(SingleTurnDialog):
 		'''
 		return WordPunctTokenizer().tokenize(sentence)
 
-class BERTOpenSubtitles(BERTLanguageProcessingBase):
+class BERTSingleTurnDialog(BERTLanguageProcessingBase):
+	r"""Base class for single-turn dialog datasets **with BERT input**.
+	This is an abstract class.
+
+	This class is supported for sequence to sequence generation tasks, especially
+	single turn dialog tasks.
+
+	Arguments:{ARGUMENTS}
+
+	Attributes:{ATTRIBUTES}
+	"""
+
+	ARGUMENTS = BERTLanguageProcessingBase.ARGUMENTS
+	ATTRIBUTES = BERTLanguageProcessingBase.ATTRIBUTES
+
+	def get_batch(self, key, indexes):
+		'''{LanguageProcessingBase.GET_BATCH_DOC_WITHOUT_RETURNS}
+
+		Returns:
+			(dict): A dict at least contains:
+
+				* post_length (:class:`numpy.array`): A 1-d array, the length of post in each batch.
+			  	  Size: `[batch_size]`
+				* post (:class:`numpy.array`): A 2-d padding array containing id of words in posts.
+			  	  Only provide valid words. `unk_id` will be used if a word is not valid.
+			  	  Size: `[batch_size, max(sent_length)]`
+				* post_allvocabs (:class:`numpy.array`): A 2-d padding array containing id of words in posts.
+			  	  Provide both valid and invalid vocabs.
+			  	  Size: `[batch_size, max(sent_length)]`
+			  	* post_bert (:class:`numpy.array`): A 2-d padding array containing BERT id of words in posts.
+			  	  Size: `[batch_size, max(sent_length)]`
+				* resp_length (:class:`numpy.array`): A 1-d array, the length of response in each batch.
+			  	  Size: `[batch_size]`
+				* resp (:class:`numpy.array`): A 2-d padding array containing id of words in responses.
+			  	  Only provide valid vocabs. `unk_id` will be used if a word is not valid.
+			  	  Size: `[batch_size, max(sent_length)]`
+				* resp_allvocabs (:class:`numpy.array`):
+				  A 2-d padding array containing id of words in responses.
+			  	  Provide both valid and invalid vocabs.
+			  	  Size: `[batch_size, max(sent_length)]`
+			  	* resp_bert (:class:`numpy.array`):
+			  	  A 2-d padding array containing BERT id of words in responses.
+			  	  Size: `[batch_size, max(sent_length)]`
+		'''
+		if key not in self.key_name:
+			raise ValueError("No set named %s." % key)
+		res = {}
+		batch_size = len(indexes)
+		res["post_length"] = np.array(list(map(lambda i: len(self.data[key]['post'][i]), indexes)))
+		res["resp_length"] = np.array(list(map(lambda i: len(self.data[key]['resp'][i]), indexes)))
+		res_post = res["post"] = np.zeros((batch_size, np.max(res["post_length"])), dtype=int)
+		res_resp = res["resp"] = np.zeros((batch_size, np.max(res["resp_length"])), dtype=int)
+		res_post_bert = res["post_bert"] = np.zeros((batch_size, np.max(res["post_length"])), dtype=int)
+		res_resp_bert = res["resp_bert"] = np.zeros((batch_size, np.max(res["resp_length"])), dtype=int)
+		for i, j in enumerate(indexes):
+			post = self.data[key]['post'][j]
+			resp = self.data[key]['resp'][j]
+			res_post[i, :len(post)] = post
+			res_resp[i, :len(resp)] = resp
+
+			post_bert = self.data[key]['post_bert'][j]
+			resp_bert = self.data[key]['resp_bert'][j]
+			res_post_bert[i, :len(post_bert)] = post_bert
+			res_resp_bert[i, :len(resp_bert)] = resp_bert
+
+		res["post_allvocabs"] = res_post.copy()
+		res["resp_allvocabs"] = res_resp.copy()
+		res_post[res_post >= self.valid_vocab_len] = self.unk_id
+		res_resp[res_resp >= self.valid_vocab_len] = self.unk_id
+
+		return res
+
+	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob"):
+		'''Get metric for teacher-forcing mode.
+
+		It contains:
+
+		* :class:`.metric.PerplexityMetric`
+
+		Arguments:
+			gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerplexityMetric`
+		'''
+		metric = MetricChain()
+		metric.add_metric(PerplexityMetric(self, gen_log_prob_key=gen_log_prob_key))
+		return metric
+
+	def get_inference_metric(self, gen_key="gen"):
+		'''Get metric for inference.
+
+		It contains:
+
+		* :class:`.metric.BleuCorpusMetric`
+		* :class:`.metric.SingleDialogRecorder`
+
+		Arguments:
+			gen_key (str): default: "gen". Refer to :class:`.metric.BleuCorpusMetric` or
+			               :class:`.metric.SingleDialogRecorder`
+		'''
+		metric = MetricChain()
+		metric.add_metric(BleuCorpusMetric(self, gen_key=gen_key))
+		metric.add_metric(SingleTurnDialogRecorder(self, gen_key=gen_key))
+		return metric
+
+
+class BERTOpenSubtitles(BERTSingleTurnDialog):
 	'''A dataloader for OpenSubtitles dataset.
 
 	Arguments:
 		file_id (str): a str indicates the source of OpenSubtitles dataset.
 		min_vocab_times (int): A cut-off threshold of `UNK` tokens. All tokens appear
 			less than `min_vocab_times`	will be replaced by `<unk>`. Default: 10.
-		max_sent_length (int): All sentences longer than `max_sen_length` will be shortened
-			to first `max_sen_length` tokens. Default: 50.
+		max_sent_length (int): All sentences longer than `max_sent_length` will be shortened
+			to first `max_sent_length` tokens. Default: 50.
 		invalid_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
 			not less than `invalid_vocab_times` in the **whole dataset** (except valid words) will be
 			marked as invalid vocabs. Otherwise, they are unknown words, both in training or
@@ -286,13 +387,13 @@ class BERTOpenSubtitles(BERTLanguageProcessingBase):
 
 	def __init__(self, file_id, min_vocab_times=10, \
 			max_sent_length=50, invalid_vocab_times=0, \
-			bert_vocab='bert-base-uncased'):
+			bert_vocab_name='bert-base-uncased'):
 		self._file_id = file_id
 		self._file_path = get_resource_file_path(file_id)
 		self._min_vocab_times = min_vocab_times
 		self._max_sent_length = max_sent_length
 		self._invalid_vocab_times = invalid_vocab_times
-		super(BERTOpenSubtitles, self).__init__(bert_vocab=bert_vocab)
+		super().__init__(bert_vocab_name=bert_vocab_name)
 
 	@classmethod
 	def _run_tokenize(cls, ele):

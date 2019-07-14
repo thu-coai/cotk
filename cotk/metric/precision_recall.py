@@ -86,9 +86,9 @@ class _PrecisionRecallMetric(MetricBase):
 		if not isinstance(multiple_gen, (np.ndarray, list)):
 			raise TypeError("Unknown type for multiple_gen")
 
-		references = [[self.dataloader.trim_index(cand[1:]) for cand in inst] \
+		references = [[self.dataloader.trim(cand[1:]) for cand in inst] \
 					  for inst in candidate_allvocabs]
-		gens = [[self.dataloader.trim_index(cand) for cand in inst] \
+		gens = [[self.dataloader.trim(cand) for cand in inst] \
 					  for inst in multiple_gen]
 
 		if len(references) != len(gens):

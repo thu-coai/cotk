@@ -9,7 +9,7 @@ from setuptools.command.test import test as TestCommand
 class LibTest(TestCommand):
 	def run_tests(self):
 		# import here, cause outside the eggs aren't loaded
-		ret = os.system("pytest --cov=cotk tests/ --cov-report term-missing && python ./models/run_tests.py")
+		ret = os.system("pytest --cov=cotk tests/ --cov-report term-missing")
 		sys.exit(ret >> 8)
 
 setup(

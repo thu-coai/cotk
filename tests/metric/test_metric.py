@@ -594,8 +594,8 @@ class TestBleuCorpusMetric:
 		refs = []
 		gens = []
 		for gen_sen, resp_sen in zip(input[gen_key], input[reference_key]):
-			gen_sen_processed = dataloader.trim_index(gen_sen)
-			resp_sen_processed = dataloader.trim_index(resp_sen[1:])
+			gen_sen_processed = dataloader.trim(gen_sen)
+			resp_sen_processed = dataloader.trim(resp_sen[1:])
 			refs.append([resp_sen_processed])
 			gens.append(gen_sen_processed)
 		gens = replace_unk(gens)
@@ -687,7 +687,7 @@ class TestSelfBleuCorpusMetric:
 	def get_self_bleu(self, dataloader, input, gen_key):
 		gens = []
 		for gen_sen in input[gen_key]:
-			gen_sen_processed = dataloader.trim_index(gen_sen)
+			gen_sen_processed = dataloader.trim(gen_sen)
 			gens.append(gen_sen_processed)
 		refs = copy.deepcopy(gens)
 		_refs = replace_unk(refs)
@@ -773,8 +773,8 @@ class TestFwBwBleuCorpusMetric:
 		refs = []
 		gens = []
 		for gen_sen, resp_sen in zip(input[gen_key], input[reference_key]):
-			gen_sen_processed = dataloader.trim_index(gen_sen)
-			resp_sen_processed = dataloader.trim_index(resp_sen[1:])
+			gen_sen_processed = dataloader.trim(gen_sen)
+			resp_sen_processed = dataloader.trim(resp_sen[1:])
 			refs.append(resp_sen_processed)
 			gens.append(gen_sen_processed)
 		gens = replace_unk(gens)
@@ -883,8 +883,8 @@ class TestMultiTurnBleuCorpusMetric:
 		gens = []
 		for i in range(len(input[reference_key])):
 			for resp_sen, gen_sen in zip(input[reference_key][i], input[gen_key][i]):
-				gen_sen_processed = dataloader.trim_index(gen_sen)
-				resp_sen_processed = dataloader.trim_index(resp_sen)
+				gen_sen_processed = dataloader.trim(gen_sen)
+				resp_sen_processed = dataloader.trim(resp_sen)
 				gens.append(gen_sen_processed)
 				refs.append([resp_sen_processed[1:]])
 		gens = replace_unk(gens)
@@ -1053,7 +1053,7 @@ class TestMultiTurnDialogRecorder:
 		for i, resp_turn in enumerate(data[resp_key]):
 			resp_now = []
 			for j, resp in enumerate(resp_turn):
-				t = dataloader.trim_index(resp[1:])
+				t = dataloader.trim(resp[1:])
 				if data[turn_length] is None:
 					if len(t) == 0:
 						break
@@ -1065,7 +1065,7 @@ class TestMultiTurnDialogRecorder:
 		for i, gen_turn in enumerate(data[gen_key]):
 			gen_now = []
 			for j, gen in enumerate(gen_turn):
-				t = dataloader.trim_index(gen)
+				t = dataloader.trim(gen)
 				if data[turn_length] is None:
 					if len(t) == 0:
 						break

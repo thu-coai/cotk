@@ -8,6 +8,9 @@ Data Loader
 Vocabulary
 ----------------------------------
 
+Vocabulary for LanguageProcessingBase
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 Language generation and evaluation highly depend on vocabulary, 
 thus we introduce a common setting in ``cotk``. All tokens appeared 
 in dataset (including the ones only appear in test set) are splited into
@@ -115,15 +118,81 @@ We offer some tips for you to further understand how vocabularies work.
         * Unknown vacabularies are not in ``vocab_list``, therefore
           they don't have index.
 
+Vocabulary for BERTLanguageProcessingBase
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Some pretrained model have its own vocabulary so it is hard directly adapted
+to our framework. Before stepping in out workaround, make sure you have read
+the previous section `Vocabulary for LanguageProcessingBase`.
+
+To make sure the pretrained model works correctly, we use the pretrained
+model's tokenizer. It is defined in
+:meth:`.BERTLanguageProcessingBase.tokenize`.
+For example, BERTLanguageProcessingBase use BERTtokenizer for tokenizing.
+
+Then, we processing the tokenized sentences and define a mapping from
+tokenized words to all vocabularies. This process is the same with the one
+in the section `Vocabulary for LanguageProcessingBase`.
+
+Also, we can obtained a convertion between tokenized sentences and pretrained
+id from pretrained models. Now, we have 3 representation methods of sentences:
+
+* Tokenized sentences.
+* Pretrained model's word ids.
+* Our word ids. (Both for ``all_vocabs`` and ``valid_vocabs``,
+  because they share the id and the only difference is
+  ``valid_vocabs`` is less than ``all_vocabs``.)
+
+Here is the path of convertion.
+
+.. image:: convertion.png
+
+1.  :meth:`.BERTLanguageProcessingBase.convert_bert_ids_to_tokens`.
+    May cause ``<unk>`` due to model's id can't cover all tokens.
+    (But this won't happen in BERT, because BERT has a tokenizer
+    that sentences will always split to what it konws.)
+
+2.  :meth:`.BERTLanguageProcessingBase.convert_ids_to_tokens`.
+    May cause ``<unk>`` when there is unknown vocabs or invalid vocabs.
+
+3.  :meth:`.LanguageProcessingBase.convert_ids_to_tokens`.
+    May cause ``<unk>`` when there is unknown vocabs.
+
+4.  The same except ``id > valid_vocab_size``.
+
+5.  :meth:`.BERTLanguageProcessingBase.convert_tokens_to_bert_ids`.
+    No more ``<unk>``.
+
+6.  :meth:`.LanguageProcessingBase.convert_tokens_to_ids`
+    No more ``<unk>``.
+
+7.  The same. No more ``<unk>``.
+
+There is also other convertions:
+
+* :meth:`.BERTLanguageProcessingBase.convert_ids_to_bert_ids` : Just
+  equal to (2 or 3) + 1.
+
+* :meth:`.BERTLanguageProcessingBase.convert_bert_ids_to_ids` : Just
+  equal to 1 + 6.
+
+In most time, dataloader will provide sentences both in bert id and
+our id. And unnecessary convertion should be avoided because it may
+cause information loss.
+
 
 Basic Classes
 ------------------------------------
 
+Dataloader
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: Dataloader
 
     .. automethod:: get_all_subclasses
     .. automethod:: load_class
 
+LanguageProcessingBase
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: LanguageProcessingBase
 
     .. autoattribute:: vocab_list
@@ -135,8 +204,29 @@ Basic Classes
     .. automethod:: get_batch
     .. automethod:: get_next_batch
     .. automethod:: get_batches
-    .. automethod:: trim_index
+    .. automethod:: trim
     .. automethod:: convert_tokens_to_ids
+    .. automethod:: convert_ids_to_tokens
+
+BERTLanguageProcessingBase
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autoclass:: BERTLanguageProcessingBase
+
+    .. autoattribute:: vocab_list
+    .. autoattribute:: vocab_size
+    .. autoattribute:: all_vocab_size
+    .. automethod:: _load_data
+    .. automethod:: tokenize
+    .. automethod:: restart
+    .. automethod:: get_batch
+    .. automethod:: get_next_batch
+    .. automethod:: get_batches
+    .. automethod:: trim
+    .. automethod:: convert_tokens_to_bert_ids
+    .. automethod:: convert_bert_ids_to_ids
+    .. automethod:: convert_tokens_to_ids
+    .. automethod:: convert_ids_to_bert_ids
+    .. automethod:: convert_bert_ids_to_tokens
     .. automethod:: convert_ids_to_tokens
 
 LanguageGeneration
@@ -152,7 +242,7 @@ LanguageGeneration
     .. automethod:: get_batch
     .. automethod:: get_next_batch
     .. automethod:: get_batches
-    .. automethod:: trim_index
+    .. automethod:: trim
     .. automethod:: convert_tokens_to_ids
     .. automethod:: convert_ids_to_tokens
     .. automethod:: get_teacher_forcing_metric
@@ -162,7 +252,8 @@ MSCOCO
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: MSCOCO
     :members:
-    :private-members:
+
+    .. automethod:: _load_data
 
 SingleTurnDialog
 -----------------------------------
@@ -177,7 +268,7 @@ SingleTurnDialog
     .. automethod:: get_batch
     .. automethod:: get_next_batch
     .. automethod:: get_batches
-    .. automethod:: trim_index
+    .. automethod:: trim
     .. automethod:: convert_tokens_to_ids
     .. automethod:: convert_ids_to_tokens
     .. automethod:: get_teacher_forcing_metric
@@ -187,7 +278,39 @@ OpenSubtitles
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: OpenSubtitles
     :members:
-    :private-members:
+
+    .. automethod:: _load_data
+
+BERTSingleTurnDialog
+-------------------------------------
+
+.. autoclass:: BERTSingleTurnDialog
+
+    .. autoattribute:: vocab_list
+    .. autoattribute:: vocab_size
+    .. autoattribute:: all_vocab_size
+    .. automethod:: _load_data
+    .. automethod:: tokenize
+    .. automethod:: restart
+    .. automethod:: get_batch
+    .. automethod:: get_next_batch
+    .. automethod:: get_batches
+    .. automethod:: trim
+    .. automethod:: convert_tokens_to_bert_ids
+    .. automethod:: convert_bert_ids_to_ids
+    .. automethod:: convert_tokens_to_ids
+    .. automethod:: convert_ids_to_bert_ids
+    .. automethod:: convert_bert_ids_to_tokens
+    .. automethod:: convert_ids_to_tokens
+    .. automethod:: get_teacher_forcing_metric
+    .. automethod:: get_inference_metric
+
+BERTOpenSubtitles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autoclass:: BERTOpenSubtitles
+    :members:
+
+    .. automethod:: _load_data
 
 MultiTurnDialog
 -----------------------------------
@@ -202,8 +325,8 @@ MultiTurnDialog
     .. automethod:: get_batch
     .. automethod:: get_next_batch
     .. automethod:: get_batches
-    .. automethod:: trim_index
-    .. automethod:: multi_turn_trim_index
+    .. automethod:: trim
+    .. automethod:: multi_turn_trim
     .. automethod:: convert_tokens_to_ids
     .. automethod:: convert_multi_turn_tokens_to_ids
     .. automethod:: convert_ids_to_tokens
@@ -215,7 +338,8 @@ UbuntuCorpus
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: UbuntuCorpus
     :members:
-    :private-members:
+    
+    .. automethod:: _load_data
 
 SwitchBoardCorpus
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -223,4 +347,28 @@ SwitchBoardCorpus
     :members:
 
     .. automethod:: _load_data
+    .. automethod:: get_multi_ref_metric
 
+
+SentenceClassification
+-----------------------------------
+
+.. autoclass:: SentenceClassification
+
+    .. autoattribute:: vocab_list
+    .. autoattribute:: vocab_size
+    .. autoattribute:: all_vocab_size
+    .. automethod:: _load_data
+    .. automethod:: tokenize
+    .. automethod:: restart
+    .. automethod:: get_batch
+    .. automethod:: get_next_batch
+    .. automethod:: get_batches
+    .. automethod:: trim
+    .. automethod:: convert_tokens_to_ids
+    .. automethod:: convert_ids_to_tokens
+    .. automethod:: get_metric
+
+.. autoclass:: SST
+
+    .. automethod:: _load_data

@@ -93,8 +93,8 @@ class BleuCorpusMetric(MetricBase):
 
 		relevant_data = []
 		for gen_sen, resp_sen in zip(gen, resp):
-			self.hyps.append(self.dataloader.trim_index(gen_sen))
-			reference = list(self.dataloader.trim_index(resp_sen[1:]))
+			self.hyps.append(self.dataloader.trim(gen_sen))
+			reference = list(self.dataloader.trim(resp_sen[1:]))
 			relevant_data.append(reference)
 			self.refs.append([reference])
 		self._hash_relevant_data(relevant_data)
@@ -181,7 +181,7 @@ class SelfBleuCorpusMetric(MetricBase):
 			raise TypeError("Unknown type for gen.")
 
 		for gen_sen in gen:
-			self.hyps.append(self.dataloader.trim_index(gen_sen))
+			self.hyps.append(self.dataloader.trim(gen_sen))
 
 	def close(self):
 		'''
@@ -279,7 +279,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 			raise TypeError("Unknown type for gen.")
 
 		for gen_sen in gen:
-			self.hyps.append(list(self.dataloader.trim_index(gen_sen)))
+			self.hyps.append(list(self.dataloader.trim(gen_sen)))
 
 
 	def close(self):
@@ -297,7 +297,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 
 		resp = self.dataloader.data["test"][self.reference_test_key]
 		for resp_sen in resp:
-			self.refs.append(list(self.dataloader.trim_index(resp_sen[1:])))
+			self.refs.append(list(self.dataloader.trim(resp_sen[1:])))
 
 		sample_hyps = self.sample if self.sample < len(self.hyps) else len(self.hyps)
 		sample_refs = self.sample if self.sample < len(self.refs) else len(self.refs)
@@ -409,8 +409,8 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 			gen_session = gen[i]
 			ref_session = reference_allvocabs[i]
 			for j in range(turn_length):
-				self.hyps.append(list(self.dataloader.trim_index(gen_session[j])))
-				self.refs.append([list(self.dataloader.trim_index(ref_session[j])[1:])])
+				self.hyps.append(list(self.dataloader.trim(gen_session[j])))
+				self.refs.append([list(self.dataloader.trim(ref_session[j])[1:])])
 
 	def close(self):
 		'''

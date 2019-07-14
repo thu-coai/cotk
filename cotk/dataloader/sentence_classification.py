@@ -21,12 +21,12 @@ class SentenceClassification(LanguageProcessingBase):
 	ARGUMENTS = LanguageProcessingBase.ARGUMENTS
 	ATTRIBUTES = LanguageProcessingBase.ATTRIBUTES
 
-	def get_batch(self, key, index):
-		'''Get a batch of specified `index`.
+	def get_batch(self, key, indexes):
+		'''Get a batch of specified `indexes`.
 
 		Arguments:
 			key (str): must be contained in `key_name`
-			index (list): a list of specified index
+			indexes (list): a list of specified indexes
 
 		Returns:
 			(dict): A dict at least contains:
@@ -65,13 +65,13 @@ class SentenceClassification(LanguageProcessingBase):
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
 		res = {}
-		batch_size = len(index)
+		batch_size = len(indexes)
 		res["sent_length"] = np.array( \
-			list(map(lambda i: len(self.data[key]['sent'][i]), index)))
+			list(map(lambda i: len(self.data[key]['sent'][i]), indexes)))
 		res_sent = res["sent"] = np.zeros( \
 			(batch_size, np.max(res["sent_length"])), dtype=int)
 		res["label"] = np.zeros(batch_size, dtype=int)
-		for i, j in enumerate(index):
+		for i, j in enumerate(indexes):
 			sentence = self.data[key]['sent'][j]
 			res["sent"][i, :len(sentence)] = sentence
 			res["label"][i] = self.data[key]['label'][j]
@@ -80,14 +80,18 @@ class SentenceClassification(LanguageProcessingBase):
 		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
 		return res
 
-	def get_accuracy_metric(self, prediction_key="prediction"):
+	def get_metric(self, prediction_key="prediction"):
 		'''Get metrics for accuracy. In other words, this function
 		provides metrics for sentence classification task.
+
 		It contains:
-		* :class:`.metric.AccuracyMetric`
+
+			* :class:`.metric.AccuracyMetric`
+
 		Arguments:
 			prediction_key (str): The key of prediction over sentences.
 				Refer to :class:`.metric.AccuracyMetric`. Default: ``prediction``.
+
 		Returns:
 			A :class:`.metric.MetricChain` object.
 		'''
@@ -113,7 +117,7 @@ class SST(SentenceClassification):
 					marked as invalid words. Otherwise, they are unknown words, both in training or
 					testing stages. Default: 0 (No unknown words).
 
-	Refer to :class:`.LanguageGeneration` for attributes and methods.
+	Refer to :class:`.LanguageProcessingBase` for attributes and methods.
 
 	References:
 		[1] http://images.cocodataset.org/annotations/annotations_trainval2017.zip
@@ -132,7 +136,7 @@ class SST(SentenceClassification):
 		super(SST, self).__init__()
 
 	def _load_data(self):
-		r'''Loading dataset, invoked by `LanguageGeneration.__init__`
+		r'''Loading dataset, invoked by `LanguageProcessingBase.__init__`
 		'''
 		def parseline(line):
 			label = int(line[1])

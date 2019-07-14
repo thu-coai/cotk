@@ -35,12 +35,6 @@ class MultiTurnDialog(LanguageProcessingBase):
 		ext_vocab = ext_vocab or ["<pad>", "<unk>", "<go>", "<eos>"]
 		super().__init__(ext_vocab, key_name)
 
-
-	GET_BATCH_ARGUMENTS = r'''
-			key (str): key name of dataset, must be contained in ``self.key_name``.
-			index (list): a list of specified index
-	'''
-
 	GET_BATCH_RETURNS_DICT = r'''
 			* turn_length(list): A 1-d list, the number of turns in sessions.
 			  Size: ``[batch_size]``
@@ -85,11 +79,8 @@ class MultiTurnDialog(LanguageProcessingBase):
 				"turn_length": [4, 2], # the number of turns in each session
 				"sent_length": [[3, 3, 5, 5], [6, 5]], # length of sentences'''
 
-	def get_batch(self, key, index):
-		'''Get a batch of specified `index`.
-
-		Arguments:
-			{GET_BATCH_ARGUMENTS}
+	def get_batch(self, key, indexes):
+		'''{LanguageProcessingBase.GET_BATCH_DOC_WITHOUT_RETURNS}
 
 		Returns:
 			(dict): A dict at least contains:
@@ -104,14 +95,14 @@ class MultiTurnDialog(LanguageProcessingBase):
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
 		res = {}
-		res["turn_length"] = [len(self.data[key]['session'][i]) for i in index]
+		res["turn_length"] = [len(self.data[key]['session'][i]) for i in indexes]
 		res["sent_length"] = []
-		for i in index:
+		for i in indexes:
 			sent_length = [len(sent) for sent in self.data[key]['session'][i]]
 			res["sent_length"].append(sent_length)
-		res_sent = res["sent"] = np.zeros((len(index), np.max(res['turn_length']), \
+		res_sent = res["sent"] = np.zeros((len(indexes), np.max(res['turn_length']), \
 			np.max(list(chain(*res['sent_length'])))), dtype=int)
-		for i, index_i in enumerate(index):
+		for i, index_i in enumerate(indexes):
 			for j, sent in enumerate(self.data[key]['session'][index_i]):
 				res_sent[i, j, :len(sent)] = sent
 
@@ -119,7 +110,7 @@ class MultiTurnDialog(LanguageProcessingBase):
 		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
 		return res
 
-	def multi_turn_trim_index(self, index, turn_length=None, ignore_first_token=False):
+	def multi_turn_trim(self, index, turn_length=None, ignore_first_token=False):
 		r'''Trim indexes for multi turn dialog. There will be 3 steps:
 
 		* For every turn, if there is an ``<eos>``, \
@@ -141,7 +132,7 @@ class MultiTurnDialog(LanguageProcessingBase):
 		Examples:
 			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 			>>> #	"been", "to", "China", "Japan"]
-			>>> dataloader.multi_turn_trim_index(
+			>>> dataloader.multi_turn_trim(
 			...     [[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0],
 			...         # <go> I have been to China <pad> <pad> <eos> I <eos> <pad>
 			...     [2, 4, 5, 6, 7, 9, 3, 0, 3, 4, 3, 0],
@@ -151,14 +142,14 @@ class MultiTurnDialog(LanguageProcessingBase):
 			...         # <go> I have been to China <pad> <pad> <eos> I <eos> <pad>
 			...     turn_length = None, ignore_first_token = False)
 			[[2, 4, 5, 6, 7, 8], [2, 4, 5, 6, 7, 9]]
-			>>> dataloader.multi_turn_trim_index(
+			>>> dataloader.multi_turn_trim(
 			...     [[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0],
 			...     [2, 4, 5, 6, 7, 9, 3, 0, 3, 4, 3, 0],
 			...     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 			...     [2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0]],
 			...     turn_length = 1, ignore_first_token = False)
 			[[2, 4, 5, 6, 7, 8]]
-			>>> dataloader.multi_turn_trim_index(
+			>>> dataloader.multi_turn_trim(
 			...     [[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0],
 			...     [2, 4, 5, 6, 7, 9, 3, 0, 3, 4, 3, 0],
 			...     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -170,7 +161,7 @@ class MultiTurnDialog(LanguageProcessingBase):
 		for i, turn_index in enumerate(index):
 			if turn_length and i >= turn_length:
 				break
-			turn_trim = self.trim_index(turn_index)
+			turn_trim = self.trim(turn_index)
 			if turn_trim and ignore_first_token:
 				turn_trim = turn_trim[1:]
 			if turn_length is None and (not turn_trim):
@@ -221,7 +212,7 @@ class MultiTurnDialog(LanguageProcessingBase):
 			index (list or :class:`numpy.ndarray`): a jagged 2-d array of int.
 				Size: ``[turn_length, ~sent_length]``, where where "~" means different sizes
 				in this dimension is allowed.
-			trim (bool): if True, call :func:`multi_turn_trim_index` before convertion.
+			trim (bool): if True, call :func:`multi_turn_trim` before convertion.
 			turn_length (int): Only works when trim=``True``.
 				If True, the session is trimmed according the turn_length. Default: None
 			ignore_first_token (bool): Only works when trim=``True``.
@@ -257,7 +248,7 @@ class MultiTurnDialog(LanguageProcessingBase):
 			(list): a list of trimmed index
 		'''
 		if trim:
-			index = self.multi_turn_trim_index(index, turn_length=turn_length, \
+			index = self.multi_turn_trim(index, turn_length=turn_length, \
 				ignore_first_token=ignore_first_token)
 		return list(map(lambda sent: \
 			list(map(lambda word: self.all_vocab_list[word], sent)), \
@@ -590,11 +581,8 @@ class SwitchboardCorpus(MultiTurnDialog):
 		'''
 		return WordPunctTokenizer().tokenize(sentence)
 
-	def get_batch(self, key, index):
-		'''Get a batch of specified `index`.
-
-		Arguments:
-			{MultiTurnDialog.GET_BATCH_ARGUMENTS}
+	def get_batch(self, key, indexes):
+		'''{LanguageProcessingBase.GET_BATCH_DOC_WITHOUT_RETURNS}
 
 		Returns:
 			(dict): A dict contains what is in the return of MultiTurnDialog.get_batch.
@@ -616,14 +604,12 @@ class SwitchboardCorpus(MultiTurnDialog):
 				[[2, 6, 5, 10, 3]]]           # one response to 2nd session:  <go> you are fine <eos>
 			}
 		'''
-		res = super().get_batch(key, index)
-		gather = lambda sub_key: [self.data[key][sub_key][i] for i in index]
+		res = super().get_batch(key, indexes)
+		gather = lambda sub_key: [self.data[key][sub_key][i] for i in indexes]
 		for sub_key in self.data[key]:
 			if sub_key not in res:
 				res[sub_key] = gather(sub_key)
 		return res
-
-
 
 	def get_multi_ref_metric(self, generated_num_per_context=20, word2vec=None,\
 				multiple_gen_key="multiple_gen_key"):

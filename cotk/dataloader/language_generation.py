@@ -26,12 +26,8 @@ class LanguageGeneration(LanguageProcessingBase):
 	ARGUMENTS = LanguageProcessingBase.ARGUMENTS
 	ATTRIBUTES = LanguageProcessingBase.ATTRIBUTES
 
-	def get_batch(self, key, index):
-		'''Get a batch of specified `index`.
-
-		Arguments:
-			key (str): key name of dataset, must be contained in ``self.key_name``.
-			index (list): a list of specified index
+	def get_batch(self, key, indexes):
+		'''{LanguageProcessingBase.GET_BATCH_DOC_WITHOUT_RETURNS}
 
 		Returns:
 			(dict): A dict at least contains:
@@ -69,12 +65,12 @@ class LanguageGeneration(LanguageProcessingBase):
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
 		res = {}
-		batch_size = len(index)
+		batch_size = len(indexes)
 		res["sent_length"] = np.array( \
-			list(map(lambda i: len(self.data[key]['sent'][i]), index)))
+			list(map(lambda i: len(self.data[key]['sent'][i]), indexes)))
 		res_sent = res["sent"] = np.zeros( \
 			(batch_size, np.max(res["sent_length"])), dtype=int)
-		for i, j in enumerate(index):
+		for i, j in enumerate(indexes):
 			sentence = self.data[key]['sent'][j]
 			res["sent"][i, :len(sentence)] = sentence
 
