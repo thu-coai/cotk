@@ -8,6 +8,7 @@ import json
 
 import numpy as np
 
+from nltk.tokenize import WordPunctTokenizer
 from .._utils.file_utils import get_resource_file_path
 from .dataloader import LanguageProcessingBase
 from ..metric import MetricChain, MultiTurnPerplexityMetric, MultiTurnBleuCorpusMetric, \
@@ -417,6 +418,17 @@ class UbuntuCorpus(MultiTurnDialog):
 					cut_word_num / vocab_num, max(turn_length), cut_sent_num / sent_num))
 		return vocab_list, valid_vocab_len, data, data_size
 
+	def tokenize(self, sentence):
+		r'''Convert sentence(str) to list of token(str)
+
+		Arguments:
+			sentence (str)
+
+		Returns:
+			sent (list): list of token(str)
+		'''
+		return WordPunctTokenizer().tokenize(sentence.replace('__eou__', ''))
+
 class SwitchboardCorpus(MultiTurnDialog):
 	'''A dataloader for Switchboard dataset.
 
@@ -567,6 +579,16 @@ class SwitchboardCorpus(MultiTurnDialog):
 				   cut_word_num / vocab_num, max(turn_lens), cut_sent_num / np.sum(turn_lens)))
 		return vocab_list, len(valid_vocab_set), data, data_size
 
+	def tokenize(self, sentence):
+		r'''Convert sentence(str) to list of token(str)
+
+		Arguments:
+			sentence (str)
+
+		Returns:
+			sent (list): list of token(str)
+		'''
+		return WordPunctTokenizer().tokenize(sentence)
 
 	def get_batch(self, key, index):
 		'''Get a batch of specified `index`.

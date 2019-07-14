@@ -216,3 +216,14 @@ class SST(SentenceClassification):
 				"%s set. invalid rate: %f, unknown rate: %f, max length before cut: %d, cut word rate: %f" % \
 				(key, invalid_num / vocab_num, oov_num / vocab_num, max(length), cut_num / vocab_num))
 		return vocab_list, valid_vocab_len, data, data_size
+
+	def tokenize(self, sentence):
+		r'''Convert sentence(str) to list of token(str)
+
+		Arguments:
+			sentence (str)
+
+		Returns:
+			sent (list): list of token(str)
+		'''
+		return [x.split(' ')[-1].lower() for x in sentence if x != '']

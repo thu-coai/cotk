@@ -95,6 +95,18 @@ class LanguageProcessingBase(Dataloader):
 		raise NotImplementedError( \
 			"This function should be implemented by subclasses.")
 
+	def tokenize(self, sentence):
+		'''Convert sentence(str) to list of token(str)
+
+		Arguments:
+			sentence (str)
+
+		Returns:
+			sent (list): list of token(str)
+		'''
+		raise NotImplementedError( \
+			"This function should be implemented by subclasses.")
+
 	@property
 	def vocab_size(self):
 		'''int: equals to ``valid_vocab_len``.

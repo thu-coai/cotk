@@ -10,6 +10,7 @@ import tqdm
 
 import numpy as np
 
+from nltk.tokenize import WordPunctTokenizer
 from .._utils.file_utils import get_resource_file_path
 from .dataloader import LanguageProcessingBase, BERTLanguageProcessingBase
 from ..metric import MetricChain, PerplexityMetric, BleuCorpusMetric, SingleTurnDialogRecorder
@@ -247,6 +248,17 @@ class OpenSubtitles(SingleTurnDialog):
 					(key, invalid_num / vocab_num, oov_num / vocab_num, max(length), cut_num / vocab_num))
 		return vocab_list, valid_vocab_len, data, data_size
 
+	def tokenize(self, sentence):
+		r'''Convert sentence(str) to list of token(str)
+
+		Arguments:
+			sentence (str)
+
+		Returns:
+			sent (list): list of token(str)
+		'''
+		return WordPunctTokenizer().tokenize(sentence)
+
 class BERTOpenSubtitles(BERTLanguageProcessingBase):
 	'''A dataloader for OpenSubtitles dataset.
 
@@ -305,8 +317,8 @@ class BERTOpenSubtitles(BERTLanguageProcessingBase):
 		pool = Pool(multiprocessing.cpu_count(), \
 	      initializer=self._set_tokenizer, initargs=(self.tokenizer, ))
 		for _post_tokens, _post_bert_ids, _resp_tokens, _resp_bert_ids in \
-			tqdm.tqdm(pool.imap_unordered(self._run_tokenize, tasks, chunksize=500), \
-			total=len(posts)):
+				tqdm.tqdm(pool.imap_unordered(self._run_tokenize, tasks, chunksize=500), \
+				total=len(posts)):
 			post_tokens.append(_post_tokens)
 			post_bert_ids.append(_post_bert_ids[:self._max_sent_length])
 			resp_tokens.append(_resp_tokens)

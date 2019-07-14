@@ -4,6 +4,7 @@ from itertools import chain
 
 import numpy as np
 
+from nltk.tokenize import WordPunctTokenizer
 # from .._utils.unordered_hash import UnorderedSha256
 from .._utils.file_utils import get_resource_file_path
 from .dataloader import LanguageProcessingBase
@@ -251,3 +252,14 @@ class MSCOCO(LanguageGeneration):
 				"%s set. invalid rate: %f, unknown rate: %f, max length before cut: %d, cut word rate: %f" % \
 				(key, invalid_num / vocab_num, oov_num / vocab_num, max(length), cut_num / vocab_num))
 		return vocab_list, valid_vocab_len, data, data_size
+
+	def tokenize(self, sentence):
+		r'''Convert sentence(str) to list of token(str)
+
+		Arguments:
+			sentence (str)
+
+		Returns:
+			sent (list): list of token(str)
+		'''
+		return WordPunctTokenizer().tokenize(sentence)
