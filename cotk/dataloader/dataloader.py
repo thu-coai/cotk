@@ -303,7 +303,7 @@ class LanguageProcessingBase(Dataloader):
 try:
 	from pytorch_pretrained_bert import BertTokenizer
 	import numpy as np
-except ImportError as err:
+except (ImportError, ModuleNotFoundError) as err:
 	from .._utils.imports import DummyObject
 	BertTokenizer = DummyObject(err)
 
