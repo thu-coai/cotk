@@ -7,11 +7,8 @@ import os.path
 import json
 import argparse
 import re
-import shutil
-import zipfile
 
 import requests
-from .._utils import file_utils
 from . import main, _utils
 
 def get_result_from_id(query_id):
@@ -94,19 +91,19 @@ Path to dump dashboard result.")
 
 		if 'args' not in info:
 			info['args'] = []
-		if 'working_dir' not in info:
-			info['working_dir'] = ""
+		if 'working_dir' not in info or 'working_dir' == '':
+			info['working_dir'] = "."
 		if 'entry' not in info:
 			info['entry'] = "main"
 
 	# cmd construction
-	cmd = "cd {}/{} && cotk run --entry {}".\
+	cmd = "cd {}/{} && cotk run --entry {} --only-run".\
 			format(code_dir, info['working_dir'], info['entry'])
 	if not isinstance(info['args'], list):
 		raise ValueError("`args` in `config.json` should be of type `list`.")
 
 	cmd += " {}".format(" ".join(info['args']))
-	with open("run_model.sh".format(code_dir), "w") as file:
+	with open("run_model.sh", "w") as file:
 		file.write(cmd)
 	main.LOGGER.info("Model running cmd written in {}".format("run_model.sh"))
 	print("Model running cmd: \t{}".format(cmd))

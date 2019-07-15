@@ -7,6 +7,7 @@ import numpy as np
 from nltk.tokenize import WordPunctTokenizer
 # from .._utils.unordered_hash import UnorderedSha256
 from .._utils.file_utils import get_resource_file_path
+from .._utils import hooks
 from .dataloader import LanguageProcessingBase
 from ..metric import MetricChain, PerplexityMetric, LanguageGenerationRecorder, \
 	FwBwBleuCorpusMetric, SelfBleuCorpusMetric
@@ -78,6 +79,7 @@ class LanguageGeneration(LanguageProcessingBase):
 		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
 		return res
 
+	@hooks.hook_standard_metric("teacher_forcing")
 	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob"):
 		'''Get metrics for teacher-forcing. In other words, this function
 		provides metrics for language modelling task.
@@ -87,7 +89,7 @@ class LanguageGeneration(LanguageProcessingBase):
 		* :class:`.metric.PerplexityMetric`
 
 		Arguments:
-			gen_log_prob_key (str): The key of predicted log probablilty over words.
+			gen_log_prob_key (str): The key of predicted log probability over words.
 				Refer to :class:`.metric.PerplexityMetric`. Default: ``gen_log_prob``.
 
 		Returns:
@@ -100,6 +102,7 @@ class LanguageGeneration(LanguageProcessingBase):
 					gen_log_prob_key=gen_log_prob_key))
 		return metric
 
+	@hooks.hook_standard_metric("inference")
 	def get_inference_metric(self, gen_key="gen", sample=1000, seed=1229, cpu_count=None):
 		'''Get metrics for inference. In other words, this function provides metrics for
 		language generation tasks.
@@ -164,6 +167,7 @@ class MSCOCO(LanguageGeneration):
 
 	'''
 
+	@hooks.hook_dataloader
 	def __init__(self, file_id="resources://MSCOCO", min_vocab_times=10, \
 			max_sent_length=50, invalid_vocab_times=0):
 		self._file_id = file_id
@@ -171,7 +175,7 @@ class MSCOCO(LanguageGeneration):
 		self._min_vocab_times = min_vocab_times
 		self._max_sent_length = max_sent_length
 		self._invalid_vocab_times = invalid_vocab_times
-		super(MSCOCO, self).__init__()
+		super().__init__()
 
 	def _load_data(self):
 		r'''Loading dataset, invoked during the initialization of :class:`LanguageGeneration`.

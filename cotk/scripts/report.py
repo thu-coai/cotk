@@ -167,7 +167,7 @@ model with cotk. You can't use \"only-upload\" before \"only-run\".")
 
 	if not cargs.only_run:
 		LOGGER.info("Collecting info for upload...")
-		upload_id = upload_report(cargs.result, data["entry"], data["args"], data["working_dir"], \
+		upload_id = upload_report(cargs.result, data["entry"], data["args"], data.get("working_dir", ''),\
 			git_user, git_repo, git_commit, \
 			data["cotk_record_information"], token)
 		LOGGER.info("Upload complete. Check %s for your report.", SHOW_URL % upload_id)

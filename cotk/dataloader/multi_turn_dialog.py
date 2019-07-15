@@ -10,6 +10,7 @@ import numpy as np
 
 from nltk.tokenize import WordPunctTokenizer
 from .._utils.file_utils import get_resource_file_path
+from .._utils import hooks
 from .dataloader import LanguageProcessingBase
 from ..metric import MetricChain, MultiTurnPerplexityMetric, MultiTurnBleuCorpusMetric, \
 	MultiTurnDialogRecorder
@@ -254,6 +255,7 @@ class MultiTurnDialog(LanguageProcessingBase):
 			list(map(lambda word: self.all_vocab_list[word], sent)), \
 			index))
 
+	@hooks.hook_standard_metric("teacher_forcing")
 	def get_teacher_forcing_metric(self, multi_turn_gen_log_prob_key="multi_turn_gen_log_prob"):
 		'''Get metric for teacher-forcing.
 
@@ -262,7 +264,7 @@ class MultiTurnDialog(LanguageProcessingBase):
 		* :class:`.metric.MultiTurnPerplexityMetric`
 
 		Arguments:
-			gen_log_prob_key (str): The key of predicted log probablilty over words.
+			gen_log_prob_key (str): The key of predicted log probability over words.
 				Refer to :class:`.metric.MultiTurnPerplexityMetric`. Default: ``gen_log_prob``.
 
 		Returns:
@@ -275,6 +277,7 @@ class MultiTurnDialog(LanguageProcessingBase):
 			multi_turn_reference_allvocabs_key="sent_allvocabs"))
 		return metric
 
+	@hooks.hook_standard_metric("inference")
 	def get_inference_metric(self, multi_turn_gen_key="multi_turn_gen"):
 		'''Get metric for inference.
 
@@ -330,6 +333,7 @@ class UbuntuCorpus(MultiTurnDialog):
 			testing stages. Default: ``0`` (No unknown words).
 	'''
 
+	@hooks.hook_dataloader
 	def __init__(self, file_id="resources://Ubuntu", min_vocab_times=10, \
 			max_sent_length=50, max_turn_length=20, invalid_vocab_times=0):
 		self._file_id = file_id
@@ -440,6 +444,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 
 	ARGUMENTS = UbuntuCorpus.ARGUMENTS
 
+	@hooks.hook_dataloader
 	def __init__(self, file_id="resources://SwitchboardCorpus", min_vocab_times=5, \
 				max_sent_length=50, max_turn_length=1000, invalid_vocab_times=0):
 		self._file_id = file_id
@@ -611,6 +616,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 				res[sub_key] = gather(sub_key)
 		return res
 
+	@hooks.hook_standard_metric("multi_ref")
 	def get_multi_ref_metric(self, generated_num_per_context=20, word2vec=None,\
 				multiple_gen_key="multiple_gen_key"):
 		'''Get metrics for multiple references.

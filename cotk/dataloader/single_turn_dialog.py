@@ -12,6 +12,7 @@ import numpy as np
 
 from nltk.tokenize import WordPunctTokenizer
 from .._utils.file_utils import get_resource_file_path
+from .._utils import hooks
 from .dataloader import LanguageProcessingBase
 from .bert_dataloader import BERTLanguageProcessingBase
 from ..metric import MetricChain, PerplexityMetric, BleuCorpusMetric, SingleTurnDialogRecorder
@@ -102,6 +103,7 @@ class SingleTurnDialog(LanguageProcessingBase):
 		res_resp[res_resp >= self.valid_vocab_len] = self.unk_id
 		return res
 
+	@hooks.hook_standard_metric("teacher_forcing")
 	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob",\
 					   invalid_vocab=False):
 		'''Get metrics for teacher-forcing.
@@ -111,7 +113,7 @@ class SingleTurnDialog(LanguageProcessingBase):
 		* :class:`.metric.PerplexityMetric`
 
 		Arguments:
-			gen_log_prob_key (str):  The key of predicted log probablilty over words.
+			gen_log_prob_key (str):  The key of predicted log probability over words.
 				Refer to :class:`.metric.PerplexityMetric`. Default: ``gen_log_prob``.
 			invalid_vocab (bool): Whether ``gen_log_prob`` contains invalid vocab.
 				Refer to :class:`.metric.PerplexityMetric`. Default: ``False``.
@@ -128,6 +130,7 @@ class SingleTurnDialog(LanguageProcessingBase):
 			invalid_vocab=invalid_vocab))
 		return metric
 
+	@hooks.hook_standard_metric("inference")
 	def get_inference_metric(self, gen_key="gen"):
 		'''Get metrics for inference.
 
@@ -174,6 +177,8 @@ class OpenSubtitles(SingleTurnDialog):
 		[2] P. Lison and J. Tiedemann, OpenSubtitles2016: Extracting Large Parallel Corpora from
 		Movie and TV Subtitles. LREC 2016.
 	'''
+
+	@hooks.hook_dataloader
 	def __init__(self, file_id="resources://OpenSubtitles", min_vocab_times=10, \
 			max_sent_length=50, invalid_vocab_times=0):
 		self._file_id = file_id
@@ -328,6 +333,7 @@ class BERTSingleTurnDialog(BERTLanguageProcessingBase):
 
 		return res
 
+	@hooks.hook_standard_metric("teacher_forcing")
 	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob"):
 		'''Get metric for teacher-forcing mode.
 
@@ -342,6 +348,7 @@ class BERTSingleTurnDialog(BERTLanguageProcessingBase):
 		metric.add_metric(PerplexityMetric(self, gen_log_prob_key=gen_log_prob_key))
 		return metric
 
+	@hooks.hook_standard_metric("inference")
 	def get_inference_metric(self, gen_key="gen"):
 		'''Get metric for inference.
 
@@ -385,6 +392,7 @@ class BERTOpenSubtitles(BERTSingleTurnDialog):
 		Movie and TV Subtitles. LREC 2016.
 	'''
 
+	@hooks.hook_dataloader
 	def __init__(self, file_id, min_vocab_times=10, \
 			max_sent_length=50, invalid_vocab_times=0, \
 			bert_vocab_name='bert-base-uncased'):

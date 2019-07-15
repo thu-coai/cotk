@@ -6,6 +6,7 @@ import numpy as np
 
 # from .._utils.unordered_hash import UnorderedSha256
 from .._utils.file_utils import get_resource_file_path
+from .._utils import hooks
 from .dataloader import LanguageProcessingBase
 from ..metric import MetricChain, AccuracyMetric
 
@@ -80,6 +81,7 @@ class SentenceClassification(LanguageProcessingBase):
 		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
 		return res
 
+	@hooks.hook_standard_metric()
 	def get_metric(self, prediction_key="prediction"):
 		'''Get metrics for accuracy. In other words, this function
 		provides metrics for sentence classification task.
@@ -126,6 +128,7 @@ class SST(SentenceClassification):
 
 	'''
 
+	@hooks.hook_dataloader
 	def __init__(self, file_id, min_vocab_times=10, \
 			max_sent_length=50, invalid_vocab_times=0):
 		self._file_id = file_id
