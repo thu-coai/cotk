@@ -136,7 +136,7 @@ First initialize a git repo in your command line.
 Then write your model with an entry function in ``main.py``.
 
 ```python
-    import cotk
+    import cotk.dataloader
     import json
 
     def run():
