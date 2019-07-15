@@ -42,7 +42,9 @@ if __name__ == "__main__":
     for filename in os.listdir("./"):
         if not filename.endswith(".md") and not filename.endswith(".rst"):
             continue
-        file = open(filename).read()
+        print(filename)
+        file = open(filename, "r").read()
+
         locations = get_location(file)
         for key, path in locations:
             text = render(file, key)

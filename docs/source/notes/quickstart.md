@@ -1,3 +1,4 @@
+
 ## Quick Start
 
 Let us skim through the whole package to find what you want. 
@@ -120,9 +121,11 @@ We also provide standard metrics for selected dataloader.
    If you want to know more about metrics, please refer to :mod:`docs <cotk.metric>`.
 
 
-### Publish and Reproduce Experiments
+### Publish Experiments
 
 We provide an online dashboard to manage your experiments.
+
+Here we give an simple example for you.
 
 First initialize a git repo in your command line.
 
@@ -147,41 +150,71 @@ Then write your model with an entry function in ``main.py``.
         json.dump(metric.close(), open("result.json", 'w'))
 ```
 
+.. note::
+
+    The only requirement of your model is to output a file named ``result.json``,
+    you can do whatever you want (even don't load data using ``cotk``).
+
 Next, commit your changes and set upstream branch in your command line.
+
 ```bash
     git add -A
     git commit -a -m "init"
     git remote add origin master https://github.com/USERNAME/REPONAME.git
-    git push origin -f master
+    git push origin -u master
 ```
 
-Finally, type ``cotk run --entry main`` to run your model.
+Finally, type ``cotk run`` to run your model and upload to cotk dashboard.
 
 ``cotk`` will automatically collect your git repo, username, commit and ``result.json``
-to the cotk dashboard (TO BE ONLINE).
+to the cotk dashboard (TO BE ONLINE).The dashboard is a website where you can manage
+your experiments or share results with others.
 
 FILL AN IMAGE HERE
 
-The dashboard is a website where you can manage your experiments or share
-results with others.
+If you don't want to use cotk's dashboard, you can also choose to directly upload your model
+to github.
 
-You can also download others' experiments in dashboard 
+Use ``cotk run --only-run`` instead of ``cotk run``, you will find a ``.model_config.json``
+is generated. Commit the file and push it to github, the other can automatically download
+your model as the way described in next section.
+
+.. note::
+
+    The reproducibility should be maintained by the author. We only make sure all the input
+    is the same, but difference can be introduced by different random seed, device or other
+    affects. Before you upload, run ``cotk run --only-run`` twice and find whether the results
+    is the same.
+
+### Reproduce Experiments
+
+You can download others' model in dashboard
 and try to reproduce their results.
 
 ```bash
     cotk download ID
 ```
 
-The ``ID`` comes from dashboard id. 
+The ``ID`` comes from dashboard id.
 ``cotk`` will download the codes from dashboard and tell you how to run the models.
 
 ```none
-INFO: Fetching REPO/USERNAME/COMMIT
+INFO: Fetching USERNAME/REPO/COMMIT
 13386B [00:00, 54414.25B/s]
-INFO: Codes from REPO/USERNAME/COMMIT fetched.
+INFO: Codes from USERNAME/REPO/COMMIT fetched.
 INFO: Model running cmd written in run_model.sh
-Model running cmd:  cd ./PATH && cotk run --only-run --main run
+Model running cmd:  cd ./PATH && cotk run --only-run --entry main
 ```
+
+Type ``cotk run --only-run --entry main`` will reproduce the same experiments.
+
+You can also download directly from github if the maintainer has set the ``.model_config.json``.
+
+```bash
+    cotk download USER/REPO/COMMIT
+```
+
+``cotk`` will download the codes from github and generate commands by the config file.
 
 ### Predefined Models
 
@@ -189,3 +222,4 @@ We have provided some baselines for the classical tasks, see :ref:`Model Zoo <mo
 
 
 You can also use ``cotk download thu-coai/MODEL_NAME/master`` to get the codes.
+
