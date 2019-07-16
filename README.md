@@ -147,9 +147,7 @@ or using ``while`` if you like
 ```
 
 
-**note**:
-
-   If you want to know more about data loader, please refer to [docs](https://thu-coai.github.io/cotk_docs/index.html#model-zoo).
+**note**: If you want to know more about data loader, please refer to [docs](https://thu-coai.github.io/cotk_docs/index.html#model-zoo).
 
 ### Metrics
 
@@ -196,9 +194,7 @@ We also provide standard metrics for selected dataloader.
 ``Hash value`` is provided for checking whether the same dataset is used.
 
 
-**note**:
-
-   If you want to know more about metrics, please refer to [docs](https://thu-coai.github.io/cotk_docs/metric.html).
+**note**: If you want to know more about metrics, please refer to [docs](https://thu-coai.github.io/cotk_docs/metric.html).
 
 ### Publish Experiments
 
@@ -229,10 +225,10 @@ Then write your model with an entry function in ``main.py``.
         json.dump(metric.close(), open("result.json", 'w'))
 ```
 
-.. note::
 
-    The only requirement of your model is to output a file named ``result.json``,
-    you can do whatever you want (even don't load data using ``cotk``).
+**note**: The only requirement of your model is to output a file named ``result.json``,
+you can do whatever you want (even don't load data using ``cotk``).
+
 
 Next, commit your changes and set upstream branch in your command line.
 
@@ -258,12 +254,11 @@ Use ``cotk run --only-run`` instead of ``cotk run``, you will find a ``.model_co
 is generated. Commit the file and push it to github, the other can automatically download
 your model as the way described in next section.
 
-.. note::
 
-    The reproducibility should be maintained by the author. We only make sure all the input
-    is the same, but difference can be introduced by different random seed, device or other
-    affects. Before you upload, run ``cotk run --only-run`` twice and find whether the results
-    is the same.
+**note**: The reproducibility should be maintained by the author. We only make sure all the input
+is the same, but difference can be introduced by different random seed, device or other
+affects. Before you upload, run ``cotk run --only-run`` twice and find whether the results
+is the same.
 
 ### Reproduce Experiments
 

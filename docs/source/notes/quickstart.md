@@ -155,6 +155,8 @@ Then write your model with an entry function in ``main.py``.
     The only requirement of your model is to output a file named ``result.json``,
     you can do whatever you want (even don't load data using ``cotk``).
 
+
+
 Next, commit your changes and set upstream branch in your command line.
 
 ```bash
@@ -185,6 +187,7 @@ your model as the way described in next section.
     is the same, but difference can be introduced by different random seed, device or other
     affects. Before you upload, run ``cotk run --only-run`` twice and find whether the results
     is the same.
+
 
 ### Reproduce Experiments
 

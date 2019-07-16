@@ -75,9 +75,7 @@ or using ``while`` if you like
 ~~ contentend sphinx
 
 ~~ contentstart readme
-**note**:
-
-   If you want to know more about data loader, please refer to [docs](https://thu-coai.github.io/cotk_docs/index.html#model-zoo).
+**note**: If you want to know more about data loader, please refer to [docs](https://thu-coai.github.io/cotk_docs/index.html#model-zoo).
 ~~ contentend readme
 
 ### Metrics
@@ -131,9 +129,7 @@ We also provide standard metrics for selected dataloader.
 ~~ contentend sphinx
 
 ~~ contentstart readme
-**note**:
-
-   If you want to know more about metrics, please refer to [docs](https://thu-coai.github.io/cotk_docs/metric.html).
+**note**: If you want to know more about metrics, please refer to [docs](https://thu-coai.github.io/cotk_docs/metric.html).
 ~~ contentend readme
 
 ### Publish Experiments
@@ -165,10 +161,18 @@ Then write your model with an entry function in ``main.py``.
         json.dump(metric.close(), open("result.json", 'w'))
 ```
 
+~~ contentstart sphinx
 .. note::
 
     The only requirement of your model is to output a file named ``result.json``,
     you can do whatever you want (even don't load data using ``cotk``).
+~~ contentend sphinx
+
+~~ contentstart readme
+**note**: The only requirement of your model is to output a file named ``result.json``,
+you can do whatever you want (even don't load data using ``cotk``).
+~~ contentend readme
+
 
 Next, commit your changes and set upstream branch in your command line.
 
@@ -194,12 +198,21 @@ Use ``cotk run --only-run`` instead of ``cotk run``, you will find a ``.model_co
 is generated. Commit the file and push it to github, the other can automatically download
 your model as the way described in next section.
 
+~~ contentstart sphinx
 .. note::
 
     The reproducibility should be maintained by the author. We only make sure all the input
     is the same, but difference can be introduced by different random seed, device or other
     affects. Before you upload, run ``cotk run --only-run`` twice and find whether the results
     is the same.
+~~ contentend sphinx
+
+~~ contentstart readme
+**note**: The reproducibility should be maintained by the author. We only make sure all the input
+is the same, but difference can be introduced by different random seed, device or other
+affects. Before you upload, run ``cotk run --only-run`` twice and find whether the results
+is the same.
+~~ contentend readme
 
 ### Reproduce Experiments
 
