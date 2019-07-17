@@ -42,7 +42,7 @@ def run_model(entry, args):
 	# cotk recorder end
 	return close_recorder()
 
-def validate_result(result_path):
+def read_and_validate_result(result_path):
 	if not os.path.isfile(result_path):
 		raise ValueError("Result file ({}) is not found.".format(result_path))
 	try:
@@ -59,7 +59,7 @@ def upload_report(result_path, entry, args, working_dir, \
 	'''Upload report to dashboard. Return id of the new record.'''
 	# check result file existence
 	# get git link
-	result = validate_result(result_path)
+	result = read_and_validate_result(result_path)
 
 	upload_information = { \
 		"entry": entry, \
@@ -69,12 +69,12 @@ def upload_report(result_path, entry, args, working_dir, \
 		"git_repo": git_repo, \
 		"git_commit": git_commit, \
 		"record_information": cotk_record_information, \
-		"result": json.dumps(result) \
+		"result": result \
 	}
 	#LOGGER.info("Save your report locally at {}".format(BACKUP_FILE))
 	#json.dump(upload_information, open(BACKUP_FILE, 'w'))
 	LOGGER.info("Uploading your report...")
-	res = requests.post(REPORT_URL, {"data": upload_information, "token": token})
+	res = requests.post(REPORT_URL, {"data": json.dumps(upload_information), "token": token})
 	res = json.loads(res.text)
 	if res['code'] != "ok":
 		raise RuntimeError("upload error. %s" % json.loads(res['err']))
