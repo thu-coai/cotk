@@ -15,16 +15,15 @@ from . import _utils, main
 from .._utils import start_recorder, close_recorder
 
 LOGGER = main.LOGGER
-REPORT_URL = main.REPORT_URL
-SHOW_URL = main.SHOW_URL
-QUERY_URL = main.QUERY_URL
+DASHBOARD_URL = main.DASHBOARD_URL
+REPORT_URL = DASHBOARD_URL + "/upload"
+SHOW_URL = DASHBOARD_URL + "/show?id=%d"
 BACKUP_FILE = '.cotk_upload_backup'
 
 def run_model(entry, args):
 	'''Run the model and record the info of library'''
 	# before run model
 	# cotk recorder start
-	import cotk
 	start_recorder()
 	sys.path.insert(0, os.getcwd())
 	model = importlib.import_module(entry)
@@ -85,9 +84,11 @@ def get_local_token():
 	if os.path.exists(main.CONFIG_FILE):
 		return json.load(open(main.CONFIG_FILE, 'r'))['token']
 	else:
-		raise RuntimeError("Please config your token, \n" + \
-						   "either by setting it temporarily in cotk\n" + \
-						   "or by calling `cotk config`")
+		raise RuntimeError("Please set your token. \n" + \
+						   "\tEither using \"--token\" to specify token temporarily\n" + \
+						   "\tor set token in global using `cotk config set token TOKEN`." + \
+						   "If you don't have a token, sign up at Dashboard and find your token at user profile." + \
+						   "Cotk dashboard: %s" % DASHBOARD_URL)
 
 def verify_token_online(token):
 	#TODO: wait for api
@@ -157,7 +158,7 @@ to check your changes.")
 		json.dump(data, open(config_file, 'w'))
 		LOGGER.info("Runtime information has dumped into %s.", config_file)
 
-		validate_result(cargs.result)
+		read_and_validate_result(cargs.result)
 	else:
 
 		if not os.path.isfile(config_file):

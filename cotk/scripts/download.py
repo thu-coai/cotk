@@ -11,9 +11,12 @@ import re
 import requests
 from . import main, _utils
 
+DASHBOARD_URL = main.DASHBOARD_URL
+QUERY_URL = DASHBOARD_URL + "/get?id=%d"
+
 def get_result_from_id(query_id):
 	'''Query uploaded info from id'''
-	query = requests.get(main.QUERY_URL % query_id)
+	query = requests.get(QUERY_URL % query_id)
 	if not query.ok:
 		raise RuntimeError("Cannot fetch result from id %d" % query_id)
 	else:

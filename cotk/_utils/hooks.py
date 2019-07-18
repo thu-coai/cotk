@@ -22,8 +22,9 @@ def hook_dataloader(fn):
 		binded = sign.bind(*args, **kwargs)
 		binded.apply_defaults()
 		binded = dict(binded.arguments)
+		self = binded['self']
 		del binded['self']
-		invoke_listener("add_dataloader", fn.__qualname__.split(".")[0], binded)
+		invoke_listener("add_dataloader", self, fn.__qualname__.split(".")[0], binded)
 		return fn(*args, **kwargs)
 	return wrapped
 
@@ -35,8 +36,9 @@ def hook_standard_metric(metric_name=""):
 			binded = sign.bind(*args, **kwargs)
 			binded.apply_defaults()
 			binded = dict(binded.arguments)
+			self = binded['self']
 			del binded['self']
-			invoke_listener("add_standard_metric", fn.__qualname__.split(".")[0], metric_name, binded)
+			invoke_listener("add_standard_metric", self, fn.__qualname__.split(".")[0], metric_name, binded)
 			print(kwargs)
 			return fn(*args, **kwargs)
 		return wrapped
@@ -49,8 +51,9 @@ def hook_wordvec(fn):
 		binded = sign.bind(*args, **kwargs)
 		binded.apply_defaults()
 		binded = dict(binded.arguments)
+		self = binded['self']
 		del binded['self']
-		invoke_listener("add_wordvec", fn.__qualname__.split(".")[0], binded)
+		invoke_listener("add_wordvec", self, fn.__qualname__.split(".")[0], binded)
 		return fn(*args, **kwargs)
 	return wrapped
 
@@ -74,17 +77,26 @@ class SimpleHooksListener(BaseHooksListener):
 			"standard_metric": {},
 			"wordvec": {}
 		}
+		self.dataloader_id = {}
 
 	def close(self):
 		return self.record
 
-	def add_dataloader(self, dataloader, args):
+	def add_dataloader(self, obj, dataloader, args):
+		id = len(self.dataloader_id)
+		args["id"] = id
 		self.record["dataloader"][dataloader] = args
+		print(obj)
+		self.dataloader_id[obj] = id
+		print(self.dataloader_id)
 
-	def add_standard_metric(self, dataloader, metric_type, args):
-		self.record["standard_metric"][dataloader + "_" + metric_type] = args
+	def add_standard_metric(self, obj, clsname, metric_type, args):
+		print(obj)
+		print(self.dataloader_id)
+		args['dataloader_id'] = self.dataloader_id[obj]
+		self.record["standard_metric"][clsname + "_" + metric_type] = args
 
-	def add_wordvec(self, wordvec, args):
+	def add_wordvec(self, obj, wordvec, args):
 		self.record["wordvec"][wordvec] = args
 
 def start_recorder():
