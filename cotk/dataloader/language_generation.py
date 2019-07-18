@@ -163,7 +163,8 @@ class MSCOCO(LanguageGeneration):
 	References:
 		[1] http://images.cocodataset.org/annotations/annotations_trainval2017.zip
 
-		[2] Lin T Y, Maire M, Belongie S, et al. Microsoft COCO: Common Objects in Context. ECCV 2014.
+		[2] Chen X, Fang H, Lin T Y, et al. Microsoft COCO Captions:
+		Data Collection and Evaluation Server. arXiv:1504.00325, 2015.
 
 	'''
 

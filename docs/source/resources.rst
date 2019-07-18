@@ -135,7 +135,7 @@ MSCOCO
         std of number of uterrances   2.51     2.44    2.44  
         ============================  =======  ======  ======
     * Reference
-        Lin T Y, Maire M, Belongie S, et al. `Microsoft COCO: Common Objects in Context <https://arxiv.org/pdf/1405.0312.pdf>`_. In European Conference on Computer Vision (ECCV), 2014.
+        Chen X, Fang H, Lin T Y, et al. `Microsoft COCO Captions: Data Collection and Evaluation Server <https://arxiv.org/pdf/1504.00325.pdf>`_. arXiv:1504.00325, 2015.
         
 
 MSCOCO_small
