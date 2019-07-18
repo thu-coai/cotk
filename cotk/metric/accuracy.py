@@ -1,7 +1,7 @@
 r"""
 Containing some classes and functions about accuracy evaluating results of models.
 """
-import nltk
+import numpy as np
 from .metric import MetricBase
 
 class AccuracyMetric(MetricBase):
@@ -58,6 +58,6 @@ class AccuracyMetric(MetricBase):
 		if (not self.hyps) or (not self.refs):
 			raise RuntimeError("The metric has not been forwarded data correctly.")
 		result.update({"accuracy": \
-			nltk.classify.accuracy(self.refs, self.hyps), \
+			np.mean(np.array(self.refs) == np.array(self.hyps)), \
 			"accuracy hashvalue": self._hashvalue()})
 		return result

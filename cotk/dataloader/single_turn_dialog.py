@@ -334,35 +334,46 @@ class BERTSingleTurnDialog(BERTLanguageProcessingBase):
 		return res
 
 	@hooks.hook_standard_metric("teacher_forcing")
-	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob"):
-		'''Get metric for teacher-forcing mode.
-
+	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob",\
+					   invalid_vocab=False):
+		'''Get metrics for teacher-forcing.
 		It contains:
-
 		* :class:`.metric.PerplexityMetric`
-
 		Arguments:
-			gen_prob_key (str): default: `gen_prob`. Refer to :class:`.metric.PerplexityMetric`
+			gen_log_prob_key (str):  The key of predicted log probablilty over words.
+				Refer to :class:`.metric.PerplexityMetric`. Default: ``gen_log_prob``.
+			invalid_vocab (bool): Whether ``gen_log_prob`` contains invalid vocab.
+				Refer to :class:`.metric.PerplexityMetric`. Default: ``False``.
+		Returns:
+			A :class:`.metric.MetricChain` object.
 		'''
 		metric = MetricChain()
-		metric.add_metric(PerplexityMetric(self, gen_log_prob_key=gen_log_prob_key))
+		metric.add_metric(PerplexityMetric(self,\
+			reference_allvocabs_key="resp_allvocabs",\
+			reference_len_key="resp_length",\
+			gen_log_prob_key=gen_log_prob_key,\
+			invalid_vocab=invalid_vocab))
 		return metric
 
 	@hooks.hook_standard_metric("inference")
 	def get_inference_metric(self, gen_key="gen"):
-		'''Get metric for inference.
+		'''Get metrics for inference.
 
 		It contains:
 
 		* :class:`.metric.BleuCorpusMetric`
-		* :class:`.metric.SingleDialogRecorder`
+		* :class:`.metric.SingleTurnDialogRecorder`
 
 		Arguments:
-			gen_key (str): default: "gen". Refer to :class:`.metric.BleuCorpusMetric` or
-			               :class:`.metric.SingleDialogRecorder`
+			gen_key (str): The key of generated sentences in index form.
+				Refer to :class:`.metric.BleuCorpusMetric` or
+				:class:`.metric.SingleTurnDialogRecorder`. Default: ``gen``.
+		Returns:
+			A :class:`.metric.MetricChain` object.
 		'''
 		metric = MetricChain()
-		metric.add_metric(BleuCorpusMetric(self, gen_key=gen_key))
+		metric.add_metric(BleuCorpusMetric(self, gen_key=gen_key, \
+			reference_allvocabs_key="resp_allvocabs"))
 		metric.add_metric(SingleTurnDialogRecorder(self, gen_key=gen_key))
 		return metric
 
