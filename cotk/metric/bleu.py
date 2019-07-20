@@ -115,7 +115,7 @@ class BleuCorpusMetric(MetricBase):
 		self.hyps = _replace_unk(self.hyps, self.dataloader.unk_id)
 		try:
 			result.update({"bleu": \
-				corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction().method7), \
+				corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction().method3), \
 				"bleu hashvalue": self._hashvalue()})
 		except ZeroDivisionError as _:
 			if not self.ignore_smoothing_error:
@@ -430,7 +430,7 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 
 		try:
 			result.update({"bleu": \
-				corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction().method7), \
+				corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction().method3), \
 				"bleu hashvalue": self._hashvalue()})
 		except ZeroDivisionError as _:
 			if not self.ignore_smoothing_error:
