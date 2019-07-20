@@ -16,7 +16,7 @@ def _replace_unk(_input, _unk_id, _target=-1):
 
 	Arguments:
 		_input (list): the references or hypothesis.
-		_unk_id (int): id for unkonwn words.
+		_unk_id (int): id for unknown words.
 		_target: the target word index used to replace the unknown words.
 
 	Returns:
