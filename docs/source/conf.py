@@ -201,7 +201,7 @@ todo_include_todos = True
 def setup(app):
     app.add_stylesheet('cotk_theme.css')
 
-# copy readme and images
+# download readme and images
 
 models = {"LanguageGeneration": {
         "lm_tf":"LM-tensorflow",
@@ -216,6 +216,24 @@ models = {"LanguageGeneration": {
     }
 }
 
+
+from cotk._utils.file_utils import _http_get
+from cotk._utils.resource_processor import unzip_file
+
+def copy_readme_from_github(model_name, target_path):
+    print("downloading %s from github..." % model_name)
+    online_path = "https://github.com/thu-coai/%s/archive/master.zip" % model_name
+    local_path = os.path.join("..", "build", model_name + ".zip")
+    build_dir = os.path.join("..", "build")
+    local_dir = os.path.join("..", "build", model_name + "-master")
+    #os.mkdirs(local_path, exist_ok=True)
+    _http_get(online_path, open(local_path, "wb"))
+    unzip_file(local_path, build_dir)
+    shutil.copy(os.path.join(local_dir, "Readme.md"), 
+            os.path.join(target_path, "Readme.md"))
+    shutil.copytree(os.path.join(local_dir, "images"),
+            os.path.join(target_path, "images"))
+
 exclude_patterns = []
 shutil.rmtree("./models", ignore_errors=True)
 os.makedirs("./models", exist_ok=True)
@@ -225,15 +243,13 @@ for dir1, submodels in models.items():
     index_file.write("%s\n=========================================\n" % dir1)
     index_file.write(".. toctree::\n\n")
     for rstname, modelname in submodels.items():
-        index_file.write("   %s/readme\n" % modelname)
+        index_file.write("   %s/Readme\n" % modelname)
         os.makedirs(os.path.join("./models", dir1, modelname), exist_ok=True)
-        shutil.copy(os.path.join("../../", "models", modelname, "Readme.md"), 
-            os.path.join("./models", dir1, modelname, "Readme.md"))
-        exclude_patterns.append(os.path.join("models", dir1, modelname, "Readme.md"))
-        shutil.copytree(os.path.join("../../", "models", modelname, "images"),
-            os.path.join("./models", dir1, modelname, "images"))
-        with open(os.path.join("./models", dir1, modelname, "readme.rst"), 'w') as rst_file:
-            rst_file.write(".. mdinclude:: ./Readme.md\n")
+        copy_readme_from_github(modelname, os.path.join("./models", dir1, modelname))
+        #shutil.copy(os.path.join("../../", "models", modelname, "Readme.md"), 
+            #os.path.join("./models", dir1, modelname, "Readme.md"))
+        #shutil.copytree(os.path.join("../../", "models", modelname, "images"),
+            #os.path.join("./models", dir1, modelname, "images"))
     index_file.close()
 
 #print(exclude_patterns)
