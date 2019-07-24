@@ -357,7 +357,7 @@ class UbuntuCorpus(MultiTurnDialog):
 				else:
 					raw_data = [d[0] + d[1] for d in raw_data[1:]]
 
-				raw2line = lambda raw: [sent.strip().split() \
+				raw2line = lambda raw: [WordPunctTokenizer().tokenize(sent) \
 						for sent in raw.strip().replace('__eou__', '').split('__eot__')]
 				origin_data[key] = {'session': list(map(raw2line, raw_data))}
 
@@ -505,13 +505,13 @@ class SwitchboardCorpus(MultiTurnDialog):
 							if prefix_utts[utt[0]][0] == utt[1][0] \
 							else '<eos> ' + utt[1][1].strip() + ' ', enumerate(line['utts'])))
 				utts = ('<d> ' + "".join(suffix_utts).strip()).split("<eos>")
-				sess = list(map(lambda utt: utt.strip().split(), utts))
+				sess = list(map(lambda utt: WordPunctTokenizer().tokenize(utt), utts))
 				sess = sess[1:] + [['<d>']] if read_multi_ref else sess
 				origin_data['session'].append(sess[:self._max_turn_length])
 
 				if read_multi_ref:
 					origin_data['candidate_allvocabs'].append(list(map(\
-						lambda resp: resp[1].strip().split(), line['responses'])))
+						lambda resp: WordPunctTokenizer().tokenize(resp[1]), line['responses'])))
 		return origin_data
 
 	def _build_vocab(self, origin_data):

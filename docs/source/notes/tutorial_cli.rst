@@ -98,7 +98,6 @@ By complying with the following protocols, you are able to make your model easil
 - A file named ``result.json`` should be created, when the entry function ``run()`` is called with ``<args>``.
   The ``result.json`` contains the scores from :ref:`metric functions <metric_ref>`. For example:
 
-
 .. code-block:: none
 
     {'bw-bleu': 0.04871277607530735,
