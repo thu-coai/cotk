@@ -119,7 +119,7 @@ We offer some tips for you to further understand how vocabularies work.
           they don't have index.
 
 Vocabulary for BERTLanguageProcessingBase
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Some pretrained model have its own vocabulary so it is hard directly adapted
 to our framework. Before stepping in out workaround, make sure you have read
@@ -368,6 +368,9 @@ SentenceClassification
     .. automethod:: convert_tokens_to_ids
     .. automethod:: convert_ids_to_tokens
     .. automethod:: get_metric
+
+SST
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: SST
 

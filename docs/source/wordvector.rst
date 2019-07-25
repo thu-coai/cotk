@@ -1,6 +1,9 @@
 Word Vector
 #############
 
+WordVector
+-----------------------------------
+
 .. automodule:: cotk.wordvector
 .. autoclass:: WordVector
 
@@ -8,6 +11,10 @@ Word Vector
     .. automethod:: load_class
     .. automethod:: load_matrix
     .. automethod:: load_dict
+
+
+Glove
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: Glove
     :members:
