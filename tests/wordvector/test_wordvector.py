@@ -24,6 +24,7 @@ class TestWordVector():
 		assert WordVector.load_class('not_subclass') == None
 
 	def base_test_load(self, dl):
+		# test WordVector.load_matrix
 		vocab_list = ['the', 'of']
 		n_dims = 300
 		wordvec = dl.load_matrix(n_dims, vocab_list)
@@ -39,6 +40,27 @@ class TestWordVector():
 		assert isinstance(wordvec, np.ndarray)
 		assert wordvec.shape == (len(vocab_list), n_dims)
 		assert wordvec[0][0] == 0.04656
+
+		# test WordVector.load_dict
+		oov_list = ['oov', 'unk', '']
+		for vocab_list in (['the', 'and'], ['the', 'of'], ['the', 'oov'], ['oov'], ['of', 'unk', ''], []):
+			wordvec = dl.load_dict(vocab_list)
+			assert isinstance(wordvec, dict)
+			assert set(wordvec) == set([word for word in vocab_list if word not in oov_list])
+			if not wordvec:
+				continue
+			vec_shape = next(iter(wordvec.values())).shape
+			assert len(vec_shape) == 1
+			for vec in wordvec.values():
+				assert isinstance(vec, np.ndarray)
+				assert vec.shape == vec_shape
+			if 'the' in wordvec:
+				assert (wordvec['the'][-2:] == [-0.20989, 0.053913]).all()
+			if 'and' in wordvec:
+				assert (wordvec['and'][-2:] == [0.011807, 0.059703]).all()
+			if 'of' in wordvec:
+				assert (wordvec['of'][-2:] == [-0.29183, -0.046533]).all()		
+
 
 @pytest.fixture
 def load_glove():
