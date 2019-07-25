@@ -195,6 +195,9 @@ class SelfBleuCorpusMetric(MetricBase):
 			raise RuntimeError("The metric has not been forwarded data correctly.")
 		if len(self.hyps) == 1:
 			raise RuntimeError("Self-Bleu can't be computed because there is only 1 generated sentence.")
+		if self.sample <= 1:
+			raise RuntimeError('`self.sample` should be more than 1, \
+				whose value is `{}`'.format(self.sample))
 
 		if self.sample > len(self.hyps):
 			self.sample = len(self.hyps)
@@ -204,17 +207,24 @@ class SelfBleuCorpusMetric(MetricBase):
 		_ref = _replace_unk(ref, self.dataloader.unk_id)
 
 		bleu_irl = []
+
+		tasks = ((ref[:i]+ref[i+1:self.sample], _ref[i]) for i in range(self.sample))
 		if self.sample >= 1000 and self.cpu_count > 1:
-			tasks = ((ref[:i]+ref[i+1:self.sample], _ref[i]) for i in range(self.sample))
+			# use multiprocessing
 			pool = Pool(self.cpu_count)
-			for ans in tqdm.tqdm(pool.imap_unordered( \
-				_sentence_bleu, tasks, chunksize=20), total=self.sample):
-				bleu_irl.append(ans)
+			values = pool.imap_unordered(_sentence_bleu, tasks, chunksize=20)
+		else:
+			pool = None
+			values = map(_sentence_bleu, tasks)
+		if self.sample >= 1000:
+			# use tqdm
+			values = tqdm.tqdm(values, total=self.sample)
+		for ans in values:
+			bleu_irl.append(ans)
+		if pool is not None:
 			pool.close()
 			pool.join()
-		elif self.sample > 1:
-			for i in range(self.sample):
-				bleu_irl.append(_sentence_bleu((ref[:i]+ref[i+1:], _ref[i])))
+
 		self._hash_relevant_data([self.seed, self.sample])
 		res.update({"self-bleu" : 1.0 * sum(bleu_irl) / len(bleu_irl),\
 					"self-bleu hashvalue": self._hashvalue()})
@@ -302,36 +312,52 @@ class FwBwBleuCorpusMetric(MetricBase):
 		sample_hyps = self.sample if self.sample < len(self.hyps) else len(self.hyps)
 		sample_refs = self.sample if self.sample < len(self.refs) else len(self.refs)
 
+		if sample_hyps <= 1:
+			raise RuntimeError('`sample_hyps` should be more than 1, \
+				whose value is `{}`'.format(sample_hyps))
+		if sample_refs <= 1:
+			raise RuntimeError('`sample_refs` should be more than 1, \
+				whose value is `{}`'.format(sample_refs))
+
 		random.seed(self.seed)
 		random.shuffle(self.hyps)
 		random.shuffle(self.refs)
 
 		self.hyps = _replace_unk(self.hyps, self.dataloader.unk_id)
 
-		bleu_irl_fw, bleu_irl_bw = [], []
-		if sample_hyps >= 1000 and self.cpu_count > 1:
-			tasks = ((self.refs, self.hyps[i]) for i in range(sample_hyps))
-			pool = Pool(self.cpu_count)
-			for ans in tqdm.tqdm(pool.imap_unordered( \
-				_sentence_bleu, tasks, chunksize=20), total=sample_hyps):
-				bleu_irl_fw.append(ans)
-			pool.close()
-			pool.join()
-		else:
-			for i in range(sample_hyps):
-				bleu_irl_fw.append(_sentence_bleu((self.refs, self.hyps[i])))
 
-		if sample_refs >= 1000 and self.cpu_count > 1:
-			tasks = ((self.hyps, self.refs[i]) for i in range(sample_refs))
+		bleu_irl_fw, bleu_irl_bw = [], []
+
+		tasks = ((self.refs, self.hyps[i]) for i in range(sample_hyps))
+		if sample_hyps >= 1000 and self.cpu_count > 1:
 			pool = Pool(self.cpu_count)
-			for ans in tqdm.tqdm(pool.imap_unordered( \
-				_sentence_bleu, tasks, chunksize=20), total=sample_refs):
-				bleu_irl_bw.append(ans)
+			values = pool.imap_unordered(_sentence_bleu, tasks, chunksize=20)
+		else:
+			pool = None
+			values = map(_sentence_bleu, tasks)
+		if sample_hyps >= 1000:
+			values = tqdm.tqdm(values, total=sample_hyps)
+		for ans in values:
+			bleu_irl_fw.append(ans)
+		if pool is not None:
 			pool.close()
 			pool.join()
+
+		tasks = ((self.hyps, self.refs[i]) for i in range(sample_refs))
+		if sample_refs >= 1000 and self.cpu_count > 1:
+			pool = Pool(self.cpu_count)
+			values = pool.imap_unordered(_sentence_bleu, tasks, chunksize=20)
 		else:
-			for i in range(sample_refs):
-				bleu_irl_bw.append(_sentence_bleu((self.hyps, self.refs[i])))
+			pool = None
+			values = map(_sentence_bleu, tasks)
+		if sample_refs >= 1000:
+			values = tqdm.tqdm(values, total=sample_refs)
+		for ans in values:
+			bleu_irl_bw.append(ans)
+		if pool is not None:
+			pool.close()
+			pool.join()
+
 		fw_bleu = (1.0 * sum(bleu_irl_fw) / len(bleu_irl_fw))
 		bw_bleu = (1.0 * sum(bleu_irl_bw) / len(bleu_irl_bw))
 		if fw_bleu + bw_bleu > 0:

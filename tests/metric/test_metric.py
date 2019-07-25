@@ -1,7 +1,9 @@
 import copy
 import itertools
 import random
+from unittest import mock
 
+import tqdm
 import numpy as np
 import pytest
 import torch
@@ -728,30 +730,60 @@ class TestSelfBleuCorpusMetric:
 
 		assert res['self-bleu hashvalue'] != res_unequal['self-bleu hashvalue']
 
-	@pytest.mark.parametrize('argument, shape, type, gen_len', self_bleu_test_parameter)
-	def test_close(self, argument, shape, type, gen_len):
+	@pytest.mark.parametrize('argument, shape, type, gen_len, use_tqdm', generate_testcase(\
+		(zip(test_argument), "add"),
+		(zip(test_shape, test_type), "multi"),
+		(zip(["non-empty"]), "multi"),
+		(zip([True, False]), "multi")))
+	def test_close(self, argument, shape, type, gen_len, use_tqdm):
 		# 'default' or 'custom'
 		# 'pad' or 'jag'
 		# 'list' or 'array'
 		# 'equal' or 'unequal'
 		# 'random', 'non-empty', 'empty'
 		# 'random', 'non-empty', 'empty'
-		dataloader = FakeDataLoader()
-		gen_key = 'gen' \
-			if argument == 'default' else 'gk'
-		data = dataloader.get_data(gen_key=gen_key, \
-								   to_list=(type == 'list'), \
-								   pad=(shape == 'pad'), \
-								   gen_len=gen_len)
-		_data = copy.deepcopy(data)
-		if argument == 'default':
-			bcm = SelfBleuCorpusMetric(dataloader)
-		else:
-			bcm = SelfBleuCorpusMetric(dataloader, gen_key)
 
-		bcm.forward(data)
-		assert np.isclose(bcm.close()['self-bleu'], self.get_self_bleu(dataloader, data, gen_key))
-		assert same_dict(data, _data)
+		# Test whether tqdm.tqdm is called, when sample >= 1000 
+		# and tqdm.tqdm is not called , when sample < 1000.
+		# If tqdm.tqdm is called in `bcm.close`, `bleu_irl` will be replaced by random data.
+		if use_tqdm:
+			sample = random.randint(1000, 2000)
+			assert sample >= 1000
+		else:
+			sample = random.randint(2, 50)
+			assert 1 < sample < 1000
+		fake_bleu_irl = [random.random() for _ in range(sample)]
+
+		import multiprocessing
+		with mock.patch('tqdm.tqdm', return_value=fake_bleu_irl):
+			with mock.patch('multiprocessing.pool.Pool'):
+				dataloader = FakeDataLoader()
+				gen_key = 'gen' \
+					if argument == 'default' else 'gk'
+				data = dataloader.get_data(gen_key=gen_key, \
+											to_list=(type == 'list'), \
+											pad=(shape == 'pad'), \
+											gen_len=gen_len,
+											batch=sample)
+				_data = copy.deepcopy(data)
+				if argument == 'default':
+					bcm = SelfBleuCorpusMetric(dataloader, sample=4000)
+				else:
+					bcm = SelfBleuCorpusMetric(dataloader, gen_key, sample=4000)
+				assert bcm.sample == 4000
+
+				bcm.forward(data)
+				if use_tqdm:
+					assert np.isclose(bcm.close()['self-bleu'], 1.0 * sum(fake_bleu_irl) / len(fake_bleu_irl))
+					assert tqdm.tqdm.called
+					if bcm.cpu_count > 1:
+						assert multiprocessing.pool.Pool.called
+				else:
+					assert np.isclose(bcm.close()['self-bleu'], self.get_self_bleu(dataloader, _data, gen_key))
+					assert not tqdm.tqdm.called
+					assert not multiprocessing.pool.Pool.called
+				assert bcm.sample == sample
+				assert same_dict(data, _data)
 
 	# def test_self_bleu_bug(self):
 	# 	dataloader = FakeDataLoader()
@@ -767,7 +799,8 @@ fwbw_bleu_test_parameter = generate_testcase(\
 	(zip(test_argument), "add"),
 	(zip(test_shape, test_type), "multi"),
 	(zip(["non-empty"]), "multi"),
-	(zip(["non-empty"]), "multi")
+	(zip(["non-empty"]), "multi"),
+	(zip([True, False]), "add")
 )
 
 class TestFwBwBleuCorpusMetric:
@@ -825,30 +858,69 @@ class TestFwBwBleuCorpusMetric:
 		res_unequal = bcm_unequal.close()
 		assert res['fw-bw-bleu hashvalue'] != res_unequal['fw-bw-bleu hashvalue']
 
-	@pytest.mark.parametrize('argument, shape, type, gen_len, ref_len', fwbw_bleu_test_parameter)
-	def test_close(self, argument, shape, type, gen_len, ref_len):
+	@pytest.mark.parametrize('argument, shape, type, gen_len, ref_len, use_tqdm', fwbw_bleu_test_parameter)
+	def test_close(self, argument, shape, type, gen_len, ref_len, use_tqdm):
 		# 'default' or 'custom'
 		# 'pad' or 'jag'
 		# 'list' or 'array'
 		# 'equal' or 'unequal'
 		# 'random', 'non-empty', 'empty'
 		# 'random', 'non-empty', 'empty'
-		dataloader = FakeDataLoader()
-		reference_key, gen_key = ('resp_allvocabs', 'gen') \
-			if argument == 'default' else ('rk', 'gk')
-		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
-								   to_list=(type == 'list'), pad=(shape == 'pad'), \
-								   gen_len=gen_len, ref_len=ref_len)
-		dataloader.data["test"][reference_key] = data[reference_key]
-		_data = copy.deepcopy(data)
-		if argument == 'default':
-			bcm = FwBwBleuCorpusMetric(dataloader, reference_key)
+		if use_tqdm:
+			sample = random.randint(1000, 2000)
+			assert sample >= 1000
 		else:
-			bcm = FwBwBleuCorpusMetric(dataloader, reference_key, gen_key)
+			sample = random.randint(2, 50)
+			assert 1 < sample < 1000
+		fake_bleu_irl_fw = [random.random() for _ in range(sample)]
+		fake_bleu_irl_bw = [random.random() for _ in range(sample)]
 
-		bcm.forward(data)
-		assert np.isclose(bcm.close()['fw-bw-bleu'], self.get_bleu(dataloader, data, reference_key, gen_key))
-		assert same_dict(data, _data)
+		def get_fake_values(lists=(fake_bleu_irl_fw, fake_bleu_irl_bw), i=-1):
+			def _get_fake_values(*_, **__):
+				nonlocal i, lists
+				i = (1 + i) % len(lists)
+				return lists[i]
+			return _get_fake_values
+
+		import multiprocessing
+		with mock.patch('tqdm.tqdm', side_effect=get_fake_values()):
+			with mock.patch('multiprocessing.pool.Pool'):
+				# tqdm.tqdm is replaced by _get_fake_values. It returns fake values.
+				dataloader = FakeDataLoader()
+				reference_key, gen_key = ('resp_allvocabs', 'gen') \
+					if argument == 'default' else ('rk', 'gk')
+				data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
+											to_list=(type == 'list'), pad=(shape == 'pad'), \
+											gen_len=gen_len, ref_len=ref_len, batch=sample)
+				dataloader.data["test"][reference_key] = data[reference_key]
+				_data = copy.deepcopy(data)
+				if argument == 'default':
+					bcm = FwBwBleuCorpusMetric(dataloader, reference_key, sample=sample)
+				else:
+					bcm = FwBwBleuCorpusMetric(dataloader, reference_key, gen_key, sample=sample)
+
+				assert bcm.sample == sample
+				bcm.forward(data)
+				if use_tqdm:
+					fw_bleu = (1.0 * sum(fake_bleu_irl_fw) / len(fake_bleu_irl_fw))
+					bw_bleu = (1.0 * sum(fake_bleu_irl_bw) / len(fake_bleu_irl_bw))
+					if fw_bleu + bw_bleu > 0:
+						fw_bw_bleu = 2.0 * bw_bleu * fw_bleu / (fw_bleu + bw_bleu)
+					else:
+						fw_bw_bleu = 0
+					assert np.isclose(bcm.close()['fw-bw-bleu'], fw_bw_bleu)
+					assert tqdm.tqdm.called
+					assert tqdm.tqdm.call_count == 2
+					assert tqdm.tqdm() == fake_bleu_irl_fw
+					assert tqdm.tqdm() == fake_bleu_irl_bw
+					if bcm.cpu_count > 1:
+						assert multiprocessing.pool.Pool.called
+					
+				else:
+					assert np.isclose(bcm.close()['fw-bw-bleu'], self.get_bleu(dataloader, _data, reference_key, gen_key))
+					assert not tqdm.tqdm.called
+					assert not multiprocessing.pool.Pool.called
+				assert same_dict(data, _data)
 
 	# def test_fwbwbleu_bug(self):
 	# 	dataloader = FakeDataLoader()
