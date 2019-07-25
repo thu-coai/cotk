@@ -37,12 +37,15 @@ https://cotk-data.s3-ap-northeast-1.amazonaws.com/mscoco.zip#MSCOCO           MS
 
 .. note::
 
-    If you already have the resources data at local, but ``cotk`` want to download them,
-    you can use the following command line to import local resources into cache.
+    If you already have the resources data at local, but ``cotk`` didn't notice them and
+    try to download again, you can use the following command to import local resources into cache.
 
     ``cotk import <file_id> <file_path>``
     
-    where **file_path** is the path to the local resource.
+    where ``file_path`` is the path to the local resource. For example:
+
+    ``cotk import resources://MSCOCO ./MSCOCO.zip
+
 
 Word Vector
 ----------------------------------
@@ -55,12 +58,12 @@ Glove50d
     * used by: :class:`.wordvector.Glove`
     
     Introduction
-        This is a file containing vector representation for words pretrained by GloVe, which is an unsupervised learning
+        This is a file containing vector representation for words pretrained by `GloVe`, which is an unsupervised learning
         algorithm for obtaining vector representations for words. Training is performed on aggregated global word-word
         co-occurrence statistics from a corpus, and the resulting representations showcase interesting linear substructures
         of the word vector space.
         
-        This file is a 50 dimension version from ``glove.6B``, which is trained on Wikipedia2014 and Gigaword5.
+        This file is a 50 dimension version from ``glove.6B``, which is trained on `Wikipedia2014` and `Gigaword5`.
 
     Statistic
         ===================== ==============
@@ -84,7 +87,7 @@ Glove100d
     * usage: :class:`.wordvector.Glove`
 
     Introduction
-        * This is a file containing vector representation for words pretrained by GloVe.
+        * This is a file containing vector representation for words pretrained by `GloVe`.
         * This file is a 100 dimension version from ``glove.6B``.
         * Refer to `Glove50d`_ for more information and references.
 
@@ -104,7 +107,7 @@ Glove200d
     * usage: :class:`.wordvector.Glove`
 
     Introduction
-        * This is a file containing vector representation for words pretrained by GloVe.
+        * This is a file containing vector representation for words pretrained by `GloVe`.
         * This file is a 200 dimension version from ``glove.6B``.
         * Refer to `Glove50d`_ for more information and references.
 
@@ -124,7 +127,7 @@ Glove300d
     * usage: :class:`.wordvector.Glove`
     
     Introduction
-        * This is a file containing vector representation for words pretrained by GloVe.
+        * This is a file containing vector representation for words pretrained by `GloVe`.
         * This file is a 300 dimension version from ``glove.6B``.
         * Refer to `Glove50d`_ for more information and references.
 
@@ -144,7 +147,7 @@ Glove50d_small
     * usage: :class:`.wordvector.Glove`
 
     Introduction
-        * This is a file containing vector representation for words pretrained by GloVe.
+        * This is a file containing vector representation for words pretrained by `GloVe`.
         * This file is a 50 dimension version from ``glove.6B`` and only contains the most frequency 40,000 words.
         * Refer to `Glove50d`_ for more information and references.
 
@@ -173,7 +176,7 @@ MSCOCO
 
         The original data is `2017 Train/Val annotations [241MB] <http://images.cocodataset.org/annotations/annotations_trainval2017.zip>`_ .
         We use the same train set as original data, but split the val set into dev(odd-numbered sentences) and test set(even-numbered sentences).
-        We extract the caption and use `nltk.tokenize.word_tokenize` for tokenization.
+        We extract the caption and use ``nltk.tokenize.word_tokenize`` for tokenization.
         We also capitalize each sentence and add full stop to it if it does not have one.
 
     Statistic
@@ -286,6 +289,9 @@ SST
         Stanford Sentiment Treebank is the first corpus with fully labeled
         parse trees that allows for a complete analysis of the compositional
         effects of sentiment in language.
+
+        We remain the original split of dataset. The dataset is tokenized and
+        contains capitalized letters.
     
     Statistic
         =====================================  =========  =========  =========
@@ -335,8 +341,8 @@ SwitchboardCorpus
         However, there are two differences between our data with theirs:
 
         * We ensure that any two consecutive utterances come from different speakers,
-          by concatenating the original consecutive utterances from the same speakers in
-          data pre-processing of :class:`.dataloader.SwitchboardCorpus`.
+          by concatenating the original consecutive utterances from the same speakers
+          during pre-processing of :class:`.dataloader.SwitchboardCorpus`.
           (This is because we want to be compatible with other multi-turn dialog set.)
         * To avoid the gap between training and test, we have to remove some samples
           from ``multi_ref``, where the target speaker is the same as the last one in the context.
@@ -399,7 +405,7 @@ Ubuntu
         The dataset has both the multi-turn property of conversations in the Dialog State Tracking Challenge datasets,
         and the unstructured nature of interactions from microblog services such as Twitter.
 
-        We build the dataset using the ubuntu-ranking-dataset-creator[1], without tokenization, lemmatization and stemming. 
+        We build the dataset using the ubuntu-ranking-dataset-creator[1], without tokenization, lemmatization or stemming. 
 		The dataset contains capital character. The positive example probability is set to 1.0 for training set. 
 		The examples for training/dev/test sets are set to 1,000,000/19,560/18,920 as default.
 		Other settings are default.
