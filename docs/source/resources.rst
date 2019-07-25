@@ -44,7 +44,7 @@ https://cotk-data.s3-ap-northeast-1.amazonaws.com/mscoco.zip#MSCOCO           MS
     
     where ``file_path`` is the path to the local resource. For example:
 
-    ``cotk import resources://MSCOCO ./MSCOCO.zip
+    ``cotk import resources://MSCOCO ./MSCOCO.zip``
 
 
 Word Vector
