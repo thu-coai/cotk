@@ -155,7 +155,7 @@ class SelfBleuCorpusMetric(MetricBase):
 		if cpu_count is not None:
 			self.cpu_count = cpu_count
 		elif "CPU_COUNT" in os.environ and os.environ["CPU_COUNT"] is not None:
-			self.cpu_count = os.environ["CPU_COUNT"]
+			self.cpu_count = int(os.environ["CPU_COUNT"])
 		else:
 			self.cpu_count = multiprocessing.cpu_count()
 
@@ -252,7 +252,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 		if cpu_count is not None:
 			self.cpu_count = cpu_count
 		elif "CPU_COUNT" in os.environ and os.environ["CPU_COUNT"] is not None:
-			self.cpu_count = os.environ["CPU_COUNT"]
+			self.cpu_count = int(os.environ["CPU_COUNT"])
 		else:
 			self.cpu_count = multiprocessing.cpu_count()
 		self.refs = []
