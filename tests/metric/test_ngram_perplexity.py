@@ -1,5 +1,8 @@
 import pytest
 import numpy as np
+import random
+from unittest import mock
+import tqdm
 
 from cotk.metric import NgramFwBwPerplexityMetric
 from cotk.models.ngram_language_model import KneserNeyInterpolated
@@ -32,16 +35,37 @@ class TestNgramLM():
 			assert probs[-1] >= 0
 		assert np.isclose(sum(probs), 1)
 
-	@pytest.mark.parametrize('order', [1, 2, 3, 4])
-	def test_perplexity(self, order):
+	@pytest.mark.parametrize('order, use_tqdm', zip([1, 1, 2, 2, 3, 3, 4, 4], [False, True] * 4))
+	def test_perplexity(self, order, use_tqdm):
+		# Test whether tqdm.tqdm is called, when sample >= 1000
+		# and tqdm.tqdm is not called , when sample < 1000.
+		# If tqdm.tqdm is called in `bcm.close`, `bleu_irl` will be replaced by random data.
+		if use_tqdm:
+			sample = random.randint(101, 200)
+			assert sample > 100
+		else:
+			sample = random.randint(2, 100)
+			assert 1 < sample <= 100
+		fake_sent_lp = [random.random() for _ in range(sample)]
 		vocab = ['<go>', '<eos>', '<unk>', 'a', 'b', 'c', 'd']
 		LM = KneserNeyInterpolated(order, vocab[0], vocab[1], vocab[2])
 		corpus = []
-		for i in range(20):
+		for i in range(10 + sample):
 			corpus.append(list(np.random.choice(vocab[3:], np.random.randint(0, 10, 1)[0])))
 		LM.fit(corpus[:10])
 
-		assert LM.perplexity(corpus[10:]) > 0
+		import multiprocessing
+		with mock.patch('tqdm.tqdm', return_value=fake_sent_lp):
+			with mock.patch('multiprocessing.pool.Pool'):
+				if use_tqdm:
+					assert np.isclose(LM.perplexity(corpus[10:]), np.exp(-sum(fake_sent_lp) / sum(map(len, corpus[10:]))))
+					assert tqdm.tqdm.called
+					if LM.cpu_count > 0:
+						assert multiprocessing.pool.Pool.called
+				else:
+					assert LM.perplexity(corpus[10:]) > 0
+					assert not tqdm.tqdm.called
+					assert not multiprocessing.pool.Pool.called
 
 
 fwbw_perplexity_test_parameter = generate_testcase(\

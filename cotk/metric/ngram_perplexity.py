@@ -13,7 +13,7 @@ class NgramFwBwPerplexityMetric(MetricBase):
 			are passed to :func:`forward` by ``dataloader.data["test"][self.reference_test_key]``.
 		{MetricBase.GEN_KEY_ARGUMENTS}
 	'''
-	def __init__(self, dataloader, ngram, reference_test_key, gen_key="gen"):
+	def __init__(self, dataloader, ngram, reference_test_key, gen_key="gen", cpu_count=None):
 		super().__init__()
 		self.dataloader = dataloader
 		self.ngram = ngram
@@ -21,6 +21,7 @@ class NgramFwBwPerplexityMetric(MetricBase):
 		self.gen_key = gen_key
 		self.hyps = []
 		self.refs = []
+		self.cpu_count = cpu_count
 
 	def forward(self, data):
 		'''Processing a batch of data.
@@ -52,7 +53,7 @@ class NgramFwBwPerplexityMetric(MetricBase):
 
 		model = KneserNeyInterpolated(self.ngram, \
 					self.dataloader.vocab_list[2], self.dataloader.vocab_list[3], \
-					self.dataloader.vocab_list[1])
+					self.dataloader.vocab_list[1], cpu_count=self.cpu_count)
 		print("training forward")
 		model.fit(self.refs)
 		print("scoring forward")
@@ -60,7 +61,7 @@ class NgramFwBwPerplexityMetric(MetricBase):
 
 		model = KneserNeyInterpolated(self.ngram, \
 					self.dataloader.vocab_list[2], self.dataloader.vocab_list[3], \
-					self.dataloader.vocab_list[1])
+					self.dataloader.vocab_list[1], cpu_count=self.cpu_count)
 		print("training backward")
 		model.fit(self.hyps)
 		print("scoring backward")

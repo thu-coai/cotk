@@ -1,8 +1,12 @@
 r""" A implemention of KneserNey Interpolated Language Model.
 """
+import os
 from functools import partial
 from itertools import chain
 from collections import Counter
+import multiprocessing
+from multiprocessing import Pool
+import tqdm
 
 from nltk.lm.preprocessing import pad_both_ends
 from nltk.util import everygrams
@@ -30,7 +34,8 @@ class KneserNeyInterpolated:
 	    	training corpus
 	'''
 	def __init__(self, order, left_pad_symbol, right_pad_symbol, unk_symbol, cutoff=1, \
-				 default_delta_1=0.1, default_delta_2=0.1, default_delta_3=0.1):
+				 default_delta_1=0.1, default_delta_2=0.1, default_delta_3=0.1, \
+				 cpu_count=None):
 		self.order = order
 		self.left_pad_symbol = left_pad_symbol
 		self.right_pad_symbol = right_pad_symbol
@@ -44,6 +49,12 @@ class KneserNeyInterpolated:
 		self.suffix2concnt = {}
 		self.midseq2concnt = {}
 		self.n2cnt2discount = {n: {} for n in range(1, self.order + 1)}
+		if cpu_count is not None:
+			self.cpu_count = cpu_count
+		elif "CPU_COUNT" in os.environ and os.environ["CPU_COUNT"] is not None:
+			self.cpu_count = int(os.environ["CPU_COUNT"])
+		else:
+			self.cpu_count = multiprocessing.cpu_count()
 
 	@property
 	def vocab_size(self):
@@ -203,9 +214,18 @@ class KneserNeyInterpolated:
 		Returns:
 		    (float): Perplexity when generating ``corpus``
 		'''
-		length = 0
-		entropy = 0
-		for sent in corpus:
-			entropy -= self.sent_log_prob(sent)
-			length += len(sent) + 1
-		return np.exp(entropy / length)
+		log_probs = []
+		if len(corpus) > 100 and self.cpu_count > 0:
+			pool = Pool(self.cpu_count)
+			for lp in tqdm.tqdm(pool.imap_unordered(self.sent_log_prob, corpus, chunksize=40)):
+				log_probs.append(lp)
+			pool.close()
+			pool.join()
+		else:
+			if len(corpus) > 100:
+				tasks = tqdm.tqdm(corpus)
+			else:
+				tasks = corpus
+			for sent in tasks:
+				log_probs.append(self.sent_log_prob(sent))
+		return np.exp(-sum(log_probs) / sum(map(len, corpus)))
