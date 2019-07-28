@@ -9,6 +9,8 @@ import sys
 import argparse
 import importlib
 import traceback
+import textwrap
+
 
 import requests
 from . import _utils, main
@@ -19,6 +21,7 @@ DASHBOARD_URL = main.DASHBOARD_URL
 REPORT_URL = DASHBOARD_URL + "/upload"
 SHOW_URL = DASHBOARD_URL + "/show?id=%d"
 BACKUP_FILE = '.cotk_upload_backup'
+FILL = lambda str: textwrap.fill(textwrap.dedent(str))
 
 def run_model(entry, args):
 	'''Run the model and record the info of library'''
@@ -76,7 +79,17 @@ def upload_report(result_path, entry, args, working_dir, \
 	res = requests.post(REPORT_URL, {"data": json.dumps(upload_information), "token": token})
 	res = json.loads(res.text)
 	if res['code'] != "ok":
-		raise RuntimeError("upload error. %s" % json.loads(res['err']))
+		if res['code'] == 'wrong format' or res['code'] == 'invalid form':
+			raise RuntimeError(FILL("""
+				The upload information is unrecognized. If this persists,
+				upgrade cotk to a newer version. Detailed error: %s""" % res['err']))
+		elif res['code'] == 'bad token':
+			raise RuntimeError(FILL("""
+				The token is invalid. Please reset your token using
+				`cotk config set token <TOKEN>`, where your <TOKEN> can be find
+				at %s/profile.""" % DASHBOARD_URL))
+		else:
+			raise RuntimeError("Unknown error. Code: %s" % res['code'])
 	return res['id']
 
 def get_local_token():
@@ -85,14 +98,15 @@ def get_local_token():
 		return json.load(open(main.CONFIG_FILE, 'r'))['token']
 	else:
 		raise RuntimeError("Please set your token. \n" + \
-						   "\tEither using \"--token\" to specify token temporarily\n" + \
-						   "\tor set token in global using `cotk config set token TOKEN`." + \
+						   "    Either using \"--token\" to specify token temporarily\n" + \
+						   "    or set token in global using `cotk config set token <TOKEN>`.\n" + \
 						   "If you don't have a token, sign up at Dashboard and find your token at user profile." + \
 						   "Cotk dashboard: %s" % DASHBOARD_URL)
 
 def verify_token_online(token):
-	#TODO: wait for api
-	return True
+	res = requests.post(REPORT_URL, {"token": token})
+	res = json.loads(res.text)
+	return res['code'] != 'bad token'
 
 def run(args):
 	'''Entrance of run'''
@@ -119,7 +133,11 @@ def run(args):
 			token = cargs.token
 		else:
 			token = get_local_token()
-		verify_token_online(token)
+		if not verify_token_online(token):
+			raise RuntimeError(FILL("""
+				The token is invalid. Please reset your token using
+				`cotk config set token <TOKEN>`, where your <TOKEN> can be find
+				at %s/profile.""" % DASHBOARD_URL))
 
 		_utils.assert_repo_exist()
 		if not _utils.check_repo_clean():
