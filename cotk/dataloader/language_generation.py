@@ -134,7 +134,7 @@ class LanguageGeneration(LanguageProcessingBase):
 					seed=seed, \
 					cpu_count=cpu_count))
 		metric.add_metric(FwBwBleuCorpusMetric(self, \
-					reference_test_key="sent", \
+					reference_test_list=self.get_all_batch("test")["sent"], \
 					gen_key=gen_key, \
 					sample=sample, \
 					seed=seed, \

@@ -235,8 +235,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 
 	Arguments:
 		{MetricBase.DATALOADER_ARGUMENTS}
-		reference_test_key (str): Reference sentences with :ref:`all vocabs <vocab_ref>` in test data
-			are passed to :func:`forward` by ``dataloader.data["test"][self.reference_test_key]``.
+		reference_test_list (list): Reference sentences with :ref:`all vocabs <vocab_ref>` in test data.
 		{MetricBase.GEN_KEY_ARGUMENTS}
 		sample (int): Number of examples sampled from the generated sentences. Default: ``1000``.
 		seed (int): random seed for sampling. Default: ``1229``.
@@ -248,14 +247,14 @@ class FwBwBleuCorpusMetric(MetricBase):
 	'''
 
 	def __init__(self, dataloader, \
-			reference_test_key, \
+			reference_test_list, \
 			gen_key="gen", \
 			sample=1000, \
 			seed=1229, \
 			cpu_count=None):
 		super().__init__()
 		self.dataloader = dataloader
-		self.reference_test_key = reference_test_key
+		self.reference_test_list = reference_test_list
 		self.gen_key = gen_key
 		self.sample = sample
 		self.seed = seed
@@ -305,8 +304,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 		if not self.hyps:
 			raise RuntimeError("The metric has not been forwarded data correctly.")
 
-		resp = self.dataloader.data["test"][self.reference_test_key]
-		for resp_sen in resp:
+		for resp_sen in self.reference_test_list:
 			self.refs.append(list(self.dataloader.trim(resp_sen[1:])))
 
 		sample_hyps = self.sample if self.sample < len(self.hyps) else len(self.hyps)

@@ -9,15 +9,15 @@ class NgramFwBwPerplexityMetric(MetricBase):
 	Arguments:
 	    {MetricBase.DATALOADER_ARGUMENTS}
 	    ngram (int): order of ngram language model
-	    reference_test_key (str): Reference sentences with all vocabs in test data
+	    reference_test_list (list): Reference sentences with all vocabs in test data
 			are passed to :func:`forward` by ``dataloader.data["test"][self.reference_test_key]``.
 		{MetricBase.GEN_KEY_ARGUMENTS}
 	'''
-	def __init__(self, dataloader, ngram, reference_test_key, gen_key="gen", cpu_count=None):
+	def __init__(self, dataloader, ngram, reference_test_list, gen_key="gen", cpu_count=None):
 		super().__init__()
 		self.dataloader = dataloader
 		self.ngram = ngram
-		self.reference_test_key = reference_test_key
+		self.reference_test_list = reference_test_list
 		self.gen_key = gen_key
 		self.hyps = []
 		self.refs = []
@@ -47,8 +47,7 @@ class NgramFwBwPerplexityMetric(MetricBase):
 			* **fw-bw-ppl hashvalue**: hash value of reference data.
 		'''
 
-		resp = self.dataloader.data["test"][self.reference_test_key]
-		for resp_sent in resp:
+		for resp_sent in self.reference_test_list:
 			self.refs.append(list(self.dataloader.convert_ids_to_tokens(resp_sent[1:], trim=True)))
 
 		model = KneserNeyInterpolated(self.ngram, \

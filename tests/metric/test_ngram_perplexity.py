@@ -84,14 +84,14 @@ class TestNgramFwBwPerplexityMetric():
 								   to_list=to_list, pad=pad, \
 								   gen_len='non-empty', ref_len='non-empty')
 
-		dataloader.data["test"][reference_key] = data[reference_key]
-		fpm = NgramFwBwPerplexityMetric(dataloader, 4, reference_key)
+		# dataloader.data["test"][reference_key] = data[reference_key]
+		fpm = NgramFwBwPerplexityMetric(dataloader, 4, data[reference_key])
 		fpm.forward(data)
 		res = fpm.close()
 
 		data_shuffle = shuffle_instances(data, key_list)
-		dataloader.data["test"][reference_key] = data_shuffle[reference_key]
-		fpm_shuffle = NgramFwBwPerplexityMetric(dataloader, 4, reference_key)
+		# dataloader.data["test"][reference_key] = data_shuffle[reference_key]
+		fpm_shuffle = NgramFwBwPerplexityMetric(dataloader, 4, data_shuffle[reference_key])
 		fpm_shuffle.forward(data_shuffle)
 		res_shuffle = fpm_shuffle.close()
 
@@ -99,13 +99,13 @@ class TestNgramFwBwPerplexityMetric():
 
 		for data_unequal in generate_unequal_data(data, key_list, dataloader.pad_id, \
 												  reference_key, reference_is_3D=False):
-			dataloader.data["test"][reference_key] = data_unequal[reference_key]
-			fpm_unequal = NgramFwBwPerplexityMetric(dataloader, 4, reference_key)
+			# dataloader.data["test"][reference_key] = data_unequal[reference_key]
+			fpm_unequal = NgramFwBwPerplexityMetric(dataloader, 4, data_unequal[reference_key])
 
 			fpm_unequal.forward(data_unequal)
 			res_unequal = fpm_unequal.close()
 			assert res["fw-bw-ppl hashvalue"] != res_unequal["fw-bw-ppl hashvalue"]
-		fpm_unequal = NgramFwBwPerplexityMetric(dataloader, 3, reference_key)
+		fpm_unequal = NgramFwBwPerplexityMetric(dataloader, 3, data[reference_key])
 		fpm_unequal.forward(data)
 		res_unequal = fpm_unequal.close()
 		assert res["fw-bw-ppl hashvalue"] != res_unequal["fw-bw-ppl hashvalue"]
@@ -124,11 +124,11 @@ class TestNgramFwBwPerplexityMetric():
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 								   to_list=(type == 'list'), pad=(shape == 'pad'), \
 								   gen_len=gen_len, ref_len=ref_len)
-		dataloader.data["test"][reference_key] = data[reference_key]
+		# dataloader.data["test"][reference_key] = data[reference_key]
 		if argument == 'default':
-			fpm = NgramFwBwPerplexityMetric(dataloader, 4, reference_key)
+			fpm = NgramFwBwPerplexityMetric(dataloader, 4, data[reference_key])
 		else:
-			fpm = NgramFwBwPerplexityMetric(dataloader, 4, reference_key, gen_key)
+			fpm = NgramFwBwPerplexityMetric(dataloader, 4, data[reference_key], gen_key)
 
 		fpm.forward(data)
 		fpm.close()

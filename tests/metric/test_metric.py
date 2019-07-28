@@ -832,14 +832,14 @@ class TestFwBwBleuCorpusMetric:
 								   to_list=to_list, pad=pad, \
 								   gen_len='non-empty', ref_len='non-empty')
 
-		dataloader.data["test"][reference_key] = data[reference_key]
-		bcm = FwBwBleuCorpusMetric(dataloader, reference_key)
+		# dataloader.data["test"][reference_key] = data[reference_key]
+		bcm = FwBwBleuCorpusMetric(dataloader, data[reference_key])
 		bcm.forward(data)
 		res = bcm.close()
 
 		data_shuffle = shuffle_instances(data, key_list)
-		dataloader.data["test"][reference_key] = data_shuffle[reference_key]
-		bcm_shuffle = FwBwBleuCorpusMetric(dataloader, reference_key)
+		# dataloader.data["test"][reference_key] = data_shuffle[reference_key]
+		bcm_shuffle = FwBwBleuCorpusMetric(dataloader, data_shuffle[reference_key])
 		bcm_shuffle.forward(data_shuffle)
 		res_shuffle = bcm_shuffle.close()
 
@@ -847,13 +847,13 @@ class TestFwBwBleuCorpusMetric:
 
 		for data_unequal in generate_unequal_data(data, key_list, dataloader.pad_id, \
 												  reference_key, reference_is_3D=False):
-			dataloader.data["test"][reference_key] = data_unequal[reference_key]
-			bcm_unequal = FwBwBleuCorpusMetric(dataloader, reference_key)
+			# dataloader.data["test"][reference_key] = data_unequal[reference_key]
+			bcm_unequal = FwBwBleuCorpusMetric(dataloader, data_unequal[reference_key])
 
 			bcm_unequal.forward(data_unequal)
 			res_unequal = bcm_unequal.close()
 			assert res['fw-bw-bleu hashvalue'] != res_unequal['fw-bw-bleu hashvalue']
-		bcm_unequal = FwBwBleuCorpusMetric(dataloader, reference_key, sample=2)
+		bcm_unequal = FwBwBleuCorpusMetric(dataloader, data[reference_key], sample=2)
 		bcm_unequal.forward(data)
 		res_unequal = bcm_unequal.close()
 		assert res['fw-bw-bleu hashvalue'] != res_unequal['fw-bw-bleu hashvalue']
@@ -892,12 +892,12 @@ class TestFwBwBleuCorpusMetric:
 				data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 											to_list=(type == 'list'), pad=(shape == 'pad'), \
 											gen_len=gen_len, ref_len=ref_len, batch=sample)
-				dataloader.data["test"][reference_key] = data[reference_key]
+				# dataloader.data["test"][reference_key] = data[reference_key]
 				_data = copy.deepcopy(data)
 				if argument == 'default':
-					bcm = FwBwBleuCorpusMetric(dataloader, reference_key, sample=sample)
+					bcm = FwBwBleuCorpusMetric(dataloader, data[reference_key], sample=sample)
 				else:
-					bcm = FwBwBleuCorpusMetric(dataloader, reference_key, gen_key, sample=sample)
+					bcm = FwBwBleuCorpusMetric(dataloader, data[reference_key], gen_key, sample=sample)
 
 				assert bcm.sample == sample
 				bcm.forward(data)

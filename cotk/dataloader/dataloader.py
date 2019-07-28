@@ -2,6 +2,7 @@
 A module for dataloader
 '''
 import random
+import numpy as np
 from .._utils import trim_before_target
 from .._utils.metaclass import DocStringInheritor, LoadClassInterface
 
@@ -214,6 +215,30 @@ class LanguageProcessingBase(Dataloader):
 			if res is None:
 				break
 			yield res
+
+	def get_all_batch(self, key):
+		r'''Concatenate all batches to a single dict, where padding will not be applied.
+		Exactly, this function called :func:`.get_batch` where ``len(indexes)==1`` multiple times
+		and concatenate all the values in the returned dicts.
+
+
+        Arguments:
+            key (str): key name of dataset, must be contained in ``self.key_name``.
+
+        Returns:
+            A dict like :func:`get_batch`, but all the values are not padded
+            and their type will be converted to list.
+        '''
+		res = {}
+		for idx in self.index[key]:
+			batch = self.get_batch(key, [idx])
+			for attr, val in batch.items():
+				if attr not in res:
+					res[attr] = []
+				if not isinstance(val, (list, np.ndarray)):
+					val = [val]
+				res[attr].extend(val)
+		return res
 
 	def convert_tokens_to_ids(self, sent, invalid_vocab=False):
 		r'''Convert a sentence from string to ids representation.
