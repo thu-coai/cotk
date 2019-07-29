@@ -1,6 +1,7 @@
 '''
 A module for single turn dialog.
 '''
+import os
 import time
 from collections import Counter
 from itertools import chain
@@ -406,12 +407,20 @@ class BERTOpenSubtitles(BERTSingleTurnDialog):
 	@hooks.hook_dataloader
 	def __init__(self, file_id, min_vocab_times=10, \
 			max_sent_length=50, invalid_vocab_times=0, \
-			bert_vocab_name='bert-base-uncased'):
+			bert_vocab_name='bert-base-uncased', cpu_count=None):
 		self._file_id = file_id
 		self._file_path = get_resource_file_path(file_id)
 		self._min_vocab_times = min_vocab_times
 		self._max_sent_length = max_sent_length
 		self._invalid_vocab_times = invalid_vocab_times
+
+		if cpu_count is not None:
+			self.cpu_count = cpu_count
+		elif "CPU_COUNT" in os.environ and os.environ["CPU_COUNT"] is not None:
+			self.cpu_count = int(os.environ["CPU_COUNT"])
+		else:
+			self.cpu_count = multiprocessing.cpu_count()
+
 		super().__init__(bert_vocab_name=bert_vocab_name)
 
 	@classmethod
@@ -434,7 +443,7 @@ class BERTOpenSubtitles(BERTSingleTurnDialog):
 
 		post_tokens, post_bert_ids = [], []
 		resp_tokens, resp_bert_ids = [], []
-		pool = Pool(multiprocessing.cpu_count(), \
+		pool = Pool(self.cpu_count, \
 	      initializer=self._set_tokenizer, initargs=(self.tokenizer, ))
 		for _post_tokens, _post_bert_ids, _resp_tokens, _resp_bert_ids in \
 				tqdm.tqdm(pool.imap_unordered(self._run_tokenize, tasks, chunksize=500), \
