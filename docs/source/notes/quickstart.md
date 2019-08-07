@@ -16,7 +16,7 @@ Load common used dataset and preprocess for you:
     >>> dataloader = cotk.dataloader.MSCOCO("resources://MSCOCO_small")
     >>> # or download from a url
     >>> dl_url = cotk.dataloader.MSCOCO("http://cotk-data.s3-ap-northeast-1.amazonaws.com/mscoco_small.zip#MSCOCO")
-    >>> # or import form local file
+    >>> # or import from local file
     >>> dl_zip = cotk.dataloader.MSCOCO("./MSCOCO.zip#MSCOCO")
     
     >>> print("Dataset is split into:", dataloader.key_name)
