@@ -1,5 +1,6 @@
 import copy
-
+import random
+import operator
 import pytest
 from pytest_mock import mocker
 
@@ -56,7 +57,10 @@ class TestBertBase():
 			assert record_index == dl.index[key]
 			assert dl.batch_id[key] == 0
 			assert dl.batch_size[key] == 3
+			rng_state_st = random.getstate()
 			dl.restart(key, shuffle=True)
+			rng_state_ed = random.getstate()
+			assert operator.eq(rng_state_st, rng_state_ed)			
 			assert dl.batch_id[key] == 0
 			record_index = copy.copy(dl.index[key])
 			dl.restart(key, shuffle=False)

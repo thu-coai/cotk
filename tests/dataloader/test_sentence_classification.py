@@ -2,7 +2,8 @@ import copy
 
 import pytest
 from pytest_mock import mocker
-
+import random
+import operator
 from cotk.dataloader import SentenceClassification, SST
 from cotk.metric import MetricBase
 
@@ -59,8 +60,11 @@ class TestSentenceClassification():
 			assert record_index == dl.index[key]
 			assert dl.batch_id[key] == 0
 			assert dl.batch_size[key] == 3
+			rng_state_st = random.getstate()
 			dl.restart(key, shuffle=True)
 			assert dl.batch_id[key] == 0
+			rng_state_ed = random.getstate()
+			assert operator.eq(rng_state_st, rng_state_ed)
 			record_index = copy.copy(dl.index[key])
 			dl.restart(key, shuffle=False)
 			assert record_index == dl.index[key]

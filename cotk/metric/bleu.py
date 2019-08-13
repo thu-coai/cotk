@@ -201,8 +201,12 @@ class SelfBleuCorpusMetric(MetricBase):
 
 		if self.sample > len(self.hyps):
 			self.sample = len(self.hyps)
+
+		rng_state = random.getstate()
 		random.seed(self.seed)
 		random.shuffle(self.hyps)
+		random.setstate(rng_state)
+
 		ref = self.hyps[:self.sample]
 		_ref = _replace_unk(ref, self.dataloader.unk_id)
 
@@ -317,9 +321,11 @@ class FwBwBleuCorpusMetric(MetricBase):
 			raise RuntimeError('`sample_refs` should be more than 1, \
 				whose value is `{}`'.format(sample_refs))
 
+		rng_state = random.getstate()
 		random.seed(self.seed)
 		random.shuffle(self.hyps)
 		random.shuffle(self.refs)
+		random.setstate(rng_state)
 
 		self.hyps = _replace_unk(self.hyps, self.dataloader.unk_id)
 

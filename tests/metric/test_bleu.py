@@ -1,5 +1,6 @@
 import copy
 import random
+import operator
 from unittest import mock
 
 import tqdm
@@ -217,6 +218,7 @@ class TestSelfBleuCorpusMetric:
 					bcm = SelfBleuCorpusMetric(dataloader, gen_key, sample=4000)
 				assert bcm.sample == 4000
 
+				rng_state_st = random.getstate()
 				bcm.forward(data)
 				if use_tqdm:
 					assert np.isclose(bcm.close()['self-bleu'], 1.0 * sum(fake_bleu_irl) / len(fake_bleu_irl))
@@ -229,7 +231,8 @@ class TestSelfBleuCorpusMetric:
 					assert not multiprocessing.pool.Pool.called
 				assert bcm.sample == sample
 				assert same_dict(data, _data)
-
+				rng_state_ed = random.getstate()
+				assert operator.eq(rng_state_st, rng_state_ed)
 
 # def test_self_bleu_bug(self):
 # 	dataloader = FakeDataLoader()
@@ -347,6 +350,7 @@ class TestFwBwBleuCorpusMetric:
 				else:
 					bcm = FwBwBleuCorpusMetric(dataloader, data[reference_key], gen_key, sample=sample)
 
+				rng_state_st = random.getstate()
 				assert bcm.sample == sample
 				bcm.forward(data)
 				if use_tqdm:
@@ -370,6 +374,8 @@ class TestFwBwBleuCorpusMetric:
 					assert not tqdm.tqdm.called
 					assert not multiprocessing.pool.Pool.called
 				assert same_dict(data, _data)
+				rng_state_ed = random.getstate()
+				assert operator.eq(rng_state_st, rng_state_ed)
 
 
 # def test_fwbwbleu_bug(self):

@@ -1,7 +1,8 @@
 import copy
 from itertools import chain
 import pytest
-
+import random
+import operator
 from cotk.dataloader import MultiTurnDialog, UbuntuCorpus, SwitchboardCorpus
 from cotk.metric import MetricBase
 from cotk.wordvector.gloves import Glove
@@ -61,8 +62,11 @@ class TestMultiTurnDialog():
 			assert record_index == dl.index[key]
 			assert dl.batch_id[key] == 0
 			assert dl.batch_size[key] == 3
+			rng_state_st = random.getstate()
 			dl.restart(key, shuffle=True)
 			assert dl.batch_id[key] == 0
+			rng_state_ed = random.getstate()
+			assert operator.eq(rng_state_st, rng_state_ed)
 			record_index = copy.copy(dl.index[key])
 			dl.restart(key, shuffle=False)
 			assert record_index == dl.index[key]

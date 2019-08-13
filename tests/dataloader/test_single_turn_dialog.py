@@ -2,7 +2,8 @@ import copy
 
 import pytest
 from pytest_mock import mocker
-
+import random
+import operator
 from cotk.dataloader import SingleTurnDialog, OpenSubtitles
 from cotk.metric import MetricBase
 
@@ -62,7 +63,10 @@ class TestSingleTurnDialog():
 			assert record_index == dl.index[key]
 			assert dl.batch_id[key] == 0
 			assert dl.batch_size[key] == 3
+			rng_state_st = random.getstate()
 			dl.restart(key, shuffle=True)
+			rng_state_ed = random.getstate()
+			assert operator.eq(rng_state_st, rng_state_ed)			
 			assert dl.batch_id[key] == 0
 			record_index = copy.copy(dl.index[key])
 			dl.restart(key, shuffle=False)

@@ -139,7 +139,9 @@ class LanguageProcessingBase(Dataloader):
 		if batch_size is None and self.batch_size[key] is None:
 			raise ValueError("You need batch_size to initialize.")
 		if shuffle:
+			rng_state = random.getstate()
 			random.shuffle(self.index[key])
+			random.setstate(rng_state)
 
 		self.batch_id[key] = 0
 		if batch_size is not None:
