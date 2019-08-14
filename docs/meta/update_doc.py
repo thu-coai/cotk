@@ -31,7 +31,7 @@ def render(text, key):
             if args[2] != key:
                 in_flag = True
         elif args[1] == "include":
-            res.extend(render(open(args[2]).read(), key))
+            res.extend(render(open(args[2], 'r', encoding='utf-8').read(), key))
         else:
             raise RuntimeError("Unknown tags %s" % args[1])
     return res
@@ -43,11 +43,11 @@ if __name__ == "__main__":
         if not filename.endswith(".md") and not filename.endswith(".rst"):
             continue
         print(filename)
-        file = open(filename, "r").read()
+        file = open(filename, "r", encoding='utf-8').read()
 
         locations = get_location(file)
         for key, path in locations:
             text = render(file, key)
-            open(path, 'w').write("\n".join(text) + "\n")
+            open(path, 'w', encoding='utf-8').write("\n".join(text) + "\n")
             print("render %s with %s" % (path, key))
 

@@ -59,7 +59,7 @@ Path to dump dashboard result.")
 		main.LOGGER.info("Collecting info from id %d...", board_id)
 		info = get_result_from_id(board_id)
 		if cargs.result is not None:
-			json.dump(info, open(cargs.result, "w"))
+			json.dump(info, open(cargs.result, "w", encoding='utf-8'))
 			main.LOGGER.info("Info from id %d saved to %s.", board_id, cargs.result)
 
 		code_dir = clone_codes_from_commit(info['git_user'], info['git_repo'], \
@@ -87,7 +87,7 @@ Path to dump dashboard result.")
 		if not os.path.isfile(config_path):
 			raise FileNotFoundError("Config file ({}) is not found.".format(config_path))
 		try:
-			info = json.load(open(config_path, "r"))
+			info = json.load(open(config_path, "r", encoding='utf-8'))
 		except json.JSONDecodeError as err:
 			raise json.JSONDecodeError("{} is not a valid json. {}".format(config_path, err.msg), \
 										err.doc, err.pos)
@@ -106,7 +106,7 @@ Path to dump dashboard result.")
 		raise ValueError("`args` in `config.json` should be of type `list`.")
 
 	cmd += " {}".format(" ".join(info['args']))
-	with open("run_model.sh", "w") as file:
+	with open("run_model.sh", "w", encoding='utf-8') as file:
 		file.write(cmd)
 	main.LOGGER.info("Model running cmd written in {}".format("run_model.sh"))
 	print("Model running cmd: \t{}".format(cmd))

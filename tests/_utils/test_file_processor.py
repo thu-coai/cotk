@@ -15,8 +15,8 @@ def r_mock():
 		yield m
 
 def check(file1, file2):
-	with open(file1, 'r') as f1:
-		with open(file2, 'r') as f2:
+	with open(file1, 'r', encoding='utf-8') as f1:
+		with open(file2, 'r', encoding='utf-8') as f2:
 			assert(f1.read() == f2.read())
 
 class TestFileUtils():

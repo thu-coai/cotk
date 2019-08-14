@@ -46,7 +46,7 @@ class TestFileUtils():
 
 		meta_path = res_path + '.json'
 		assert(os.path.exists(meta_path))
-		with open(meta_path, 'r') as meta_file:
+		with open(meta_path, 'r', encoding='utf-8') as meta_file:
 			meta = json.load(meta_file)
 			assert(meta['local_path'] == res_path)
 		
@@ -63,7 +63,7 @@ class TestFileUtils():
 
 		meta_path = os.path.join(cache_dir, '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08.json')
 		assert(os.path.exists(meta_path))
-		with open(meta_path, 'r') as meta_file:
+		with open(meta_path, 'r', encoding='utf-8') as meta_file:
 			meta = json.load(meta_file)
 			assert(meta['local_path'] == res_path)
 		
@@ -80,7 +80,7 @@ class TestFileUtils():
 
 		meta_path = os.path.join(cache_dir, 'f1043836933af4b8b28973d259c0c77f5049de2dff8d0d1f305c65f3c497b3b1.json')
 		assert(os.path.exists(meta_path))
-		with open(meta_path, 'r') as meta_file:
+		with open(meta_path, 'r', encoding='utf-8') as meta_file:
 			meta = json.load(meta_file)
 			assert(meta['local_path'] == res_path)
 		
@@ -111,7 +111,7 @@ class TestFileUtils():
 
 		meta_path = os.path.join(cache_dir, '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08.json')
 		assert(os.path.exists(meta_path))
-		with open(meta_path, 'r') as meta_file:
+		with open(meta_path, 'r', encoding='utf-8') as meta_file:
 			meta = json.load(meta_file)
 			assert(meta['local_path'] == res_path)
 		

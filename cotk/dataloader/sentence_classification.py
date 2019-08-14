@@ -148,7 +148,7 @@ class SST(SentenceClassification):
 			return (label, sent)
 		origin_data = {}
 		for key in self.key_name:
-			f_file = open("%s/%s.txt" % (self._file_path, key))
+			f_file = open("%s/%s.txt" % (self._file_path, key), 'r', encoding='utf-8')
 			origin_data[key] = {}
 			_origin_data = list( \
 				map(parseline, f_file.readlines()))

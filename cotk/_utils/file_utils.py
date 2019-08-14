@@ -44,7 +44,7 @@ def _get_config(res_name, config_dir=CONFIG_DIR):
 	config_path = os.path.join(config_dir, res_name + '.json')
 	if not os.path.exists(config_path):
 		raise FileNotFoundError("file {} not found".format(config_path))
-	with open(config_path, 'r') as config_file:
+	with open(config_path, 'r', encoding='utf-8') as config_file:
 		config = json.load(config_file)
 
 	return config
@@ -144,14 +144,14 @@ def _get_resource(file_id, cache_dir=CACHE_DIR, config_dir=CONFIG_DIR):
 
 		if content_hash == config['hashtag']:
 			meta = {'hashtag': content_hash, 'local_path': cache_path}
-			with open(meta_path, 'w') as meta_file:
+			with open(meta_path, 'w', encoding='utf-8') as meta_file:
 				json.dump(meta, meta_file)
 		else:
 			print("bad hashtag {}, correct is {}".format(content_hash, config['hashtag']))
 			raise ValueError("bad hashtag of {}".format(res_name))
 
 	else:
-		with open(meta_path, 'r') as meta_file:
+		with open(meta_path, 'r', encoding='utf-8') as meta_file:
 			meta = json.load(meta_file)
 			cache_path = meta['local_path']
 			content_hash = meta['hashtag']
@@ -193,10 +193,10 @@ def _download_data(url, cache_dir=CACHE_DIR):
 			cache_path = resource_processor.preprocess(cache_path)
 
 			meta = {'local_path': cache_path, 'hashtag': content_hash}
-			with open(meta_path, 'w') as meta_file:
+			with open(meta_path, 'w', encoding='utf-8') as meta_file:
 				json.dump(meta, meta_file)
 	else:
-		with open(meta_path, 'r') as meta_file:
+		with open(meta_path, 'r', encoding='utf-8') as meta_file:
 			meta = json.load(meta_file)
 			cache_path = meta['local_path']
 	cache_path = resource_processor.postprocess(cache_path)
@@ -260,7 +260,7 @@ def import_local_resources(file_id, local_path, cache_dir=CACHE_DIR, \
 		cache_path = resource_processor.preprocess(cache_path)
 		meta = {'local_path': cache_path, 'hashtag': local_hashtag}
 
-		with open(meta_path, 'w') as meta_file:
+		with open(meta_path, 'w', encoding='utf-8') as meta_file:
 			json.dump(meta, meta_file)
 
 		cache_path = resource_processor.postprocess(cache_path)

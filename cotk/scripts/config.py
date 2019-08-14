@@ -9,16 +9,16 @@ from . import main
 
 def load_config():
 	try:
-		config = json.load(open(main.CONFIG_FILE))
+		config_ = json.load(open(main.CONFIG_FILE, 'r', encoding='utf-8'))
 	except (FileNotFoundError, json.JSONDecodeError):
-		config = {}
-	return config
+		config_ = {}
+	return config_
 
 
 def config_set(variable, value):
 	config = load_config()
 	config[variable] = value
-	json.dump(config, open(main.CONFIG_FILE, 'w'))
+	json.dump(config, open(main.CONFIG_FILE, 'w', encoding='utf-8'))
 	main.LOGGER.info("Save your configuration locally at {}".format(main.CONFIG_FILE))
 
 

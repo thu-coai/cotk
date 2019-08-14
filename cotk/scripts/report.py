@@ -48,7 +48,7 @@ def read_and_validate_result(result_path):
 	if not os.path.isfile(result_path):
 		raise ValueError("Result file ({}) is not found.".format(result_path))
 	try:
-		result = json.load(open(result_path, "r"))
+		result = json.load(open(result_path, "r", encoding='utf-8'))
 	except json.JSONDecodeError as err:
 		raise json.JSONDecodeError("{} is not a valid json. {}".format(result_path, err.msg),\
 				err.doc, err.pos)
@@ -95,7 +95,7 @@ def upload_report(result_path, entry, args, working_dir, \
 def get_local_token():
 	'''Read locally-saved token'''
 	if os.path.exists(main.CONFIG_FILE):
-		return json.load(open(main.CONFIG_FILE, 'r'))['token']
+		return json.load(open(main.CONFIG_FILE, 'r', encoding='utf-8'))['token']
 	else:
 		raise RuntimeError("Please set your token. \n" + \
 						   "    Either using \"--token\" to specify token temporarily\n" + \
@@ -173,7 +173,7 @@ to check your changes.")
 			data = {"entry": cargs.entry, "args": extra_args,\
 			"cotk_record_information": cotk_record_information}
 
-		json.dump(data, open(config_file, 'w'))
+		json.dump(data, open(config_file, 'w', encoding='utf-8'))
 		LOGGER.info("Runtime information has dumped into %s.", config_file)
 
 		read_and_validate_result(cargs.result)
@@ -182,7 +182,7 @@ to check your changes.")
 		if not os.path.isfile(config_file):
 			raise RuntimeError(".model_config.json not found. It seems you have not run your \
 model with cotk. You can't use \"only-upload\" before \"only-run\".")
-		data = json.load(open(config_file))
+		data = json.load(open(config_file, 'r', encoding='utf-8'))
 
 	if not cargs.only_run:
 		LOGGER.info("Collecting info for upload...")

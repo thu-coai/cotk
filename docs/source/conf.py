@@ -239,7 +239,7 @@ shutil.rmtree("./models", ignore_errors=True)
 os.makedirs("./models", exist_ok=True)
 for dir1, submodels in models.items():
     os.makedirs(os.path.join("./models", dir1), exist_ok=True)
-    index_file = open(os.path.join("./models", dir1, "index.rst"), 'w')
+    index_file = open(os.path.join("./models", dir1, "index.rst"), 'w', encoding='utf-8')
     index_file.write("%s\n=========================================\n" % dir1)
     index_file.write(".. toctree::\n\n")
     for rstname, modelname in submodels.items():

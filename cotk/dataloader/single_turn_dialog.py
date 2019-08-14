@@ -194,8 +194,8 @@ class OpenSubtitles(SingleTurnDialog):
 		'''
 		origin_data = {}
 		for key in self.key_name:
-			f_file = open("%s/opensub_pair_%s.post" % (self._file_path, key))
-			g_file = open("%s/opensub_pair_%s.response" % (self._file_path, key))
+			f_file = open("%s/opensub_pair_%s.post" % (self._file_path, key), 'r', encoding='utf-8')
+			g_file = open("%s/opensub_pair_%s.response" % (self._file_path, key), 'r', encoding='utf-8')
 			origin_data[key] = {}
 			origin_data[key]['post'] = list(map(lambda line: line.split(), f_file.readlines()))
 			origin_data[key]['resp'] = list(map(lambda line: line.split(), g_file.readlines()))
@@ -464,8 +464,8 @@ class BERTOpenSubtitles(BERTSingleTurnDialog):
 		begin_time = time.time()
 		origin_data = {}
 		for key in self.key_name:
-			f_file = open("%s/opensub_pair_%s.post" % (self._file_path, key))
-			g_file = open("%s/opensub_pair_%s.response" % (self._file_path, key))
+			f_file = open("%s/opensub_pair_%s.post" % (self._file_path, key), 'r', encoding='utf-8')
+			g_file = open("%s/opensub_pair_%s.response" % (self._file_path, key), 'r', encoding='utf-8')
 			post_tokens, post_bert_ids, resp_tokens, resp_bert_ids = \
 						self._mp_process(f_file.readlines(), g_file.readlines())
 			origin_data[key] = {}

@@ -183,7 +183,7 @@ class MSCOCO(LanguageGeneration):
 		'''
 		origin_data = {}
 		for key in self.key_name:
-			f_file = open("%s/mscoco_%s.txt" % (self._file_path, key))
+			f_file = open("%s/mscoco_%s.txt" % (self._file_path, key), 'r', encoding='utf-8')
 			origin_data[key] = {}
 			origin_data[key]['sent'] = list( \
 				map(lambda line: line.split(), f_file.readlines()))

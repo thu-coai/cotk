@@ -349,7 +349,8 @@ class UbuntuCorpus(MultiTurnDialog):
 		'''
 		origin_data = {}
 		for key in self.key_name:
-			with open('%s/ubuntu_corpus_%s.csv' % (self._file_path, key)) as data_file:
+			with open('%s/ubuntu_corpus_%s.csv' % (self._file_path, key), 'r', \
+				encoding='utf-8') as data_file:
 				raw_data = list(csv.reader(data_file))
 				head = raw_data[0]
 				if head[2] == 'Label':
@@ -496,7 +497,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 		origin_data = {'session': []}
 		if read_multi_ref:
 			origin_data['candidate_allvocabs'] = []
-		with open(filepath, "r") as data_file:
+		with open(filepath, "r", encoding='utf-8') as data_file:
 			for line in data_file:
 				line = json.loads(line)
 				prefix_utts = [['X', '<d>']] + line['utts']
