@@ -7,7 +7,7 @@ from .metric import MetricBase
 from .._utils.imports import DummyObject
 try:
 	import torch
-except (ImportError, ModuleNotFoundError) as err:
+except ImportError as err:
 	torch = DummyObject(err)
 	torch.Tensor = DummyObject(err)
 
