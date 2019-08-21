@@ -3,6 +3,11 @@ import re
 
 class DocStringInheritor(type):
 	"""
+	A meta class. It let the class have the following functions:
+
+	* Docstring can inherit the parent class.
+	* {STRING} in docs will be replaced by self.STRING
+
 	A variation on
 	http://groups.google.com/group/comp.lang.python/msg/26f7b4fcb4d66c95
 	by Paul McGuire
@@ -76,7 +81,7 @@ class DocStringInheritor(type):
 		return type.__new__(cls, name, bases, clsdict)
 
 class LoadClassInterface:
-	r"""Implement two classmethods"""
+	r"""The support of dynamic class load."""
 	@classmethod
 	def get_all_subclasses(cls):
 		'''Return a generator of all subclasses.

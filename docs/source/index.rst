@@ -28,6 +28,7 @@ your models fairly with baselines.
    :maxdepth: 2
    :caption: Package Reference
 
+   _utils
    dataloader
    wordvector
    metric

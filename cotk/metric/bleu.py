@@ -9,6 +9,7 @@ import numpy as np
 import tqdm
 from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunction
 from .metric import MetricBase
+from .._utils import hooks
 
 
 def _replace_unk(_input, _unk_id, _target=-1):
@@ -52,6 +53,7 @@ class BleuCorpusMetric(MetricBase):
 		{MetricBase.GEN_KEY_ARGUMENTS}
 	'''
 
+	@hooks.hook_metric
 	def __init__(self, dataloader, ignore_smoothing_error=False,\
 			reference_allvocabs_key="ref_allvocabs", gen_key="gen"):
 		super().__init__()
@@ -99,6 +101,7 @@ class BleuCorpusMetric(MetricBase):
 			self.refs.append([reference])
 		self._hash_relevant_data(relevant_data)
 
+	@hooks.hook_metric_close
 	def close(self):
 		'''
 		Returns:
@@ -141,6 +144,7 @@ class SelfBleuCorpusMetric(MetricBase):
 			will be less than ``sample`` if the size of hypotheses is smaller than ``sample``
 	'''
 
+	@hooks.hook_metric
 	def __init__(self, dataloader, \
 		gen_key="gen", \
 		sample=1000, \
@@ -183,6 +187,7 @@ class SelfBleuCorpusMetric(MetricBase):
 		for gen_sen in gen:
 			self.hyps.append(self.dataloader.trim(gen_sen))
 
+	@hooks.hook_metric_close
 	def close(self):
 		'''
 		Returns:
@@ -250,6 +255,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 		if the size of them is smaller than ``sample``.
 	'''
 
+	@hooks.hook_metric
 	def __init__(self, dataloader, \
 			reference_test_list, \
 			gen_key="gen", \
@@ -294,7 +300,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 		for gen_sen in gen:
 			self.hyps.append(list(self.dataloader.trim(gen_sen)))
 
-
+	@hooks.hook_metric_close
 	def close(self):
 		'''
 		Returns:
@@ -387,6 +393,8 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 		{MetricBase.MULTI_TURN_GEN_KEY_ARGUMENTS}
 		{MetricBase.MULTI_TURN_LENGTH_KEY_ARGUMENTS}
 	'''
+
+	@hooks.hook_metric
 	def __init__(self, dataloader, ignore_smoothing_error=False,\
 					multi_turn_reference_allvocabs_key="reference_allvocabs", \
 					multi_turn_gen_key="multi_turn_gen", \
@@ -442,6 +450,7 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 				self.hyps.append(list(self.dataloader.trim(gen_session[j])))
 				self.refs.append([list(self.dataloader.trim(ref_session[j])[1:])])
 
+	@hooks.hook_metric_close
 	def close(self):
 		'''
 		Returns:

@@ -255,7 +255,6 @@ class MultiTurnDialog(LanguageProcessingBase):
 			list(map(lambda word: self.all_vocab_list[word], sent)), \
 			index))
 
-	@hooks.hook_standard_metric("teacher_forcing")
 	def get_teacher_forcing_metric(self, multi_turn_gen_log_prob_key="multi_turn_gen_log_prob"):
 		'''Get metric for teacher-forcing.
 
@@ -277,7 +276,6 @@ class MultiTurnDialog(LanguageProcessingBase):
 			multi_turn_reference_allvocabs_key="sent_allvocabs"))
 		return metric
 
-	@hooks.hook_standard_metric("inference")
 	def get_inference_metric(self, multi_turn_gen_key="multi_turn_gen"):
 		'''Get metric for inference.
 
@@ -617,7 +615,6 @@ class SwitchboardCorpus(MultiTurnDialog):
 				res[sub_key] = gather(sub_key)
 		return res
 
-	@hooks.hook_standard_metric("multi_ref")
 	def get_multi_ref_metric(self, generated_num_per_context=20, word2vec=None,\
 				multiple_gen_key="multiple_gen_key"):
 		'''Get metrics for multiple references.

@@ -104,7 +104,6 @@ class SingleTurnDialog(LanguageProcessingBase):
 		res_resp[res_resp >= self.valid_vocab_len] = self.unk_id
 		return res
 
-	@hooks.hook_standard_metric("teacher_forcing")
 	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob",\
 					   invalid_vocab=False):
 		'''Get metrics for teacher-forcing.
@@ -131,7 +130,6 @@ class SingleTurnDialog(LanguageProcessingBase):
 			invalid_vocab=invalid_vocab))
 		return metric
 
-	@hooks.hook_standard_metric("inference")
 	def get_inference_metric(self, gen_key="gen"):
 		'''Get metrics for inference.
 
@@ -334,12 +332,14 @@ class BERTSingleTurnDialog(BERTLanguageProcessingBase):
 
 		return res
 
-	@hooks.hook_standard_metric("teacher_forcing")
 	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob",\
 					   invalid_vocab=False):
 		'''Get metrics for teacher-forcing.
+
 		It contains:
+
 		* :class:`.metric.PerplexityMetric`
+
 		Arguments:
 			gen_log_prob_key (str):  The key of predicted log probablilty over words.
 				Refer to :class:`.metric.PerplexityMetric`. Default: ``gen_log_prob``.
@@ -356,7 +356,6 @@ class BERTSingleTurnDialog(BERTLanguageProcessingBase):
 			invalid_vocab=invalid_vocab))
 		return metric
 
-	@hooks.hook_standard_metric("inference")
 	def get_inference_metric(self, gen_key="gen"):
 		'''Get metrics for inference.
 

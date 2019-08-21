@@ -5,6 +5,7 @@ import random
 import numpy as np
 from .metric import MetricBase
 from .._utils.imports import DummyObject
+from .._utils import hooks
 try:
 	import torch
 except ImportError as err:
@@ -28,6 +29,7 @@ class PerplexityMetric(MetricBase):
 			Default: ``False``.
 	'''
 
+	@hooks.hook_metric
 	def __init__(self, dataloader, \
 					   reference_allvocabs_key="ref_allvocabs", \
 					   reference_len_key="ref_length", \
@@ -269,6 +271,7 @@ class PerplexityMetric(MetricBase):
 
 		return word_loss, length_sum
 
+	@hooks.hook_metric_close
 	def close(self):
 		r'''
 		Returns:
@@ -331,6 +334,7 @@ class MultiTurnPerplexityMetric(MetricBase):
 			Default: ``False``.
 	'''
 
+	@hooks.hook_metric
 	def __init__(self, dataloader, multi_turn_reference_allvocabs_key="multi_turn_ref_allvocabs", \
 					   multi_turn_reference_len_key="multi_turn_ref_length", \
 					   multi_turn_gen_log_prob_key="multi_turn_gen_log_prob", \
@@ -408,6 +412,7 @@ class MultiTurnPerplexityMetric(MetricBase):
 					"ref_length": sent_length, \
 					"gen_log_prob": gen_log_prob[i][:turn_length]})
 
+	@hooks.hook_metric_close
 	def close(self):
 		r'''
 		Returns:

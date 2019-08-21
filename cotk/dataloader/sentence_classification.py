@@ -81,7 +81,6 @@ class SentenceClassification(LanguageProcessingBase):
 		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
 		return res
 
-	@hooks.hook_standard_metric()
 	def get_metric(self, prediction_key="prediction"):
 		'''Get metrics for accuracy. In other words, this function
 		provides metrics for sentence classification task.

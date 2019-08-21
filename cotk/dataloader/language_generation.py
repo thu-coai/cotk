@@ -79,7 +79,6 @@ class LanguageGeneration(LanguageProcessingBase):
 		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
 		return res
 
-	@hooks.hook_standard_metric("teacher_forcing")
 	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob"):
 		'''Get metrics for teacher-forcing. In other words, this function
 		provides metrics for language modelling task.
@@ -102,7 +101,6 @@ class LanguageGeneration(LanguageProcessingBase):
 					gen_log_prob_key=gen_log_prob_key))
 		return metric
 
-	@hooks.hook_standard_metric("inference")
 	def get_inference_metric(self, gen_key="gen", sample=1000, seed=1229, cpu_count=None):
 		'''Get metrics for inference. In other words, this function provides metrics for
 		language generation tasks.

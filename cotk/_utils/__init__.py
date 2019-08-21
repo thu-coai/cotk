@@ -1,6 +1,6 @@
 r"""
-`cotk._utils` provides classes and functions downloading and
-importing datasets and wordvectors automatically.
+``cotk._utils`` often is used by internal lib. The users should
+not find api here.
 """
 
 from .file_utils import get_resource_file_path, import_local_resources

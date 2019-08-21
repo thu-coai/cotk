@@ -82,10 +82,15 @@ def _get_hashtag(file_path):
 def _parse_file_id(file_id):
 	'''
 	file_id contains one essential part and two optional parts
+
 	file_id: name[@source][#processor]
+
 	examples:
-		file_id=https://XXX/			name=https://XXX/ source=None	   processor=Default
-		file_id=MSCOCO@tsinghua#Glove	name=MSCOCO		  source=tsinghua  processor=GloveProcessor
+
+	.. code-block:: text
+
+		file_id=https://XXX/            name=https://XXX/   source=None      processor=Default
+		file_id=MSCOCO@tsinghua#Glove   name=MSCOCO         source=tsinghua  processor=GloveProcessor
 	'''
 	# There may be # in name, so we process file_id reversely.
 	# TODO: what if there is # in name?

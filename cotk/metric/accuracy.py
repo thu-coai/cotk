@@ -2,6 +2,7 @@ r"""
 Containing some classes and functions about accuracy evaluating results of models.
 """
 import numpy as np
+from .._utils import hooks
 from .metric import MetricBase
 
 class AccuracyMetric(MetricBase):
@@ -13,6 +14,7 @@ class AccuracyMetric(MetricBase):
 		{MetricBase.PREDICTION_KEY_ARGUMENTS}
 	'''
 
+	@hooks.hook_metric
 	def __init__(self, dataloader,\
 			label_key="label", prediction_key="prediction"):
 		super().__init__()
@@ -45,6 +47,7 @@ class AccuracyMetric(MetricBase):
 
 		self._hash_relevant_data(data[self.label_key])
 
+	@hooks.hook_metric_close
 	def close(self):
 		'''
 		Returns:

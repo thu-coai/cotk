@@ -23,7 +23,7 @@ SHOW_URL = DASHBOARD_URL + "/show?id=%d"
 BACKUP_FILE = '.cotk_upload_backup'
 FILL = lambda str: textwrap.fill(textwrap.dedent(str))
 
-def run_model(entry, args):
+def run_model(entry, args, result_path):
 	'''Run the model and record the info of library'''
 	# before run model
 	# cotk recorder start
@@ -42,7 +42,8 @@ def run_model(entry, args):
 
 	# after run model
 	# cotk recorder end
-	return close_recorder()
+	results = read_and_validate_result(result_path)
+	return close_recorder(results)
 
 def read_and_validate_result(result_path):
 	if not os.path.isfile(result_path):
@@ -162,7 +163,7 @@ to check your changes.")
 
 	if not cargs.only_upload:
 		LOGGER.info("Running your model at '%s' with arguments: %s.", cargs.entry, extra_args)
-		cotk_record_information = run_model(cargs.entry, extra_args)
+		cotk_record_information = run_model(cargs.entry, extra_args, cargs.result)
 		LOGGER.info("Your model has exited.")
 
 		if in_git:
@@ -175,8 +176,6 @@ to check your changes.")
 
 		json.dump(data, open(config_file, 'w', encoding='utf-8'))
 		LOGGER.info("Runtime information has dumped into %s.", config_file)
-
-		read_and_validate_result(cargs.result)
 	else:
 
 		if not os.path.isfile(config_file):
