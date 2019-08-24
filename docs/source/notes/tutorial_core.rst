@@ -1,4 +1,4 @@
-GRU Language Model: Load Data and Evaluate Models
+Practice: Implement a GRU Language Model
 ====================================================
 
 In this tutorial, we will train a neural language model on MSCOCO dataset.
@@ -21,10 +21,11 @@ However, this tutorial constructs neural networks with
 - pytorch >= 1.0.0
 - livelossplot (optional, just for showing loss)
 
+**Source codes**
 
-You can click `here <https://github.com/thu-coai/cotk/blob/master/docs/source/notes/tutorial_core_1.ipynb>`__ for ipynb files. If you don't have a suitable environment,
-you can also run `the code <http://colab.research.google.com/github/thu-coai/cotk/blob/master/docs/source/notes/tutorial_core_1.ipynb>`__
-on google colab.
+You can click `here <https://github.com/thu-coai/cotk/blob/master/docs/source/notes/tutorial_core_1.ipynb>`__ for the following ipynb files.  
+You can also run `the code <http://colab.research.google.com/github/thu-coai/cotk/blob/master/docs/source/notes/tutorial_core_1.ipynb>`__
+**online** on google colab without installing any packages.
 
 Preparing the data
 ----------------------------------------
@@ -327,6 +328,8 @@ that help you downloading and get word vectors.
     self.embedding_layer.weight = nn.Parameter(torch.Tensor(wordvec.load(embedding_size, dataloader.vocab_list)))
 
 We can add these lines at the end of ``LanguageModel.__init__``.
+
+**Source code**
 
 You can find the results and codes with pretrained word vector at
 `here <https://github.com/thu-coai/cotk/blob/master/docs/source/notes/tutorial_core_2.ipynb>`__ for ipynb files

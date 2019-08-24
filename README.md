@@ -12,14 +12,20 @@ It easy to use and make you focus on designing your models!
 
 Features included:
 
- * Light-weight, easy to start. Don't bother your way to construct models.
- * Predefined standard datasets, in the domain of language modeling, dialog generation and more.
- * Predefined evaluation suites, test your model with multiple metrics in several lines.
- * A dashboard to show experiments, compare your and others' models fairly.
- * Long-term maintenance and consistent development.
+* Light-weight, easy to start. Don't bother your way to construct models.
+* Predefined standard datasets, in the domain of language modeling, dialog generation and more.
+* Predefined evaluation suites, test your model with multiple metrics in several lines.
+* A dashboard to show experiments, compare your and others' models fairly.
+* Long-term maintenance and consistent development.
 
-This project is a part of ``thutk`` (Toolkits for Dialog System by Tsinghua University), you can follow [thutk](http://coai.cs.tsinghua.edu.cn/thutk/) or 
-[cotk](http://coai.cs.tsinghua.edu.cn/thutk/cotk/) on our home page.
+This project is a part of ``dialtk`` (Toolkits for Dialog System by Tsinghua University), you can follow [dialtk](http://coai.cs.tsinghua.edu.cn/dialtk/) or [cotk](http://coai.cs.tsinghua.edu.cn/dialtk/cotk/) on our home page.
+
+**Quick links**
+
+* [Tutorial & Documents](https://thu-coai.github.io/cotk_docs/)
+* [Dashboard](https://coai.cs.tsinghua.edu.cn/dashboard/)
+
+**Index**
 
 - [Installation](#installation)
   - [Requirements](#requirements)
@@ -31,7 +37,6 @@ This project is a part of ``thutk`` (Toolkits for Dialog System by Tsinghua Univ
   - [Publish Experiments](#publish-experiments)
   - [Reproduce Experiments](#reproduce-experiments)
   - [Predefined Models](#predefined-models)
-- [Documents & Tutorials](#documents--tutorials)
 - [Issues](#issues)
 - [Contributions](#Contributions)
 - [Team](#team)
@@ -296,11 +301,6 @@ You can also download directly from github if the maintainer has set the ``.mode
 We have provided some baselines for the classical tasks, see [Model Zoo](https://thu-coai.github.io/cotk_docs/index.html#model-zoo) in docs for details.
 
 You can also use ``cotk download thu-coai/MODEL_NAME/master`` to get the codes.
-
-
-## Documents & Tutorials
-
-Follow [the link to document and tutorials](https://thu-coai.github.io/cotk_docs/).
 
 ## Issues
 
