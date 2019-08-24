@@ -61,7 +61,7 @@ class TestPerplexityMetric():
 						word_loss += -invalid_log_prob
 				length_sum += 1
 		# print('test_metric.word_loss: ', word_loss)
-		# print('test_metric.length_sum: ', 	length_sum)
+		# print('test_metric.length_sum: ',	 length_sum)
 		return np.exp(word_loss / length_sum)
 
 	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
@@ -189,6 +189,9 @@ class TestPerplexityMetric():
 							   match=r'data\[gen_log_prob_key\] must be processed after log_softmax.'):
 				pm.forward(data)
 		assert same_dict(data, _data)
+
+	def test_version(self):
+		version_test(PerplexityMetric, dataloader=FakeDataLoader())
 
 multiperplexity_test_parameter = generate_testcase(\
 	(zip(test_argument), "add"),
@@ -327,3 +330,6 @@ class TestMultiTurnPerplexityMetric:
 							   match=r'data\[gen_log_prob_key\] must be processed after log_softmax.'):
 				mtpm.forward(data)
 		assert same_dict(data, _data)
+
+	def test_version(self):
+		version_test(MultiTurnPerplexityMetric, dataloader=FakeMultiDataloader())

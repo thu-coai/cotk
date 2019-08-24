@@ -15,9 +15,11 @@ class SingleTurnDialogRecorder(MetricBase):
 			Default: ``resp_allvocabs``.
 		{MetricBase.GEN_KEY_ARGUMENTS}
 	'''
+	_name = 'SingleTurnDialogRecorder'
+	_version = 1
 	def __init__(self, dataloader, post_allvocabs_key="post_allvocabs", \
 			resp_allvocabs_key="resp_allvocabs", gen_key="gen"):
-		super().__init__()
+		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
 		self.post_allvocabs_key = post_allvocabs_key
 		self.resp_allvocabs_key = resp_allvocabs_key
@@ -93,11 +95,13 @@ class MultiTurnDialogRecorder(MetricBase):
 		{MetricBase.MULTI_TURN_GEN_KEY_ARGUMENTS}
 		{MetricBase.MULTI_TURN_LENGTH_KEY_ARGUMENTS}
 	'''
+	_name = 'MultiTurnDialogRecorder'
+	_version = 1
 	def __init__(self, dataloader,
 			multi_turn_reference_allvocabs_key="multi_turn_ref_allvocabs", \
 			multi_turn_gen_key="multi_turn_gen", \
 			turn_len_key="turn_length"):
-		super().__init__()
+		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
 		self.multi_turn_reference_allvocabs_key = multi_turn_reference_allvocabs_key
 		self.multi_turn_gen_key = multi_turn_gen_key
@@ -175,8 +179,10 @@ class LanguageGenerationRecorder(MetricBase):
 		{MetricBase.DATALOADER_ARGUMENTS}
 		{MetricBase.GEN_KEY_ARGUMENTS}
 	'''
+	_name = 'LanguageGenerationRecorder'
+	_version = 1
 	def __init__(self, dataloader, gen_key="gen"):
-		super().__init__()
+		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
 		self.gen_key = gen_key
 		self.gen_list = []

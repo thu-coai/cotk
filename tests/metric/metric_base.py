@@ -1,6 +1,7 @@
 import random
 import itertools
 import copy
+import json
 
 import numpy as np
 
@@ -365,3 +366,26 @@ def generate_unequal_data(data, key_list, pad_id, reference_key, \
 				np.random.shuffle(data_unequal[reference_key][0])
 		res.append(data_unequal)
 	return res
+
+def version_test(metric_class, dataloader=None):
+	name = metric_class._name
+	version = metric_class._version
+	filename = './tests/metric/version_test_data/{}_v{}.jsonl'.format(name, version)
+	with open(filename, "r") as file:
+		for line in file:
+			data = json.loads(line)
+			if dataloader:
+				dataloader.all_vocab_list = data['init']['dataloader']['all_vocab_list']
+				dataloader.valid_vocab_len = data['init']['dataloader']['valid_vocab_len']
+				dataloader.word2id = dict(zip(range(len(data['init']['dataloader']['all_vocab_list'])), \
+											  data['init']['dataloader']['all_vocab_list']))
+				data['init']['dataloader'] = dataloader
+			metric = metric_class(**data['init'])
+			for batch in data['forward']:
+				metric.forward(**batch)
+			res = metric.close()
+			for key, val in res.items():
+				if isinstance(val, (np.float, np.float16, np.float32, np.float64, np.float128, float)):
+					res[key] = float(val)
+			assert same_dict(res, data['output'], exact_equal=False), "Version {} error".format(version)
+			# assert metric.close() == data['output'], "Version {} error".format(version)

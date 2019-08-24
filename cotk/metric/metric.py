@@ -115,8 +115,12 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 			the environment variable ``CPU_COUNT`` will be used	when it is set,
 			or all available cpu will be used otherwise."""
 
-	def __init__(self):
+	def __init__(self, name, version):
 		self.unordered_hash = UnorderedSha256()
+		self.name = name
+		self.version = version
+		self.unordered_hash.update_data(str(name).encode())
+		self.unordered_hash.update_data(str(version).encode())
 		self.closed = False
 
 	def _hash_relevant_data(self, data_list):
@@ -169,8 +173,10 @@ class MetricChain(MetricBase):
 
 	Todo: Give more examples to combining forward and close
 	'''
+	_name = 'MetricChain'
+	_version = 1
 	def __init__(self):
-		super().__init__()
+		super().__init__(self._name, self._version)
 		self.metric_list = []
 
 	def add_metric(self, metric):

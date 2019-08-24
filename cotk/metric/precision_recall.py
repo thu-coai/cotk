@@ -25,11 +25,12 @@ class _PrecisionRecallMetric(MetricBase):
 			The key of multiple generated sentences. Default: ``multiple_gen``."""
 
 
-	def __init__(self, dataloader, \
+	def __init__(self, name, version, \
+				 dataloader, \
 				 generated_num_per_context, \
 				 candidate_allvocabs_key='candidate_allvocabs', \
 				 multiple_gen_key='multiple_gen'):
-		super().__init__()
+		super().__init__(name, version)
 		self.dataloader = dataloader
 		self.candidate_allvocabs_key = candidate_allvocabs_key
 		self.multiple_gen_key = multiple_gen_key
@@ -144,13 +145,17 @@ class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
 		ngram (int): Specifies using BLEU-ngram.
 	'''
 
+	_name = 'BleuPrecisionRecallMetric'
+	_version = 1
+
 	@hooks.hook_metric
 	def __init__(self, dataloader, \
 				 ngram, \
 				 generated_num_per_context, \
 				 candidates_allvocabs_key='candidate_allvocabs', \
 				 multiple_gen_key='multiple_gen'):
-		super().__init__(dataloader, generated_num_per_context, candidates_allvocabs_key, \
+		super().__init__(self._name, self._version, \
+				dataloader, generated_num_per_context, candidates_allvocabs_key, \
 				multiple_gen_key)
 		if ngram not in range(1, 5):
 			raise ValueError("ngram should belong to [1, 4]")
@@ -213,6 +218,9 @@ class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
 
 	'''
 
+	_name = 'EmbSimilarityPrecisionRecallMetric'
+	_version = 1
+
 	@hooks.hook_metric
 	def __init__(self, dataloader, \
 				 word2vec, \
@@ -220,7 +228,7 @@ class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
 				 generated_num_per_context, \
 				 candidates_allvocabs_key='candidate_allvocabs', \
 				 multiple_gen_key='multiple_gen'):
-		super().__init__(dataloader, generated_num_per_context, \
+		super().__init__(self._name, self._version, dataloader, generated_num_per_context, \
 			candidates_allvocabs_key, multiple_gen_key)
 		if not isinstance(word2vec, dict):
 			raise ValueError("word2vec has invalid type")

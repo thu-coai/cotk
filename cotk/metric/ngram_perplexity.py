@@ -14,9 +14,13 @@ class NgramFwBwPerplexityMetric(MetricBase):
 			are passed to :func:`forward` by ``dataloader.data["test"][self.reference_test_key]``.
 		{MetricBase.GEN_KEY_ARGUMENTS}
 	'''
+
+	_name = 'NgramFwBwPerplexityMetric'
+	_version = 1
+
 	@hooks.hook_metric
 	def __init__(self, dataloader, ngram, reference_test_list, gen_key="gen", cpu_count=None):
-		super().__init__()
+		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
 		self.ngram = ngram
 		self.reference_test_list = reference_test_list

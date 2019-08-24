@@ -132,3 +132,6 @@ class TestNgramFwBwPerplexityMetric():
 
 		fpm.forward(data)
 		fpm.close()
+
+	def test_version(self):
+		version_test(NgramFwBwPerplexityMetric, dataloader=FakeDataLoader())

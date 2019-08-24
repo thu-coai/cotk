@@ -104,6 +104,8 @@ class TestBleuPrecisionRecallMetric():
 
 		assert same_dict(data, _data)
 
+	def test_version(self):
+		version_test(BleuPrecisionRecallMetric, dataloader=FakeMultiDataloader())
 
 
 emb_similarity_precision_recall_test_parameter = generate_testcase( \
@@ -233,9 +235,9 @@ class TestEmbSimilarityPrecisionRecallMetric():
 				espr.forward(data)
 		else:
 			# if emb_len < dataloader.all_vocab_size and \
-			# 	(ref_vocab == 'all_vocab' or gen_vocab == 'all_vocab'):
-			# 	with pytest.raises(ValueError, match="[a-z]* index out of range."):
-			# 		espr.forward(data)
+			#	 (ref_vocab == 'all_vocab' or gen_vocab == 'all_vocab'):
+			#	 with pytest.raises(ValueError, match="[a-z]* index out of range."):
+			#		 espr.forward(data)
 			# else:
 			espr.forward(data)
 			ans = espr.close()
@@ -243,3 +245,6 @@ class TestEmbSimilarityPrecisionRecallMetric():
 			assert sorted(ans.keys()) == [prefix + ' hashvalue', prefix + ' precision', prefix + ' recall']
 
 		assert same_dict(data, _data)
+
+	def test_version(self):
+		version_test(EmbSimilarityPrecisionRecallMetric, dataloader=FakeMultiDataloader())
