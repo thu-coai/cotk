@@ -23,7 +23,7 @@ This project is a part of ``dialtk`` (Toolkits for Dialog System by Tsinghua Uni
 **Quick links**
 
 * [Tutorial & Documents](https://thu-coai.github.io/cotk_docs/)
-* [Dashboard](https://coai.cs.tsinghua.edu.cn/dashboard/)
+* [Dashboard](http://coai.cs.tsinghua.edu.cn/dashboard/)
 
 **Index**
 
