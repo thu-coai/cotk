@@ -15,7 +15,7 @@ SH.setFormatter(FORMAT)
 LOGGER.addHandler(SH)
 
 CONFIG_FILE = os.path.join(str(Path.home()), '.cotk_config')
-DASHBOARD_URL = os.getenv("COTK_DASHBOARD_URL", "http://coai.cs.tsinghua.edu.cn/dashboard/")
+DASHBOARD_URL = os.getenv("COTK_DASHBOARD_URL", "http://coai.cs.tsinghua.edu.cn/dashboard")
 
 def show_command():
 	'''show help'''
