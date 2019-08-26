@@ -2,6 +2,7 @@ import random
 import itertools
 import copy
 import json
+import re
 
 import numpy as np
 
@@ -385,7 +386,9 @@ def version_test(metric_class, dataloader=None):
 				metric.forward(**batch)
 			res = metric.close()
 			for key, val in res.items():
-				if isinstance(val, (np.float, np.float16, np.float32, np.float64, np.float128, float)):
+				if isinstance(val, float) or re.match(r"<class 'numpy\.float\d*'>", str(type(val))):
 					res[key] = float(val)
+				elif isinstance(val, int) or re.match(r"<class 'numpy\.int\d*'>", str(type(val))):
+					res[key] = int(val)
 			assert same_dict(res, data['output'], exact_equal=False), "Version {} error".format(version)
 			# assert metric.close() == data['output'], "Version {} error".format(version)

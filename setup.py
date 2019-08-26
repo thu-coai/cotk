@@ -45,7 +45,7 @@ setup(
 			"pytest>=3.6.0",
 			"pytest-cov==2.4.0",
 			"checksumdir",
-			"pytorch-pretrained-bert>=0.6.0"
+			"pytorch-transformers>=1.1.0"
 		]
 	},
 	cmdclass={'test': LibTest},
