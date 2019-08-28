@@ -64,7 +64,7 @@ Path to dump dashboard result.")
 
 		code_dir = clone_codes_from_commit(info['git_user'], info['git_repo'], \
 												  info['git_commit'])
-		main.LOGGER.info("Codes from id %d fetched.")
+		main.LOGGER.info("Codes from id %d fetched.", board_id)
 	else:
 		# download from online git repo
 		patterns_2 = r'(?:https?://github\.com/)?([^\s/]+)/([^\s/]+)/?'
