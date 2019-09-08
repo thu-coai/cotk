@@ -71,10 +71,11 @@ class _PrecisionRecallMetric(MetricBase):
 				  where "~" means different sizes in this dimension is allowed.
 
 				Here is an example for data:
+
 					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 					>>> #   "been", "to", "China"]
 					>>> data = {
-					... 	candidate_allvocabs_key: [[[4], [5,6]], [[4,5,6]]]
+					... 	candidate_allvocabs_key: [[[4], [5,6]], [[4,5,6]]],
 					...		multiple_gen_key: [[[5,6,3]], [[4,5,7,3], [8,3]]]
 					... }
 
@@ -143,6 +144,24 @@ class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
 	Arguments:
 		{_PrecisionRecallMetric.ARGUMENTS}
 		ngram (int): Specifies using BLEU-ngram.
+
+	Here is an exmaple:
+
+		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
+		>>> candidate_allvocabs_key = 'candidate_allvocabs'
+		>>> multiple_gen_key='multiple_gen'
+		>>> metric = cotk.metric.BleuPrecisionRecallMetric(dl, 2, 2)
+		>>> data = {
+		...		candidate_allvocabs_key: [[[10, 64, 851], [10, 48, 851]]],
+		...		# candidate_allvocabs_key: [[["I", "like", "python"], ["I", "use", "python"]]],
+		... 	multiple_gen_key: [[[10, 64, 479, 3], [10, 48, 2019, 3]]],
+		... 	# multiple_gen_key: [[["I", "like", "java", "<eos>"], ["I", "use", "PHP", "<eos>"]]],
+		... }
+		>>> metric.forword(data)
+		>>> metric.close()
+		{'BLEU-2 precision': 0.12909944355487823,
+ 		 'BLEU-2 recall': 0.12909944355487823,
+ 		 'BLEU-2 hashvalue': '1652cd40276078ec8722d367f18008bf14053572ac15ce10e270eb41eae34bbf'}
 	'''
 
 	_name = 'BleuPrecisionRecallMetric'
@@ -191,6 +210,7 @@ class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
 			int: score \in [0, 1].
 
 		Here is an Example:
+
 			>>> gen = [4,5]
 			>>> reference = [5,6]
 			>>> self._score(gen, reference)
@@ -216,6 +236,25 @@ class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
 			* ``avg`` : element-wise average word embeddings.
 			* ``extrema`` : element-wise maximum word embeddings.
 
+	Here is an exmaple:
+
+		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
+		>>> candidate_allvocabs_key = 'candidate_allvocabs'
+		>>> multiple_gen_key='multiple_gen'
+		>>> wordvector = cotk.wordvector.Glove()
+		>>> metric = cotk.metric.EmbSimilarityPrecisionRecallMetric(dl, wordvector.load_dict(dl.all_vocab_list()), 'avg', 2)
+		>>> data = {
+		...		candidate_allvocabs_key: [[[10, 64, 851], [10, 48, 851]]],
+		...		# candidate_allvocabs_key: [[["I", "like", "python"], ["I", "use", "python"]]],
+		... 	multiple_gen_key: [[[10, 64, 479, 3], [10, 48, 2019, 3]]],
+		... 	# multiple_gen_key: [[["I", "like", "java", "<eos>"], ["I", "use", "PHP", "<eos>"]]],
+		... }
+		>>> metric.forword(data)
+		>>> metric.close()
+		>>> # metric.close() returns a dict like this.
+		>>>	# {'avg-bow precision': 0.0,
+		>>>	# 'avg-bow recall': 0.0,
+		>>>	# 'avg-bow hashvalue': '5abaaa9a8e709b3f05467e3f6d0e27c6cc904fceebd3accb3b768928595e729a'}
 	'''
 
 	_name = 'EmbSimilarityPrecisionRecallMetric'
@@ -255,6 +294,7 @@ class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
 			int: cosine similarity between two sentence embeddings \in [0, 1].
 
 		Here is an Example:
+
 			>>> gen = [4,5]
 			>>> reference = [5,6]
 			>>> self._score(gen, reference)

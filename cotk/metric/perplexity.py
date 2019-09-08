@@ -27,6 +27,27 @@ class PerplexityMetric(MetricBase):
 			of probability is 1. Otherwise, a random check will be performed for efficiency.
 			If pytorch is used, a full check is always performed and this argument will be ignored.
 			Default: ``False``.
+
+	Here is an example:
+
+		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
+		>>> reference_allvocabs_key="ref_allvocabs"
+		>>> reference_len_key="ref_length"
+		>>> gen_log_prob_key="gen_log_prob"
+		>>> metric = cotk.metric.PerplexityMetric(dl,
+		...		reference_allvocabs_key="ref_allvocabs",
+		...		reference_len_key="ref_length",
+		...		gen_log_prob_key="gen_log_prob")
+		>>> data = {
+		...		reference_allvocabs_key: [[2, 10, 64, 851, 3], [2, 10, 48, 851, 3]],
+		...		# reference_allvocabs_key: [["<go>", "I", "like", "python", "<eos>"], ["<go>", "I", "use", "python", "<eos>"]],
+		... 	reference_len_key: [5, 5],
+		... 	gen_log_prob_key: [[[-11.31, -11.31,  -0.69, ..., -11.31, -11.31, -11.31],...],...] # shape == (batch, length, vocab_size)
+		... }
+		>>> metric.forword(data)
+		>>> metric.close()
+		{'perplexity': 81458.00000000006,
+ 		 'perplexity hashvalue': '7f9b88b8f9996f5d49a512258f250fbc56adee714952b2c696c0b36cce36f648'}
 	'''
 
 	_name = 'PerplexityMetric'
@@ -76,11 +97,12 @@ class PerplexityMetric(MetricBase):
 				  :class:`torch.Tensor`.
 
 				Here is an example for data:
+
 					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 					>>> #   "been", "to", "China"]
 					>>> data = {
-					... 	reference_allvocabs_key: [[2,4,3], [2,5,6,3]]
-					...		reference_len_key: [3,4]
+					... 	reference_allvocabs_key: [[2,4,3], [2,5,6,3]],
+					...		reference_len_key: [3,4],
 					...		gen_log_prob_key: [[[-3.80666249, -3.11351531, -2.7080502 , -2.42036813, -2.19722458,
 								-2.01490302, -1.86075234, -1.72722095, -1.60943791],...],...]
 					... }
@@ -335,6 +357,30 @@ class MultiTurnPerplexityMetric(MetricBase):
 		full_check (bool): whether perform full checks on ``gen_log_prob`` to make sure the sum
 			of probability is 1. Otherwise, a random check will be performed for efficiency.
 			Default: ``False``.
+
+	Here is an example:
+
+		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
+		>>> multi_turn_reference_allvocabs_key = "multi_turn_ref_allvocabs"
+		>>> multi_turn_reference_len_key = "multi_turn_ref_length"
+		>>> multi_turn_gen_log_prob_key = "multi_turn_gen_log_prob"
+		>>> metric = cotk.metric.MultiTurnPerplexityMetric(dl,
+		...		multi_turn_reference_allvocabs_key="multi_turn_ref_allvocabs",
+		...		multi_turn_reference_len_key="multi_turn_ref_length",
+		...		multi_turn_gen_log_prob_key="multi_turn_gen_log_prob")
+		>>> data = {
+		...		multi_turn_reference_allvocabs_key: [[[2, 10, 64, 851, 3], [2, 10, 64, 479, 3]], [[2, 10, 64, 279, 1460, 3]]],
+		... 	# multi_turn_reference_allvocabs_key = [[["<go>", "I", "like", "python", "<eos>"],
+		... 	# 	["<go>", "I", "like", "java", "<eos>"]],
+		... 	# 	[["<go>", "I", "like", "machine", "learning", "<eos>"]]]
+		...
+		...		multi_turn_reference_len_key: [[5, 5], [6]],
+		...		multi_turn_gen_log_prob_key: [[[[-11.30784283, -11.30784283,  -0.69312263, ..., -11.30784283, -11.30784283, -11.30784283], ...], ...], ...]
+		... }
+		>>> metric.forword(data)
+		>>> metric.close()
+		{'perplexity': 81458.00000000006,
+ 		 'perplexity hashvalue': '3a7647507f2e0d05a235c1d3a29515dc8885650884d625a5b76d305541dca685'}
 	'''
 
 	_name = 'MultiTurnPerplexityMetric'
@@ -380,11 +426,12 @@ class MultiTurnPerplexityMetric(MetricBase):
 				  :class:`torch.Tensor`.
 
 				Here is an example for data:
+
 					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 					>>> #   "been", "to", "China"]
 					>>> data = {
-					... 	multi_turn_reference_allvocabs_key: [[[2,4,3], [2,5,6,3]], [[2,7,6,8,3]]]
-					...		multi_turn_reference_len_key: [[3, 4], [5]]
+					... 	multi_turn_reference_allvocabs_key: [[[2,4,3], [2,5,6,3]], [[2,7,6,8,3]]],
+					...		multi_turn_reference_len_key: [[3, 4], [5]],
 					...		multi_turn_gen_log_prob_key: [[[[-3.80666249, -3.11351531, -2.7080502,
 								-2.42036813, -2.19722458, -2.01490302, -1.86075234, -1.72722095,
 								-1.60943791], ...], ...], ...]

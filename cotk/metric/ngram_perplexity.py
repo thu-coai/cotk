@@ -11,8 +11,24 @@ class NgramFwBwPerplexityMetric(MetricBase):
 	    {MetricBase.DATALOADER_ARGUMENTS}
 	    ngram (int): order of ngram language model
 	    reference_test_list (list): Reference sentences with all vocabs in test data
-			are passed to :func:`forward` by ``dataloader.data["test"][self.reference_test_key]``.
+			are passed to :func:`forward` by ``dataloader.get_all_batch("test")["sent"]``.
 		{MetricBase.GEN_KEY_ARGUMENTS}
+
+	Here is an exmaple:
+
+		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
+		>>> gen_key = "gen"
+		>>> metric = cotk.metric.NgramFwBwPerplexityMetric(dl, 2, dl.get_all_batch('test')['sent'][0], gen_key=gen_key)
+		>>> data = {
+		...		gen_key: [[10, 1028, 479, 285, 220, 3], [851, 17, 2451, 3]]
+		...		# gen_key: [["I", "love", "java", "very", "much", "<eos>"], ["python", "is", "excellent", "<eos>"]],
+		... }
+		>>> metric.forword(data)
+		>>> metric.close()
+		{'fwppl': 51.44751843841384,
+ 		 'bwppl': 138.954327895075,
+ 		 'fw-bw-ppl': 75.0922901656957,
+ 		 'fw-bw-ppl hashvalue': '2ea52377084692953f602e4ebad23e8a46e1c4bb527947d29a03c14b426efe67'}
 	'''
 
 	_name = 'NgramFwBwPerplexityMetric'

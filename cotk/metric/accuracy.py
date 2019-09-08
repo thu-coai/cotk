@@ -12,6 +12,25 @@ class AccuracyMetric(MetricBase):
 		{MetricBase.DATALOADER_ARGUMENTS}
 		{MetricBase.LABEL_KEY_ARGUMENTS}
 		{MetricBase.PREDICTION_KEY_ARGUMENTS}
+
+
+	Here is an example:
+
+		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
+		>>> label_key = 'label'
+		>>> prediction_key = "prediction"
+		>>> metric = cotk.metric.AccuracyMetric(dl,
+		...										label_key=label_key,
+		...										prediction_key=prediction_key)
+		>>> data = {
+		...		label_key: [1,2,2,1],
+		...		prediction_key: [1,2,1,2]
+		... }
+		>>> metric.forword(data)
+		>>> metric.close()
+		{'accuracy': 0.5,
+ 		 'accuracy hashvalue': '913ba1d873921e28c4f8964cd1683d4301e3712a351672b5129f3fc3fac53852'}
+
 	'''
 
 	_name = 'AccuracyMetric'
@@ -38,7 +57,7 @@ class AccuracyMetric(MetricBase):
 
 				Here is an example for data:
 					>>> data = {
-					...		label_key: [1,2,2,1]
+					...		label_key: [1,2,2,1],
 					...		prediction_key: [1,2,1,2]
 					... }
 		'''

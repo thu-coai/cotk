@@ -51,6 +51,27 @@ class BleuCorpusMetric(MetricBase):
 		{MetricBase.DATALOADER_ARGUMENTS}
 		{MetricBase.REFERENCE_ALLVOCABS_KEY_ARGUMENTS}
 		{MetricBase.GEN_KEY_ARGUMENTS}
+
+	Here is an exmaple:
+
+		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
+		>>> reference_allvocabs_key = "ref_allvocabs"
+		>>> gen_key = "gen"
+		>>> metric = cotk.metric.BleuCorpusMetric(dl,
+		...										reference_allvocabs_key=reference_allvocabs_key,
+		...										gen_key=gen_key)
+		>>> data = {
+		... 	reference_allvocabs_key: [[2, 10, 64, 851, 3], [2, 10, 48, 851, 3]],
+		... 	# reference_allvocabs_key: [["<go>", "I", "like", "python", "<eos>"], ["<go>", "I", "use", "python", "<eos>"]],
+		...
+		...		gen_key: [[10, 1028, 479, 285, 220, 3], [851, 17, 2451, 3]]
+		...		# gen_key: [["I", "love", "java", "very", "much", "<eos>"], ["python", "is", "excellent", "<eos>"]],
+		... }
+		>>> metric.forword(data)
+		>>> metric.close()
+		{'bleu': 0.08582363099612991,
+ 		 'bleu hashvalue': '70e019630fef24d9477034a3d941a5349fcbff5a3dc6978a13ea3d85290114fb'}
+
 	'''
 
 	_name = 'BleuCorpusMetric'
@@ -77,10 +98,11 @@ class BleuCorpusMetric(MetricBase):
 				{MetricBase.FORWARD_GEN_ARGUMENTS}
 
 				Here is an example for data:
+
 					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 					>>> #   "been", "to", "China"]
 					>>> data = {
-					... 	reference_allvocabs_key: [[2,4,3], [2,5,6,3]]
+					... 	reference_allvocabs_key: [[2,4,3], [2,5,6,3]],
 					...		gen_key: [[4,5,3], [6,7,8,3]]
 					... }
 		'''
@@ -145,6 +167,20 @@ class SelfBleuCorpusMetric(MetricBase):
 	Warning:
 		the calculation of ``hashvalue`` considers the actual sample size of hypotheses which
 			will be less than ``sample`` if the size of hypotheses is smaller than ``sample``
+
+	Here is an exmaple:
+
+		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
+		>>> gen_key = 'gen'
+		>>> metric = cotk.metric.SelfBleuCorpusMetric(dl, gen_key=gen_key)
+		>>> data = {
+		...		gen_key: [[10, 64, 851, 3], [10, 48, 851, 3]],
+		...		# gen_key: [["I", "like", "python", "<eos>"], ["I", "use", "python", "<eos>"]],
+		... }
+		>>> metric.forword(data)
+		>>> metric.close()
+		{'self-bleu': 0.13512001548070346,
+ 		 'self-bleu hashvalue': '53cf55829c1b080c86c392c846a5d39a54340c70d838ec953f952aa6731118fb'}
 	'''
 
 	_name = 'SelfBleuCorpusMetric'
@@ -178,6 +214,7 @@ class SelfBleuCorpusMetric(MetricBase):
 				{MetricBase.FORWARD_GEN_ARGUMENTS}
 
 				Here is an example for data:
+
 					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 					>>> #   "been", "to", "China"]
 					>>> data = {
@@ -259,6 +296,24 @@ class FwBwBleuCorpusMetric(MetricBase):
 		The calculation of ``hashvalue`` considers the actual sample size of hypotheses and
 		references. Therefore ``hashvalue`` may vary with the size of hypothesis or references
 		if the size of them is smaller than ``sample``.
+
+	Here is an exmaple:
+
+		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
+		>>> gen_key = 'gen'
+		>>> metric = cotk.metric.FwBwBleuCorpusMetric(dl,
+		...											reference_test_list=dl.get_all_batch('test')['sent'][0],
+		...											gen_key=gen_key)
+		>>> data = {
+		...		gen_key: [[10, 64, 851, 3], [10, 48, 851, 3]],
+		...		# gen_key: [["I", "like", "python", "<eos>"], ["I", "use", "python", "<eos>"]],
+		... }
+		>>> metric.forword(data)
+		>>> metric.close()
+		{'fw-bleu': 0.007688528488990184,
+ 		 'bw-bleu': 0.0012482612634667945,
+ 		 'fw-bw-bleu': 0.002147816509441494,
+ 		 'fw-bw-bleu hashvalue': '0e3f58a90225af615ff780f04c91613759e04a3c7b4329670b1d03b679adf8cd'}
 	'''
 
 	_name = 'FwBwBleuCorpusMetric'
@@ -295,6 +350,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 				{MetricBase.FORWARD_GEN_ARGUMENTS}
 
 				Here is an example for data:
+
 					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 					>>> #   "been", "to", "China"]
 					>>> data = {
@@ -401,6 +457,33 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 		{MetricBase.MULTI_TURN_REFERENCE_ALLVOCABS_KEY_ARGUMENTS}
 		{MetricBase.MULTI_TURN_GEN_KEY_ARGUMENTS}
 		{MetricBase.MULTI_TURN_LENGTH_KEY_ARGUMENTS}
+
+	Here is an exmaple:
+
+		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
+		>>> multi_turn_reference_allvocabs_key = "reference_allvocabs"
+		>>> multi_turn_gen_key = "multi_turn_gen"
+		>>> turn_len_key = "turn_length"
+		>>> metric = cotk.metric.MultiTurnBleuCorpusMetric(dl,
+		>>> 	multi_turn_reference_allvocabs_key=multi_turn_reference_allvocabs_key,
+		>>> 	multi_turn_gen_key=multi_turn_gen_key,
+		>>> 	turn_len_key=turn_len_key)
+		>>> data = {
+		...		multi_turn_reference_allvocabs_key: [[[2, 10, 64, 851, 3], [2, 10, 64, 479, 3]], [[2, 10, 64, 279, 1460, 3]]],
+		... 	# multi_turn_reference_allvocabs_key = [[["<go>", "I", "like", "python", "<eos>"], ["<go>", "I", "like", "java", "<eos>"]],
+		... 	# 	[["<go>", "I", "like", "machine", "learning", "<eos>"]]]
+		...
+		...		turn_len_key: [2, 1],
+		... 	# turn_len_key: [len(multi_turn_reference_allvocabs_key[0]), len(multi_turn_reference_allvocabs_key[1])]
+		...
+		...		multi_turn_gen_key: [[[851, 17, 2451, 3], [2019, 17, 393, 3]], [[10, 64, 34058, 805, 2601, 3]]]
+		... 	# multi_turn_gen_key = [[["python", "is", "excellent", "<eos>"], ["PHP", "is", "best", "<eos>"]],
+		... 	# 	[["I", "like", "natural", "language", "processing", "<eos>"]]]
+		... }
+		>>> metric.forword(data)
+		>>> metric.close()
+		{'bleu': 0.12081744577265555,
+ 		 'bleu hashvalue': 'c65b44c454dee5a8d393901644c7f1acfdb847bae3ab03823cb5b9f643958960'}
 	'''
 
 	_name = 'MultiTurnBleuCorpusMetric'
@@ -432,11 +515,12 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 				{MetricBase.FORWARD_MULTI_TURN_LENGTH_ARGUMENTS}
 
 				Here is an example for data:
+
 					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 					>>> #   "been", "to", "China"]
 					>>> data = {
-					...		multi_turn_reference_allvocabs_key: [[[2,4,3], [2,5,6,3]], [[2,7,6,8,3]]]
-					...		turn_len_key: [2, 1]
+					...		multi_turn_reference_allvocabs_key: [[[2,4,3], [2,5,6,3]], [[2,7,6,8,3]]],
+					...		turn_len_key: [2, 1],
 					...		gen_key: [[[6,7,8,3], [4,5,3]], [[7,3]]]
 					... }
 		'''
