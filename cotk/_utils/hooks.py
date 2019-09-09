@@ -3,6 +3,7 @@ A utils providing callback hooks.
 '''
 
 from inspect import signature
+from functools import wraps
 import json
 import copy
 import weakref
@@ -43,6 +44,7 @@ def compress_dict(dic):
 def hook_dataloader(fn):
 	r'''decorator for dataloader.__init___'''
 	sign = signature(fn)
+	@wraps(fn)
 	def wrapped(*args, **kwargs):
 		bound = sign.bind(*args, **kwargs)
 		bound.apply_defaults()
@@ -51,6 +53,7 @@ def hook_dataloader(fn):
 		del bound['self']
 		invoke_listener("add_dataloader", self, fn.__qualname__.split(".")[0], bound)
 		return fn(*args, **kwargs)
+
 	return wrapped
 
 def hook_metric(fn):
@@ -82,6 +85,7 @@ def hook_metric_close(fn):
 def hook_wordvec(fn):
 	r'''decorator for wordvec.__init__'''
 	sign = signature(fn)
+	@wraps(fn)
 	def wrapped(*args, **kwargs):
 		bound = sign.bind(*args, **kwargs)
 		bound.apply_defaults()
