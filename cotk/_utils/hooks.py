@@ -59,6 +59,7 @@ def hook_dataloader(fn):
 def hook_metric(fn):
 	r'''decorator for metric.__init__'''
 	sign = signature(fn)
+	@wraps(fn)
 	def wrapped(*args, **kwargs):
 		bound = sign.bind(*args, **kwargs)
 		bound.apply_defaults()
