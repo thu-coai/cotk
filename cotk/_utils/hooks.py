@@ -73,6 +73,7 @@ def hook_metric(fn):
 def hook_metric_close(fn):
 	r'''decorator for metric.close'''
 	sign = signature(fn)
+	@wraps(fn)
 	def wrapped(*args, **kwargs):
 		bound = sign.bind(*args, **kwargs)
 		bound.apply_defaults()
