@@ -24,41 +24,71 @@ Basic Classes
 
 Metric class
 ---------------------------------
-.. autoclass:: BleuPrecisionRecallMetric
-    :members: forward,_score,close
 
-.. autoclass:: EmbSimilarityPrecisionRecallMetric
-    :members: forward,_score,close
-
+PerplexityMetric
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: PerplexityMetric
     :members:
 
+MultiTurnPerplexityMetric
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: MultiTurnPerplexityMetric
     :members:
 
+BleuCorpusMetric
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: BleuCorpusMetric
     :members:
 
+SelfBleuCorpusMetric
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: SelfBleuCorpusMetric
     :members:
 
+FwBwBleuCorpusMetric
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: FwBwBleuCorpusMetric
     :members:
 
+MultiTurnBleuCorpusMetric
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: MultiTurnBleuCorpusMetric
+    :members:
+
+BleuPrecisionRecallMetric
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: BleuPrecisionRecallMetric
+    :members: forward,_score,close
+
+EmbSimilarityPrecisionRecallMetric
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: EmbSimilarityPrecisionRecallMetric
+    :members: forward,_score,close
+
+NgramFwBwPerplexityMetric
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. autoclass:: NgramFwBwPerplexityMetric
     :members:
 
 Metric-like class
 ----------------------
 
+SingleTurnDialogRecorder
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: SingleTurnDialogRecorder
     :members:
 
+MultiTurnDialogRecorder
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: MultiTurnDialogRecorder
     :members:
 
+LanguageGenerationRecorder
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: LanguageGenerationRecorder
     :members:
 
+MetricChain
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. autoclass:: MetricChain
     :members:

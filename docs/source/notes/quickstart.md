@@ -28,8 +28,8 @@ Inspect vocabulary list
 ```python
     >>> print("Vocabulary size:", dataloader.vocab_size)
     Vocabulary size: 2588
-    >>> print("Frist 10 tokens in vocabulary:", dataloader.vocab_list[:10])
-    Frist 10 tokens in vocabulary: ['<pad>', '<unk>', '<go>', '<eos>', '.', 'a', 'A', 'on', 'of', 'in']
+    >>> print("First 10 tokens in vocabulary:", dataloader.vocab_list[:10])
+    First 10 tokens in vocabulary: ['<pad>', '<unk>', '<go>', '<eos>', '.', 'a', 'A', 'on', 'of', 'in']
 ```
 
 Convert between ids and strings
@@ -69,7 +69,7 @@ or using ``while`` if you like
 
 .. note::
 
-   If you want to know more about data loader, please refer to :mod:`docs <cotk.dataloader>`.
+   If you want to know more about data loader, please refer to :mod:`dataloader docs <cotk.dataloader>`.
 
 
 ### Metrics
@@ -92,6 +92,24 @@ receives data in batch.
     >>> print(metric.close())
     {'self-bleu': 0.02206768072402293,
      'self-bleu hashvalue': 'c206893c2272af489147b80df306ee703e71d9eb178f6bb06c73cb935f474452'}
+```
+
+You can merge multiple metrics together by :class:``.cotk.metric.MetricChain``
+
+```python
+    >>> metric = cotk.metric.MetricChain()
+    >>> metric.add_metric(cotk.metric.SelfBleuCorpusMetric(dataloader, gen_key="gen"))
+    >>> metric.add_metric(cotk.metric.FwBwBleuCorpusMetric(dataloader, reference_test_list=dataloader.get_all_batch()['sent_allvocabs'], gen_key="gen"))
+    >>> metric.forward({
+    ...    "gen":
+    ...        [[2, 181, 13, 26, 145, 177, 8, 22, 12, 5, 3755, 1099, 4, 3],
+    ...         [2, 46, 145, 500, 1764, 207, 11, 5, 93, 7, 31, 4, 3]]
+    ... })
+    >>> print(metric.close())
+    {'self-bleu': 0.02206768072402293,
+     'self-bleu hashvalue': 'c206893c2272af489147b80df306ee703e71d9eb178f6bb06c73cb935f474452',
+     'fw-bleu': 0.3831004349785445, 'bw-bleu': 0.025958979254273006, 'fw-bw-bleu': 0.04862323612604027,
+     'fw-bw-bleu hashvalue': '530d449a096671d13705e514be13c7ecffafd80deb7519aa7792950a5468549e'}
 ```
 
 We also provide standard metrics for selected dataloader.
@@ -118,12 +136,12 @@ We also provide standard metrics for selected dataloader.
 
 .. note::
 
-   If you want to know more about metrics, please refer to :mod:`docs <cotk.metric>`.
+   If you want to know more about metrics, please refer to :mod:`metrics docs <cotk.metric>`.
 
 
 ### Publish Experiments
 
-We provide an online dashboard to manage your experiments.
+We provide an online `dashboard <http://coai.cs.tsinghua.edu.cn/dashboard/>`__ to manage your experiments.
 
 Here we give an simple example for you.
 
@@ -169,10 +187,10 @@ Next, commit your changes and set upstream branch in your command line.
 Finally, type ``cotk run`` to run your model and upload to cotk dashboard.
 
 ``cotk`` will automatically collect your git repo, username, commit and ``result.json``
-to the cotk dashboard (TO BE ONLINE).The dashboard is a website where you can manage
+to the cotk dashboard.The dashboard is a website where you can manage
 your experiments or share results with others.
 
-FILL AN IMAGE HERE
+.. image:: dashboard.png
 
 If you don't want to use cotk's dashboard, you can also choose to directly upload your model
 to github.

@@ -113,15 +113,15 @@ First we construct a simple GRU Language model using ``pytorch``.
             # data is the dict returned by ``dataloader.get_batch``
             sent = data['sent']
             sent_length = data['sent_length']
-            # sent is a LongTensor whose shape is (batch_size, sent_length)
+            # sent is a LongTensor whose shape is (batch_size, max(sent_length))
             # sent_length is a list whose size is (batch_size)
 
             incoming = self.embedding_layer(sent)
-            # incoming: (batch_size, sent_length, embedding_size)
+            # incoming: (batch_size, max(sent_length), embedding_size)
             incoming, _ = self.rnn(incoming)
-            # incoming: (batch_size, sent_length, hidden_size)
+            # incoming: (batch_size, max(sent_length), hidden_size)
             incoming = self.output_layer(incoming)
-            # incoming: (batch_size, sent_length, dataloader.vocab_size)
+            # incoming: (batch_size, max(sent_length), dataloader.vocab_size)
 
             loss = []
             for i, length in enumerate(sent_length):
