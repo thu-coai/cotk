@@ -205,6 +205,14 @@ class KneserNeyInterpolated:
 			log_prob += np.log(self.score(sent_now[i + self.order], tuple(sent_now[i + 1:i + self.order])))
 		return log_prob
 
+	@classmethod
+	def _set_language_model(cls, language_model):
+		cls.language_model = language_model
+
+	@classmethod
+	def _compute_sent_log_prob(cls, sent):
+		return cls.language_model.sent_log_prob(sent)
+
 	def perplexity(self, corpus):
 		r'''Compute perplexity when generating the given ``corpus``
 
@@ -216,14 +224,15 @@ class KneserNeyInterpolated:
 		'''
 		log_probs = []
 		if len(corpus) > 100 and self.cpu_count > 0:
-			pool = Pool(self.cpu_count)
-			for lp in tqdm.tqdm(pool.imap_unordered(self.sent_log_prob, corpus, chunksize=40)):
+			pool = Pool(self.cpu_count, initializer=self._set_language_model, initargs=(self,))
+			for lp in tqdm.tqdm(pool.imap_unordered(self._compute_sent_log_prob, corpus, chunksize=40), \
+								totoal=len(corpus)):
 				log_probs.append(lp)
 			pool.close()
 			pool.join()
 		else:
 			if len(corpus) > 100:
-				tasks = tqdm.tqdm(corpus)
+				tasks = tqdm.tqdm(corpus, total=len(corpus))
 			else:
 				tasks = corpus
 			for sent in tasks:
