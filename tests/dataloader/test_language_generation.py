@@ -203,7 +203,7 @@ class TestLanguageGeneration():
 @pytest.fixture
 def load_mscoco():
 	def _load_mscoco(invalid_vocab_times=0):
-		return MSCOCO("./tests/dataloader/dummy_mscoco", invalid_vocab_times=invalid_vocab_times)
+		return MSCOCO("./tests/dataloader/dummy_mscoco#MSCOCO", invalid_vocab_times=invalid_vocab_times)
 	return _load_mscoco
 
 class TestMSCOCO(TestLanguageGeneration):

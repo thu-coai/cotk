@@ -189,7 +189,7 @@ class TestSingleTurnDialog():
 @pytest.fixture
 def load_opensubtitles():
 	def _load_opensubtitles(invalid_vocab_times=0):
-		return OpenSubtitles("./tests/dataloader/dummy_opensubtitles", invalid_vocab_times=invalid_vocab_times)
+		return OpenSubtitles("./tests/dataloader/dummy_opensubtitles#OpenSubtitles", invalid_vocab_times=invalid_vocab_times)
 	return _load_opensubtitles
 
 class TestOpenSubtitles(TestSingleTurnDialog):

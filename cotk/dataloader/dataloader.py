@@ -2,15 +2,22 @@
 A module for dataloader
 '''
 import random
+from collections import Counter
+
 import numpy as np
+from nltk.tokenize import WordPunctTokenizer
+
 from .._utils import trim_before_target
 from .._utils.metaclass import DocStringInheritor, LoadClassInterface
+
 
 class Dataloader(LoadClassInterface, metaclass=DocStringInheritor):
 	'''Base class of Dataloader.
 	'''
+
 	def __init__(self):
 		pass
+
 
 class LanguageProcessingBase(Dataloader):
 	r"""Base class for all language processing tasks. This is an abstract class.
@@ -76,6 +83,224 @@ class LanguageProcessingBase(Dataloader):
 			idx = self.unk_id
 		return idx
 
+	def tokenize(self, sentence, remains_capital, tokenizer):
+		r'''Convert sentence(str) to a list of tokens(str)
+
+		Arguments:
+			sentence (str): a string to be tokenized
+			remains_capital(bool): Whether remaining capital letter in data or converting them to lower case.
+			tokenizer (str): How to tokenize sentence. ``nltk.tokenize.WordPunctTokenizer`` is used if ``nltk`` is specified,
+				python built-in ``str.split`` is used if ``space`` is specified.
+
+		Returns:
+			list: a list of tokens(str)
+		'''
+		if remains_capital:
+			sentence = sentence.strip()
+		else:
+			sentence = sentence.lower().strip()
+		if tokenizer == 'nltk':
+			return WordPunctTokenizer().tokenize(sentence)
+		elif tokenizer == 'space':
+			return sentence.split()
+		else:
+			raise ValueError('tokenizer of dataloader should be either "nltk" or "space"')
+
+	def _general_load_data(self, file_path, data_format, min_vocab_times, max_sent_length, max_turn_length,
+						   invalid_vocab_times):
+		r'''This function implements a general loading process.
+
+		Arguments:
+			file_path (str): A string indicating the path of dataset.
+			data_format (list): A list of (key, data_type) pairs, which indicate what the dataset contains. data_type
+				must be in ('label', 'sentence', 'session').
+				For example, data_format=[['key1', 'sentence'], ['key2', 'label']] means that, in the raw file,
+				the first line is a sentence and the second line is a label. They are saved in a dict.
+				dataset = {'key1': [line1, line3, line5, ...], 'key2': [line2, line4, line6, ...]}
+
+				data_format=[['key1', 'session], ['key2', 'label']], means that, in the raw file, the first *several lines*
+				is a session, *followed by an empty line*, and the next line is a label.
+				dataset = {'key1': [session1, session2, ...], 'key2': [label1, label2, ...]}
+			min_vocab_times (int): A cut-off threshold of valid tokens. All tokens appear
+				not less than `min_vocab_times` in **training set** will be marked as valid words.
+			max_sent_length (int): All sentences longer than ``max_sent_length`` will be shortened
+				to first ``max_sent_length`` tokens.
+			max_turn_length (int): All sessions, whose turn length is longer than ``max_turn_length`` will be shorten to
+				first ``max_turn_length`` sentences. If the dataset don't contains sessions, this parameter will be ignored.
+			invalid_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
+				not less than ``invalid_vocab_times`` in the **whole dataset** (except valid words) will be
+				marked as invalid words. Otherwise, they are unknown words, which are ignored both for
+				model or metrics.
+
+		Returns:
+			(tuple): containing:
+
+			* **all_vocab_list** (list): vocabulary list of the datasets,
+			  including valid and invalid vocabs.
+			* **valid_vocab_len** (int): the number of valid vocab.
+			  ``vocab_list[:valid_vocab_len]`` will be regarded as valid vocabs,
+			  while ``vocab_list[valid_vocab_len:]`` regarded as invalid vocabs.
+			* **data** (dict): a dict contains data.
+			* **data_size** (dict): a dict contains size of each item in data.
+		'''
+		unknown_type = set(type_ for _, type_ in data_format) - {'label', 'sentence', 'session'}
+		if unknown_type:
+			raise ValueError('data type must be in ["label", "sentence", "session"]. %s are not allowed' % list(unknown_type))
+
+		def read_sentence(lines):
+			return next(lines).rstrip()
+
+		def read_session(lines):
+			session = []
+			while True:
+				try:
+					line = next(lines)
+					if line == '\n':
+						break
+					session.append(line.rstrip())
+				except StopIteration:
+					break
+			if not session:
+				raise StopIteration
+			return session
+
+		def read_label(lines):
+			label = int(next(lines).strip())
+			return label
+
+		read_functions = {
+			'label': read_label,
+			'sentence': read_sentence,
+			'session': read_session,
+		}
+
+		def read(lines, type_):
+			return read_functions[type_](lines)
+
+		def to_tokens(element, type_, tokenize):
+			if type_ == 'label':
+				return element
+			if type_ == 'sentence':
+				return tokenize(element)
+			if type_ == 'session':
+				return [tokenize(sentence) for sentence in element]
+
+		def iter_sentence(element, type_):
+			if type_ == 'label':
+				pass
+			elif type_ == 'sentence':
+				yield element
+			elif type_ == 'session':
+				yield from element
+			else:
+				pass
+
+		def iter_token(element, type_):
+			for sentence in iter_sentence(element, type_):
+				yield from sentence
+
+		origin_data = {}
+		for key in self.key_name:
+			origin_data[key] = {data_key: [] for data_key, _ in data_format}
+			with open("%s/%s.txt" % (file_path, key), encoding='utf-8') as f_file:
+				while True:
+					try:
+						for data_key, type_ in data_format:
+							origin_data[key][data_key].append(to_tokens(read(f_file, type_), type_, self.tokenize))
+					except StopIteration:
+						break
+
+		def chain_allvocab(dic):
+			li = []
+			for key, type_ in data_format:
+				for element in dic[key]:
+					li.extend(iter_token(element, type_))
+			return li
+
+		raw_vocab_list = chain_allvocab(origin_data['train'])
+		# Important: Sort the words preventing the index changes between
+		# different runs
+		vocab = sorted(Counter(raw_vocab_list).most_common(), \
+					   key=lambda pair: (-pair[1], pair[0]))
+		left_vocab = [x[0] for x in vocab if x[1] >= min_vocab_times]
+		vocab_list = self.ext_vocab + list(left_vocab)
+		valid_vocab_len = len(vocab_list)
+		valid_vocab_set = set(vocab_list)
+
+		for key in self.key_name:
+			if key == 'train':
+				continue
+			raw_vocab_list.extend(chain_allvocab(origin_data[key]))
+
+		vocab = sorted(Counter(raw_vocab_list).most_common(), \
+					   key=lambda pair: (-pair[1], pair[0]))
+		left_vocab = [x[0] for x in vocab if x[1] >= invalid_vocab_times and x[0] not in valid_vocab_set]
+		vocab_list.extend(left_vocab)
+
+		print("valid vocab list length = %d" % valid_vocab_len)
+		print("vocab list length = %d" % len(vocab_list))
+
+		word2id = {w: i for i, w in enumerate(vocab_list)}
+
+		def line2id(line):
+			return [self.go_id] + \
+					list(map(lambda word: word2id[word] if word in word2id else self.unk_id, line)) \
+					+ [self.eos_id]
+
+		def to_id(element, type_):
+			if type_ == 'label':
+				return element
+			if type_ == 'sentence':
+				return line2id(element)
+			if type_ == 'session':
+				return [line2id(sentence) for sentence in element]
+
+		def cut(element, type_):
+			if type_ == 'label':
+				return element
+			if type_ == 'sentence':
+				return element[: max_sent_length]
+			if type_ == 'session':
+				return [sentence[:max_sent_length] for sentence in element[:max_turn_length]]
+
+		data = {}
+		data_size = {}
+		for key in self.key_name:
+			data[key] = {}
+			for data_key, type_ in data_format:
+				origin_data[key][data_key] = [to_id(element, type_) for element in origin_data[key][data_key]]
+				data[key][data_key] = [cut(element, type_) for element in origin_data[key][data_key]]
+				if key not in data_size:
+					data_size[key] = len(data[key][data_key])
+				elif data_size[key] != len(data[key][data_key]):
+					raise RuntimeError(
+						"The data of input %s.txt contains different numbers of fields" % key)
+
+			vocab = chain_allvocab(origin_data[key])
+			vocab_num = len(vocab)
+			oov_num = sum([word not in word2id for word in vocab])
+			invalid_num = sum([word not in valid_vocab_set for word in vocab]) - oov_num
+
+			sent_length = []
+			for data_key, type_ in data_format:
+				if type_ != 'label':
+					sent_length.extend([len(sent) for element in origin_data[key][data_key] for sent in iter_sentence(element, type_)])
+
+			cut_word_num = np.sum(np.maximum(np.array(sent_length) - max_sent_length, 0))
+			if 'session' in [type_ for _, type_ in data_format]:
+				turn_length = list(map(len, origin_data[key]['session']))
+				max_turn_length_before_cut = max(turn_length)
+				sent_num = sum(turn_length)
+				cut_sentence_rate = np.sum(np.maximum(np.array(turn_length) - max_turn_length, 0)) / sent_num
+			else:
+				max_turn_length_before_cut = 1
+				cut_sentence_rate = 0
+			print(("%s set. invalid rate: %f, unknown rate: %f, max sentence length before cut: %d, " + \
+				   "cut word rate: %f\n\tmax turn length before cut: %d, cut sentence rate: %f") % \
+				  (key, invalid_num / vocab_num, oov_num / vocab_num, max(sent_length), \
+				   cut_word_num / vocab_num, max_turn_length_before_cut, cut_sentence_rate))
+		return vocab_list, valid_vocab_len, data, data_size
+
 	def _load_data(self):
 		r'''This function is called during the initialization.
 
@@ -89,18 +314,6 @@ class LanguageProcessingBase(Dataloader):
 			  while ``vocab_list[valid_vocab_len:]`` regarded as invalid vocabs.
 			* **data** (dict): a dict contains data.
 			* **data_size** (dict): a dict contains size of each item in data.
-		'''
-		raise NotImplementedError( \
-			"This function should be implemented by subclasses.")
-
-	def tokenize(self, sentence):
-		'''Convert sentence(str) to list of token(str)
-
-		Arguments:
-			sentence (str)
-
-		Returns:
-			sent (list): list of token(str)
 		'''
 		raise NotImplementedError( \
 			"This function should be implemented by subclasses.")
@@ -147,9 +360,8 @@ class LanguageProcessingBase(Dataloader):
 		if batch_size is not None:
 			self.batch_size[key] = batch_size
 		print("%s set restart, %d batches and %d left" % (key, \
-				len(self.index[key]) // self.batch_size[key], \
-				len(self.index[key]) % self.batch_size[key]))
-
+														  len(self.index[key]) // self.batch_size[key], \
+														  len(self.index[key]) % self.batch_size[key]))
 
 	GET_BATCH_DOC_WITHOUT_RETURNS = r'''
 		Get a batch of specified `indexes`.
@@ -158,6 +370,7 @@ class LanguageProcessingBase(Dataloader):
 				key (str): key name of dataset, must be contained in ``self.key_name``.
 				indexes (list): a list of specified indexes of batched data.
 	'''
+
 	def get_batch(self, key, indexes):
 		r'''{GET_BATCH_DOC_WITHOUT_RETURNS}
 
@@ -186,7 +399,7 @@ class LanguageProcessingBase(Dataloader):
 				"Please run restart before calling this function.")
 		batch_id = self.batch_id[key]
 		start, end = batch_id * \
-			self.batch_size[key], (batch_id + 1) * self.batch_size[key]
+					 self.batch_size[key], (batch_id + 1) * self.batch_size[key]
 		if start >= len(self.index[key]):
 			return None
 		if ignore_left_samples and end > len(self.index[key]):
@@ -297,7 +510,7 @@ class LanguageProcessingBase(Dataloader):
 
 		ids = trim_before_target(list(ids), self.eos_id)
 		idx = len(ids)
-		while idx > 0 and ids[idx-1] == self.pad_id:
+		while idx > 0 and ids[idx - 1] == self.pad_id:
 			idx -= 1
 		ids = ids[:idx]
 		return ids

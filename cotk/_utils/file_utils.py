@@ -215,7 +215,8 @@ def _load_local_data(local_path):
 	LOGGER.info('local path: %s', local_path)
 	LOGGER.info('processor type: %s', res_type)
 	resource_processor = ResourceProcessor.load_class(res_type + 'ResourceProcessor')()
-	local_path = resource_processor.preprocess(local_path)
+	if local_path.endswith(".zip"):
+		local_path = resource_processor.preprocess(local_path)
 	return resource_processor.postprocess(local_path)
 
 

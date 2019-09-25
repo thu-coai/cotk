@@ -216,7 +216,7 @@ class TestMultiTurnDialog():
 @pytest.fixture
 def load_ubuntucorpus():
 	def _load_ubuntucorpus(invalid_vocab_times=0):
-		return UbuntuCorpus("./tests/dataloader/dummy_ubuntucorpus", invalid_vocab_times=invalid_vocab_times)
+		return UbuntuCorpus("./tests/dataloader/dummy_ubuntucorpus#Ubuntu", invalid_vocab_times=invalid_vocab_times)
 	return _load_ubuntucorpus
 
 class TestUbuntuCorpus(TestMultiTurnDialog):

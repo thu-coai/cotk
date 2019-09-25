@@ -26,13 +26,10 @@ class TestFileUtils():
 		config_dir = str(pathlib.Path('./tests/_utils/dummy_coai'))
 		data_dir = str(pathlib.Path('./tests/_utils/data'))
 		res_path = get_resource_file_path(str(pathlib.Path('./tests/_utils/data/mscoco.zip#MSCOCO')))
+		assert os.path.isdir(res_path)
 
-		filenames = os.listdir(res_path)
-		assert res_path == str(pathlib.Path('./tests/_utils/data/mscoco.zip_unzip/mscoco'))
-		assert sorted(filenames) == sorted(os.listdir(os.path.join(data_dir, 'mscoco')))
-		for filename in filenames:
-			check(os.path.join(res_path, filename), os.path.join(data_dir, 'mscoco', filename))
-
+		for key in ['train', 'test', 'dev']:
+			assert os.path.isfile(os.path.join(res_path, key + '.txt'))
 		shutil.rmtree(str(pathlib.Path('./tests/_utils/data/mscoco.zip_unzip')))
 
 	def test_OpenSubtitles_resource(self):
@@ -40,12 +37,10 @@ class TestFileUtils():
 		config_dir = str(pathlib.Path('./tests/_utils/dummy_coai'))
 		data_dir = str(pathlib.Path('./tests/_utils/data'))
 		res_path = get_resource_file_path(str(pathlib.Path('./tests/_utils/data/opensubtitles.zip#OpenSubtitles')))
+		assert os.path.isdir(res_path)
 
-		filenames = os.listdir(res_path)
-		assert res_path == str(pathlib.Path('./tests/_utils/data/opensubtitles.zip_unzip/opensubtitles'))
-		assert sorted(filenames) == sorted(os.listdir(os.path.join(data_dir, 'opensubtitles')))
-		for filename in filenames:
-			check(os.path.join(res_path, filename), os.path.join(data_dir, 'opensubtitles', filename))
+		for key in ['train', 'test', 'dev']:
+			assert os.path.isfile(os.path.join(res_path, key + '.txt'))
 
 		shutil.rmtree(str(pathlib.Path('./tests/_utils/data/opensubtitles.zip_unzip')))
 
@@ -54,12 +49,10 @@ class TestFileUtils():
 		config_dir = str(pathlib.Path('./tests/_utils/dummy_coai'))
 		data_dir = str(pathlib.Path('./tests/_utils/data'))
 		res_path = get_resource_file_path(str(pathlib.Path('./tests/_utils/data/ubuntu_dataset.zip#Ubuntu')))
+		assert os.path.isdir(res_path)
 
-		filenames = os.listdir(res_path)
-		assert res_path == str(pathlib.Path('./tests/_utils/data/ubuntu_dataset.zip_unzip/ubuntu_dataset'))
-		assert sorted(filenames) == sorted(os.listdir(os.path.join(data_dir, 'ubuntu_dataset')))
-		for filename in filenames:
-			check(os.path.join(res_path, filename), os.path.join(data_dir, 'ubuntu_dataset', filename))
+		for key in ['train', 'test', 'dev']:
+			assert os.path.isfile(os.path.join(res_path, key + '.txt'))
 
 		shutil.rmtree(str(pathlib.Path('./tests/_utils/data/ubuntu_dataset.zip_unzip')))
 
@@ -68,6 +61,7 @@ class TestFileUtils():
 		config_dir = str(pathlib.Path('./tests/_utils/dummy_coai'))
 		data_dir = str(pathlib.Path('./tests/_utils/data'))
 		res_path = get_resource_file_path(str(pathlib.Path('./tests/_utils/data/switchboard_corpus.zip#SwitchboardCorpus')))
+		assert os.path.isdir(res_path)
 
 		filenames = os.listdir(res_path)
 		assert res_path == str(pathlib.Path('./tests/_utils/data/switchboard_corpus.zip_unzip/switchboard_corpus'))

@@ -345,83 +345,11 @@ class UbuntuCorpus(MultiTurnDialog):
 	def _load_data(self):
 		r'''Loading dataset, invoked during the initialization of :class:`MultiTurnDialog`.
 		'''
-		origin_data = {}
-		for key in self.key_name:
-			with open('%s/ubuntu_corpus_%s.csv' % (self._file_path, key), 'r', \
-				encoding='utf-8') as data_file:
-				raw_data = list(csv.reader(data_file))
-				head = raw_data[0]
-				if head[2] == 'Label':
-					raw_data = [d[0] + d[1] for d in raw_data[1:] if d[2] == '1.0']
-				else:
-					raw_data = [d[0] + d[1] for d in raw_data[1:]]
+		return super()._general_load_data(self._file_path, [['session', 'session']], self._min_vocab_times,
+										  self._max_sent_length, self._max_turn_length, self._invalid_vocab_times)
 
-				raw2line = lambda raw: [WordPunctTokenizer().tokenize(sent) \
-						for sent in raw.strip().replace('__eou__', '').split('__eot__')]
-				origin_data[key] = {'session': list(map(raw2line, raw_data))}
-
-		raw_vocab_list = list(chain(*chain(*(origin_data['train']['session']))))
-		# Important: Sort the words preventing the index changes between different runs
-		vocab = sorted(Counter(raw_vocab_list).most_common(), key=lambda pair: (-pair[1], pair[0]))
-		left_vocab = list(filter(lambda x: x[1] >= self._min_vocab_times, vocab))
-		left_vocab = list(map(lambda x: x[0], left_vocab))
-		vocab_list = self.ext_vocab + left_vocab
-		valid_vocab_len = len(vocab_list)
-		valid_vocab_set = set(vocab_list)
-
-		for key in self.key_name:
-			if key == 'train':
-				continue
-			raw_vocab_list.extend(list(chain(*chain(*(origin_data[key]['session'])))))
-		vocab = sorted(Counter(raw_vocab_list).most_common(), \
-					   key=lambda pair: (-pair[1], pair[0]))
-		left_vocab = list( \
-			filter( \
-				lambda x: x[1] >= self._invalid_vocab_times and x[0] not in valid_vocab_set, \
-				vocab))
-		left_vocab = list(map(lambda x: x[0], left_vocab))
-		vocab_list.extend(left_vocab)
-
-		print("valid vocab list length = %d" % valid_vocab_len)
-		print("vocab list length = %d" % len(vocab_list))
-
-		word2id = {w: i for i, w in enumerate(vocab_list)}
-		line2id = lambda line: ([self.go_id] + list(\
-					map(lambda word: word2id.get(word, self.unk_id), line)) + \
-					[self.eos_id])[:self._max_sent_length]
-
-		data = {}
-		data_size = {}
-		for key in self.key_name:
-			data[key] = {}
-			data[key]['session'] = [list(map(line2id, session[:self._max_turn_length])) \
-					for session in origin_data[key]['session']]
-			data_size[key] = len(data[key]['session'])
-			vocab = list(chain(*chain(*(origin_data[key]['session']))))
-			vocab_num = len(vocab)
-			oov_num = len(list(filter(lambda word: word not in word2id, vocab)))
-			invalid_num = len(list(filter(lambda word: word not in valid_vocab_set, vocab))) - oov_num
-			sent_length = list(map(len, chain(*origin_data[key]['session'])))
-			cut_word_num = np.sum(np.maximum(np.array(sent_length) - self._max_sent_length + 2, 0))
-			turn_length = list(map(len, origin_data[key]['session']))
-			sent_num = np.sum(turn_length)
-			cut_sent_num = np.sum(np.maximum(np.array(turn_length) - self._max_turn_length, 0))
-			print(("%s set. invalid rate: %f, unknown rate: %f, max sentence length before cut: %d, " + \
-					"cut word rate: %f\n\tmax turn length before cut: %d, cut sentence rate: %f") % \
-					(key, invalid_num / vocab_num, oov_num / vocab_num, max(sent_length), \
-					cut_word_num / vocab_num, max(turn_length), cut_sent_num / sent_num))
-		return vocab_list, valid_vocab_len, data, data_size
-
-	def tokenize(self, sentence):
-		r'''Convert sentence(str) to list of token(str)
-
-		Arguments:
-			sentence (str)
-
-		Returns:
-			sent (list): list of token(str)
-		'''
-		return WordPunctTokenizer().tokenize(sentence.replace('__eou__', ''))
+	def tokenize(self, sentence, remains_capital=False, tokenizer='nltk'):
+		return super().tokenize(sentence, remains_capital, tokenizer)
 
 class SwitchboardCorpus(MultiTurnDialog):
 	'''A dataloader for Switchboard dataset.

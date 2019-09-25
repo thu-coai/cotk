@@ -1,6 +1,8 @@
 """Dataloader for language generation"""
 from collections import Counter
 from itertools import chain
+import os
+import json
 
 import numpy as np
 
@@ -9,6 +11,7 @@ from .._utils.file_utils import get_resource_file_path
 from .._utils import hooks
 from .dataloader import LanguageProcessingBase
 from ..metric import MetricChain, AccuracyMetric
+
 
 # pylint: disable=W0223
 class SentenceClassification(LanguageProcessingBase):
@@ -98,9 +101,10 @@ class SentenceClassification(LanguageProcessingBase):
 		'''
 		metric = MetricChain()
 		metric.add_metric(AccuracyMetric(self, \
-					label_key='label', \
-					prediction_key=prediction_key))
+										 label_key='label', \
+										 prediction_key=prediction_key))
 		return metric
+
 
 class SST(SentenceClassification):
 	'''A dataloader for preprocessed SST dataset.
@@ -129,7 +133,7 @@ class SST(SentenceClassification):
 
 	@hooks.hook_dataloader
 	def __init__(self, file_id, min_vocab_times=10, \
-			max_sent_length=50, invalid_vocab_times=0):
+				 max_sent_length=50, invalid_vocab_times=0):
 		self._file_id = file_id
 		self._file_path = get_resource_file_path(file_id)
 		self._min_vocab_times = min_vocab_times
@@ -140,87 +144,16 @@ class SST(SentenceClassification):
 	def _load_data(self):
 		r'''Loading dataset, invoked by `LanguageProcessingBase.__init__`
 		'''
-		def parseline(line):
-			label = int(line[1])
-			line = line.split(')')
-			sent = [x.split(' ')[-1].lower() for x in line if x != '']
-			return (label, sent)
-		origin_data = {}
+		vocab_list, valid_vocab_len, data, data_size = \
+			super()._general_load_data(self._file_path,
+									[['sent', 'sentence']],
+									self._min_vocab_times,
+									self._max_sent_length,
+									None,
+									self._invalid_vocab_times)
 		for key in self.key_name:
-			f_file = open("%s/%s.txt" % (self._file_path, key), 'r', encoding='utf-8')
-			origin_data[key] = {}
-			_origin_data = list( \
-				map(parseline, f_file.readlines()))
-			origin_data[key]['sent'] = list( \
-				map(lambda line: line[1], _origin_data))
-			origin_data[key]['label'] = list( \
-				map(lambda line: line[0], _origin_data))
-
-		raw_vocab_list = list(chain(*(origin_data['train']['sent'])))
-		# Important: Sort the words preventing the index changes between
-		# different runs
-		vocab = sorted(Counter(raw_vocab_list).most_common(), \
-					   key=lambda pair: (-pair[1], pair[0]))
-		left_vocab = list( \
-			filter( \
-				lambda x: x[1] >= self._min_vocab_times, \
-				vocab))
-		vocab_list = self.ext_vocab + list(map(lambda x: x[0], left_vocab))
-		valid_vocab_len = len(vocab_list)
-		valid_vocab_set = set(vocab_list)
-
-		for key in self.key_name:
-			if key == 'train':
-				continue
-			raw_vocab_list.extend(list(chain(*(origin_data[key]['sent']))))
-		vocab = sorted(Counter(raw_vocab_list).most_common(), \
-					   key=lambda pair: (-pair[1], pair[0]))
-		left_vocab = list( \
-			filter( \
-				lambda x: x[1] >= self._invalid_vocab_times and x[0] not in valid_vocab_set, \
-				vocab))
-		vocab_list.extend(list(map(lambda x: x[0], left_vocab)))
-
-		print("valid vocab list length = %d" % valid_vocab_len)
-		print("vocab list length = %d" % len(vocab_list))
-
-		word2id = {w: i for i, w in enumerate(vocab_list)}
-		def line2id(line):
-			return ([self.go_id] + \
-					list(map(lambda word: word2id[word] if word in word2id else self.unk_id, line)) \
-					+ [self.eos_id])[:self._max_sent_length]
-
-		data = {}
-		data_size = {}
-		for key in self.key_name:
-			data[key] = {}
-			data[key]['sent'] = list(map(line2id, origin_data[key]['sent']))
-			data[key]['label'] = origin_data[key]['label']
-			data_size[key] = len(data[key]['sent'])
-
-			vocab = list(chain(*(origin_data[key]['sent'])))
-			vocab_num = len(vocab)
-			oov_num = len( \
-				list( \
-					filter( \
-						lambda word: word not in word2id, \
-						vocab)))
-			invalid_num = len( \
-				list( \
-					filter( \
-						lambda word: word not in valid_vocab_set, \
-						vocab))) - oov_num
-			length = list( \
-				map(len, origin_data[key]['sent']))
-			cut_num = np.sum( \
-				np.maximum( \
-					np.array(length) - \
-					self._max_sent_length + \
-					1, \
-					0))
-			print( \
-				"%s set. invalid rate: %f, unknown rate: %f, max length before cut: %d, cut word rate: %f" % \
-				(key, invalid_num / vocab_num, oov_num / vocab_num, max(length), cut_num / vocab_num))
+			with open(os.path.join(self._file_path, key + '_labels.json'), 'r', encoding='utf-8') as fp:
+				data[key]['label'] = json.load(fp)
 		return vocab_list, valid_vocab_len, data, data_size
 
 	def tokenize(self, sentence):
@@ -232,4 +165,5 @@ class SST(SentenceClassification):
 		Returns:
 			sent (list): list of token(str)
 		'''
-		return [x.split(' ')[-1].lower() for x in sentence if x != '']
+		# return [x.split(' ')[-1].lower() for x in sentence if x != '']
+		return super().tokenize(sentence, True, 'space')

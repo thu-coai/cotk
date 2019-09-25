@@ -3,6 +3,7 @@
 import os
 import zipfile
 import shutil
+import json
 from .metaclass import LoadClassInterface
 
 def unzip_file(src_path, dst_dir):
@@ -59,6 +60,17 @@ class MSCOCOResourceProcessor(BaseResourceProcessor):
 		'''
 		return self.basepreprocess(local_path, 'mscoco')
 
+	def postprocess(self, local_path):
+		local_path = super().postprocess(local_path)
+		new_local_path = os.path.join(local_path, 'processed')
+		os.makedirs(new_local_path, exist_ok=True)
+		for key in ['train', 'dev', 'test']:
+			local_file = os.path.join(local_path, 'mscoco_%s.txt' % key)
+			new_local_file = os.path.join(new_local_path, '%s.txt' % key)
+			if os.path.isfile(local_file):
+				shutil.copy(local_file, new_local_file)
+		return new_local_path
+
 class OpenSubtitlesResourceProcessor(BaseResourceProcessor):
 	'''Processor for OpenSubtitles Dataset
 	'''
@@ -66,6 +78,22 @@ class OpenSubtitlesResourceProcessor(BaseResourceProcessor):
 		'''Preprocess after download and before save.
 		'''
 		return self.basepreprocess(local_path, 'opensubtitles')
+	def postprocess(self, local_path):
+		local_path = super().postprocess(local_path)
+		new_local_path = os.path.join(local_path, 'processed')
+		os.makedirs(new_local_path, exist_ok=True)
+		for key in ['train', 'test', 'dev']:
+			post_path = os.path.join(local_path, 'opensub_pair_%s.post' % key)
+			response_path = os.path.join(local_path, 'opensub_pair_%s.response' % key)
+			if not os.path.isfile(post_path) or not os.path.isfile(response_path):
+				continue
+			with open(post_path, 'r', encoding='utf-8') as posts:
+				with open(response_path, 'r', encoding='utf-8') as responses:
+					with open(os.path.join(new_local_path, '%s.txt' % key), 'w', encoding='utf-8') as out:
+						for post, resp in zip(posts, responses):
+							out.write(post if post[-1] == '\n' else (post + '\n'))
+							out.write(resp if resp[-1] == '\n' else (resp + '\n'))
+		return new_local_path
 
 class UbuntuResourceProcessor(BaseResourceProcessor):
 	'''Processor for UbuntuCorpus dataset
@@ -74,6 +102,33 @@ class UbuntuResourceProcessor(BaseResourceProcessor):
 		'''Preprocess after download and before save.
 		'''
 		return self.basepreprocess(local_path, 'ubuntu_dataset')
+
+	def postprocess(self, local_path):
+		import csv
+		local_path = super().postprocess(local_path)
+		new_local_path = os.path.join(local_path, 'processed')
+		os.makedirs(new_local_path, exist_ok=True)
+		for key in ['train', 'dev', 'test']:
+			local_file = os.path.join(local_path, 'ubuntu_corpus_%s.csv' % key)
+			if not os.path.isfile(local_file):
+				continue
+			new_local_file = os.path.join(new_local_path, '%s.txt' % key)
+			with open(local_file, 'r', encoding='utf-8') as f:
+				reader = csv.reader(f)
+				head = next(reader)
+				if head[2] == 'Label':
+					raw_data = [d[0] + d[1] for d in reader if d[2] == '1.0']
+				else:
+					raw_data = [d[0] + d[1] for d in reader]
+
+			with open(new_local_file, 'w', encoding='utf-8') as f:
+				for session in raw_data:
+					for sent in session.strip().replace('__eou__', '').split('__eot__'):
+						f.write(sent)
+						f.write('\n')
+					f.write('\n')
+		return new_local_path
+
 
 class SwitchboardCorpusResourceProcessor(BaseResourceProcessor):
 	'''Processor for SwitchboardCorpus dataset
@@ -85,12 +140,41 @@ class SwitchboardCorpusResourceProcessor(BaseResourceProcessor):
 
 
 class SSTResourceProcessor(BaseResourceProcessor):
-	'''Processor for SwitchboardCorpus dataset
+	'''Processor for SST dataset
 	'''
 	def preprocess(self, local_path):
 		'''Preprocess after download and before save.
 		'''
 		return self.basepreprocess(local_path, 'trees')
+
+	def _parseline(self, line):
+		label = int(line[1])
+		line = line.split(')')
+		sent = [x.split(' ')[-1].lower() for x in line if x != '']
+		return label, ' '.join(sent)
+
+	def _postprocess(self, src, dest, key):
+		with open(os.path.join(src, key + '.txt'), 'r', encoding='utf-8') as fp:
+			labels, sents = [], []
+			for label, sent in map(self._parseline, fp):
+				labels.append(label)
+				sents.append(sent)
+		with open(os.path.join(dest, key + '.txt'), 'w', encoding='utf-8') as fp:
+			fp.writelines(sents)
+		with open(os.path.join(dest, key + '_labels.json'), 'w', encoding='utf-8') as fp:
+			json.dump(labels, fp, ensure_ascii=False)
+
+	def postprocess(self, local_path):
+		local_path = super().postprocess(local_path)
+		new_local_path = os.path.join(local_path, 'processed')
+		os.makedirs(new_local_path, exist_ok=True)
+
+		for key in ['train', 'test', 'dev']:
+			if not os.path.isfile(os.path.join(local_path, key + '.txt')):
+				raise FileNotFoundError("there isn\'t %s in %s" % (key + '.txt', local_path))
+			else:
+				self._postprocess(local_path, new_local_path, key)
+		return new_local_path
 
 class GloveResourceProcessor(ResourceProcessor):
 	'''Base Class for all dimension version of glove wordvector.

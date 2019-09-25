@@ -179,7 +179,7 @@ class TestSentenceClassification():
 @pytest.fixture
 def load_sst():
 	def _load_sst(invalid_vocab_times=0):
-		return SST("./tests/dataloader/dummy_sst", invalid_vocab_times=invalid_vocab_times)
+		return SST("./tests/dataloader/dummy_sst#SST", invalid_vocab_times=invalid_vocab_times)
 	return _load_sst
 
 class TestSST(TestSentenceClassification):

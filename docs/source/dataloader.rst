@@ -253,8 +253,6 @@ MSCOCO
 .. autoclass:: MSCOCO
     :members:
 
-    .. automethod:: _load_data
-
 SingleTurnDialog
 -----------------------------------
 .. autoclass:: SingleTurnDialog
@@ -278,8 +276,6 @@ OpenSubtitles
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: OpenSubtitles
     :members:
-
-    .. automethod:: _load_data
 
 BERTSingleTurnDialog
 -------------------------------------
@@ -310,8 +306,6 @@ BERTOpenSubtitles
 .. autoclass:: BERTOpenSubtitles
     :members:
 
-    .. automethod:: _load_data
-
 MultiTurnDialog
 -----------------------------------
 .. autoclass:: MultiTurnDialog
@@ -338,8 +332,6 @@ UbuntuCorpus
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: UbuntuCorpus
     :members:
-    
-    .. automethod:: _load_data
 
 SwitchBoardCorpus
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -373,5 +365,3 @@ SST
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: SST
-
-    .. automethod:: _load_data
