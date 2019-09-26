@@ -58,19 +58,19 @@ class BleuCorpusMetric(MetricBase):
 		>>> reference_allvocabs_key = "ref_allvocabs"
 		>>> gen_key = "gen"
 		>>> metric = cotk.metric.BleuCorpusMetric(dl,
-		...										reference_allvocabs_key=reference_allvocabs_key,
-		...										gen_key=gen_key)
+		...	    reference_allvocabs_key=reference_allvocabs_key,
+		...	    gen_key=gen_key)
 		>>> data = {
-		... 	reference_allvocabs_key: [[2, 10, 64, 851, 3], [2, 10, 48, 851, 3]],
-		... 	# reference_allvocabs_key: [["<go>", "I", "like", "python", "<eos>"], ["<go>", "I", "use", "python", "<eos>"]],
+		...     reference_allvocabs_key: [[2, 10, 64, 851, 3], [2, 10, 48, 851, 3]],
+		...     # reference_allvocabs_key: [["<go>", "I", "like", "python", "<eos>"], ["<go>", "I", "use", "python", "<eos>"]],
 		...
-		...		gen_key: [[10, 1028, 479, 285, 220, 3], [851, 17, 2451, 3]]
-		...		# gen_key: [["I", "love", "java", "very", "much", "<eos>"], ["python", "is", "excellent", "<eos>"]],
+		...	    gen_key: [[10, 1028, 479, 285, 220, 3], [851, 17, 2451, 3]]
+		...	    # gen_key: [["I", "love", "java", "very", "much", "<eos>"], ["python", "is", "excellent", "<eos>"]],
 		... }
 		>>> metric.forword(data)
 		>>> metric.close()
 		{'bleu': 0.08582363099612991,
- 		 'bleu hashvalue': '70e019630fef24d9477034a3d941a5349fcbff5a3dc6978a13ea3d85290114fb'}
+		'bleu hashvalue': '70e019630fef24d9477034a3d941a5349fcbff5a3dc6978a13ea3d85290114fb'}
 
 	'''
 
@@ -102,8 +102,8 @@ class BleuCorpusMetric(MetricBase):
 					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 					>>> #   "been", "to", "China"]
 					>>> data = {
-					... 	reference_allvocabs_key: [[2,4,3], [2,5,6,3]],
-					...		gen_key: [[4,5,3], [6,7,8,3]]
+					...     reference_allvocabs_key: [[2,4,3], [2,5,6,3]],
+					...	    gen_key: [[4,5,3], [6,7,8,3]]
 					... }
 		'''
 		super().forward(data)
@@ -174,13 +174,13 @@ class SelfBleuCorpusMetric(MetricBase):
 		>>> gen_key = 'gen'
 		>>> metric = cotk.metric.SelfBleuCorpusMetric(dl, gen_key=gen_key)
 		>>> data = {
-		...		gen_key: [[10, 64, 851, 3], [10, 48, 851, 3]],
-		...		# gen_key: [["I", "like", "python", "<eos>"], ["I", "use", "python", "<eos>"]],
+		...	    gen_key: [[10, 64, 851, 3], [10, 48, 851, 3]],
+		...	    # gen_key: [["I", "like", "python", "<eos>"], ["I", "use", "python", "<eos>"]],
 		... }
 		>>> metric.forword(data)
 		>>> metric.close()
 		{'self-bleu': 0.13512001548070346,
- 		 'self-bleu hashvalue': '53cf55829c1b080c86c392c846a5d39a54340c70d838ec953f952aa6731118fb'}
+		'self-bleu hashvalue': '53cf55829c1b080c86c392c846a5d39a54340c70d838ec953f952aa6731118fb'}
 	'''
 
 	_name = 'SelfBleuCorpusMetric'
@@ -218,7 +218,7 @@ class SelfBleuCorpusMetric(MetricBase):
 					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 					>>> #   "been", "to", "China"]
 					>>> data = {
-					...		gen_key: [[4,5,3], [6,7,8,3]]
+					...	    gen_key: [[4,5,3], [6,7,8,3]]
 					... }
 		'''
 		super().forward(data)
@@ -302,11 +302,11 @@ class FwBwBleuCorpusMetric(MetricBase):
 		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
 		>>> gen_key = 'gen'
 		>>> metric = cotk.metric.FwBwBleuCorpusMetric(dl,
-		...											reference_test_list=dl.get_all_batch('test')['sent'][0],
-		...											gen_key=gen_key)
+		...	    reference_test_list=dl.get_all_batch('test')['sent'][0],
+		...	    gen_key=gen_key)
 		>>> data = {
-		...		gen_key: [[10, 64, 851, 3], [10, 48, 851, 3]],
-		...		# gen_key: [["I", "like", "python", "<eos>"], ["I", "use", "python", "<eos>"]],
+		...	    gen_key: [[10, 64, 851, 3], [10, 48, 851, 3]],
+		...	    # gen_key: [["I", "like", "python", "<eos>"], ["I", "use", "python", "<eos>"]],
 		... }
 		>>> metric.forword(data)
 		>>> metric.close()
@@ -354,7 +354,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 					>>> #   "been", "to", "China"]
 					>>> data = {
-					...		gen_key: [[4,5,3], [6,7,8,3]]
+					...	    gen_key: [[4,5,3], [6,7,8,3]]
 					... }
 		'''
 		gen = data[self.gen_key]
@@ -465,25 +465,25 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 		>>> multi_turn_gen_key = "multi_turn_gen"
 		>>> turn_len_key = "turn_length"
 		>>> metric = cotk.metric.MultiTurnBleuCorpusMetric(dl,
-		>>> 	multi_turn_reference_allvocabs_key=multi_turn_reference_allvocabs_key,
-		>>> 	multi_turn_gen_key=multi_turn_gen_key,
-		>>> 	turn_len_key=turn_len_key)
+		>>>     multi_turn_reference_allvocabs_key=multi_turn_reference_allvocabs_key,
+		>>>     multi_turn_gen_key=multi_turn_gen_key,
+		>>>     turn_len_key=turn_len_key)
 		>>> data = {
-		...		multi_turn_reference_allvocabs_key: [[[2, 10, 64, 851, 3], [2, 10, 64, 479, 3]], [[2, 10, 64, 279, 1460, 3]]],
-		... 	# multi_turn_reference_allvocabs_key = [[["<go>", "I", "like", "python", "<eos>"], ["<go>", "I", "like", "java", "<eos>"]],
-		... 	# 	[["<go>", "I", "like", "machine", "learning", "<eos>"]]]
+		...	    multi_turn_reference_allvocabs_key: [[[2, 10, 64, 851, 3], [2, 10, 64, 479, 3]], [[2, 10, 64, 279, 1460, 3]]],
+		...     # multi_turn_reference_allvocabs_key = [[["<go>", "I", "like", "python", "<eos>"], ["<go>", "I", "like", "java", "<eos>"]],
+		...     # 	[["<go>", "I", "like", "machine", "learning", "<eos>"]]]
 		...
-		...		turn_len_key: [2, 1],
-		... 	# turn_len_key: [len(multi_turn_reference_allvocabs_key[0]), len(multi_turn_reference_allvocabs_key[1])]
+		...	    turn_len_key: [2, 1],
+		...     # turn_len_key: [len(multi_turn_reference_allvocabs_key[0]), len(multi_turn_reference_allvocabs_key[1])]
 		...
-		...		multi_turn_gen_key: [[[851, 17, 2451, 3], [2019, 17, 393, 3]], [[10, 64, 34058, 805, 2601, 3]]]
-		... 	# multi_turn_gen_key = [[["python", "is", "excellent", "<eos>"], ["PHP", "is", "best", "<eos>"]],
-		... 	# 	[["I", "like", "natural", "language", "processing", "<eos>"]]]
+		...	    multi_turn_gen_key: [[[851, 17, 2451, 3], [2019, 17, 393, 3]], [[10, 64, 34058, 805, 2601, 3]]]
+		...     # multi_turn_gen_key = [[["python", "is", "excellent", "<eos>"], ["PHP", "is", "best", "<eos>"]],
+		...     # 	[["I", "like", "natural", "language", "processing", "<eos>"]]]
 		... }
 		>>> metric.forword(data)
 		>>> metric.close()
 		{'bleu': 0.12081744577265555,
- 		 'bleu hashvalue': 'c65b44c454dee5a8d393901644c7f1acfdb847bae3ab03823cb5b9f643958960'}
+		'bleu hashvalue': 'c65b44c454dee5a8d393901644c7f1acfdb847bae3ab03823cb5b9f643958960'}
 	'''
 
 	_name = 'MultiTurnBleuCorpusMetric'
@@ -519,9 +519,9 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 					>>> #   "been", "to", "China"]
 					>>> data = {
-					...		multi_turn_reference_allvocabs_key: [[[2,4,3], [2,5,6,3]], [[2,7,6,8,3]]],
-					...		turn_len_key: [2, 1],
-					...		gen_key: [[[6,7,8,3], [4,5,3]], [[7,3]]]
+					...	    multi_turn_reference_allvocabs_key: [[[2,4,3], [2,5,6,3]], [[2,7,6,8,3]]],
+					...	    turn_len_key: [2, 1],
+					...	    gen_key: [[[6,7,8,3], [4,5,3]], [[7,3]]]
 					... }
 		'''
 		super().forward(data)

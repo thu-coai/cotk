@@ -20,16 +20,16 @@ class AccuracyMetric(MetricBase):
 		>>> label_key = 'label'
 		>>> prediction_key = "prediction"
 		>>> metric = cotk.metric.AccuracyMetric(dl,
-		...										label_key=label_key,
-		...										prediction_key=prediction_key)
+		...	    label_key=label_key,
+		...	    prediction_key=prediction_key)
 		>>> data = {
-		...		label_key: [1,2,2,1],
-		...		prediction_key: [1,2,1,2]
+		...	    label_key: [1,2,2,1],
+		...	    prediction_key: [1,2,1,2]
 		... }
 		>>> metric.forword(data)
 		>>> metric.close()
 		{'accuracy': 0.5,
- 		 'accuracy hashvalue': '913ba1d873921e28c4f8964cd1683d4301e3712a351672b5129f3fc3fac53852'}
+		'accuracy hashvalue': '913ba1d873921e28c4f8964cd1683d4301e3712a351672b5129f3fc3fac53852'}
 
 	'''
 

@@ -20,8 +20,8 @@ class NgramFwBwPerplexityMetric(MetricBase):
 		>>> gen_key = "gen"
 		>>> metric = cotk.metric.NgramFwBwPerplexityMetric(dl, 2, dl.get_all_batch('test')['sent'][0], gen_key=gen_key)
 		>>> data = {
-		...		gen_key: [[10, 1028, 479, 285, 220, 3], [851, 17, 2451, 3]]
-		...		# gen_key: [["I", "love", "java", "very", "much", "<eos>"], ["python", "is", "excellent", "<eos>"]],
+		...	    gen_key: [[10, 1028, 479, 285, 220, 3], [851, 17, 2451, 3]]
+		...	    # gen_key: [["I", "love", "java", "very", "much", "<eos>"], ["python", "is", "excellent", "<eos>"]],
 		... }
 		>>> metric.forword(data)
 		>>> metric.close()

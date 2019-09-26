@@ -75,8 +75,8 @@ class _PrecisionRecallMetric(MetricBase):
 					>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
 					>>> #   "been", "to", "China"]
 					>>> data = {
-					... 	candidate_allvocabs_key: [[[4], [5,6]], [[4,5,6]]],
-					...		multiple_gen_key: [[[5,6,3]], [[4,5,7,3], [8,3]]]
+					...     candidate_allvocabs_key: [[[4], [5,6]], [[4,5,6]]],
+					...	    multiple_gen_key: [[[5,6,3]], [[4,5,7,3], [8,3]]]
 					... }
 
 		'''
@@ -152,10 +152,10 @@ class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
 		>>> multiple_gen_key='multiple_gen'
 		>>> metric = cotk.metric.BleuPrecisionRecallMetric(dl, 2, 2)
 		>>> data = {
-		...		candidate_allvocabs_key: [[[10, 64, 851], [10, 48, 851]]],
-		...		# candidate_allvocabs_key: [[["I", "like", "python"], ["I", "use", "python"]]],
-		... 	multiple_gen_key: [[[10, 64, 479, 3], [10, 48, 2019, 3]]],
-		... 	# multiple_gen_key: [[["I", "like", "java", "<eos>"], ["I", "use", "PHP", "<eos>"]]],
+		...	    candidate_allvocabs_key: [[[10, 64, 851], [10, 48, 851]]],
+		...	    # candidate_allvocabs_key: [[["I", "like", "python"], ["I", "use", "python"]]],
+		...     multiple_gen_key: [[[10, 64, 479, 3], [10, 48, 2019, 3]]],
+		...     # multiple_gen_key: [[["I", "like", "java", "<eos>"], ["I", "use", "PHP", "<eos>"]]],
 		... }
 		>>> metric.forword(data)
 		>>> metric.close()
@@ -244,10 +244,10 @@ class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
 		>>> wordvector = cotk.wordvector.Glove()
 		>>> metric = cotk.metric.EmbSimilarityPrecisionRecallMetric(dl, wordvector.load_dict(dl.all_vocab_list()), 'avg', 2)
 		>>> data = {
-		...		candidate_allvocabs_key: [[[10, 64, 851], [10, 48, 851]]],
-		...		# candidate_allvocabs_key: [[["I", "like", "python"], ["I", "use", "python"]]],
-		... 	multiple_gen_key: [[[10, 64, 479, 3], [10, 48, 2019, 3]]],
-		... 	# multiple_gen_key: [[["I", "like", "java", "<eos>"], ["I", "use", "PHP", "<eos>"]]],
+		...	    candidate_allvocabs_key: [[[10, 64, 851], [10, 48, 851]]],
+		...	    # candidate_allvocabs_key: [[["I", "like", "python"], ["I", "use", "python"]]],
+		...     multiple_gen_key: [[[10, 64, 479, 3], [10, 48, 2019, 3]]],
+		...     # multiple_gen_key: [[["I", "like", "java", "<eos>"], ["I", "use", "PHP", "<eos>"]]],
 		... }
 		>>> metric.forword(data)
 		>>> metric.close()
