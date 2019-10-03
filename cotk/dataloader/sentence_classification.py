@@ -122,7 +122,7 @@ class SST(SentenceClassification):
 					marked as invalid words. Otherwise, they are unknown words, both in training or
 					testing stages. Default: 0 (No unknown words).
 
-	Refer to :class:`.LanguageProcessingBase` for attributes and methods.
+	Refer to :class:`.SentenceClassification` for attributes and methods.
 
 	References:
 		[1] http://images.cocodataset.org/annotations/annotations_trainval2017.zip
