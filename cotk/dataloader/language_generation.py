@@ -73,7 +73,7 @@ class LanguageGeneration(LanguageProcessingBase):
 	def _load_data(self):
 		r'''Loading dataset, invoked during the initialization of :class:`LanguageProcessingBase`.
 		'''
-		return super()._general_load_data(self._file_path, [['sent', 'sentence']], \
+		return super()._general_load_data(self._file_path, [['sent', 'Sentence']], \
 			self._min_vocab_times, self._max_sent_length, None, self._invalid_vocab_times)
 
 	def get_batch(self, key, indexes):

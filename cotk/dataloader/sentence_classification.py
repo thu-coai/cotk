@@ -146,7 +146,7 @@ class SST(SentenceClassification):
 		'''
 		vocab_list, valid_vocab_len, data, data_size = \
 			super()._general_load_data(self._file_path,
-									[['sent', 'sentence']],
+									[['sent', 'Sentence']],
 									self._min_vocab_times,
 									self._max_sent_length,
 									None,

@@ -3,12 +3,252 @@ A module for dataloader
 '''
 import random
 from collections import Counter
+from itertools import chain
 
 import numpy as np
 from nltk.tokenize import WordPunctTokenizer
 
 from .._utils import trim_before_target
 from .._utils.metaclass import DocStringInheritor, LoadClassInterface
+
+
+class DataField(LoadClassInterface, metaclass=DocStringInheritor):
+	"""A class that helps process a dataset. It knows the structure of a dataset. Thus, It can get sentences(or sessions,
+	or labels, etc) from the raw dataset. It can get all tokens in the dataset and help build a vocabulary list. It can
+	convert tokens into ids."""
+
+	@classmethod
+	def get_field(cls, field):
+		"""If field is an instance of DataField, return it.
+			If field is a subclass of DataField, return its instance(assumes that its `__init__` method accepts no arguments).
+			If field is a string, we assume it's the name of a subclass of DataField. Search the class and return its instance.
+
+			Args:
+				field (str, type, DataField): the data format of dataset.
+
+			Returns　(DataField):
+
+			"""
+		if isinstance(field, str):
+			field = DataField.load_class(field)
+		if isinstance(field, type) and issubclass(field, DataField):
+			field = field()
+		if not isinstance(field, DataField):
+			raise TypeError(
+				'argument `field` must be a DataField instance, or a subclass of DataField, or the name(str) of a subclass of DataField.')
+		return field
+
+	GET_NEXT_ARG = """
+			dataset(Iterator): an Iterator of data.
+
+		Raises:
+			StopIteration
+	"""
+
+	def get_next(self, dataset):
+		"""read **several(one or more)** elements and returns the next data. Note that it may raise StopIteration.
+
+		Args:{GET_NEXT_ARG}
+		"""
+		return next(dataset)
+
+	def __call__(self, dataset):
+		"""Convert an iterator of data to another iterator of data. At each turn, it reads several elements
+		from dataset, and transform them to a new format of data, using self.get_next.
+
+		Args:
+			dataset (Iterator): an Iterator. Generally speaking, it's an Iterator of strings. But in fact, it can be an
+				Iterator of anything.
+		"""
+		while True:
+			try:
+				yield self.get_next(dataset)
+			except StopIteration:
+				break
+
+	CONVERT_TO_TOKENS_ARG = """
+			element(str): an element of a raw dataset. It may be a sentence, a session, or something else.
+			tokenize(callable): a callable object. If the element is a sentence,
+				or a session, it will be used to convert a sentence to a list of tokens."""
+
+	# pylint: disable=W0613
+	def convert_to_tokens(self, element, tokenize):
+		"""Try to convert an element to tokens, if it consists of several tokens. If the element is a sentence, a list of
+		tokens will be returned. If the element is a session, a list of lists of tokens will be returned. By default, it does
+		nothing and just return the element.
+
+		Args:{CONVERT_TO_TOKENS_ARG}
+		"""
+		return element
+
+	# pylint: disable=W0613
+	def iter_sentence(self, element):
+		"""Returns an generator of the sentences in the element.
+
+		Args:
+			element: An element of the dataset. It is returned by the method `convert_to_tokens`.
+		"""
+		yield from ()
+
+	def iter_tokens(self, element):
+		"""Returns an generator of the tokens in the element. This is used for building vocabulary list.
+
+		Args:
+			element: An element of the dataset. It is returned by the method `convert_to_tokens`.
+		"""
+		for sent in self.iter_sentence(element):
+			yield from sent
+
+	CONVERT_TO_IDS_ARG = """
+			element: An element of the dataset. It is returned by the method `convert_to_tokens`.
+			word2id(dict): A dict which maps word(str) to id(int).
+			dataloader(Dataloader): A Dataloader, whose attribute `go_id`, `eos_id` are used.
+	"""
+
+	def convert_to_ids(self, element, word2id, dataloader):
+		"""Convert the element to ids.
+
+		Args:{CONVERT_TO_IDS_ARG}
+		"""
+		return element
+
+	CUT_ARG = """
+			element: An element of the dataset. It is returned by the method `convert_to_ids`."""
+
+	def cut(self, element, **kwargs):
+		"""Cut the element if necessary.
+
+		Args:{CUT_ARG}
+			**kwargs: Keyword arguments.
+		"""
+		return element
+
+
+class Sentence(DataField):
+	"""Each element in a dataset(Iterator) represent a sentence."""
+	def get_next(self, dataset):
+		"""read **several(one or more)** elements and returns the next sentence. Note that it may raise StopIteration.
+
+		Args:{DataField.GET_NEXT_ARG}
+
+		Examples:
+			>>> dataset = iter(["I\\n", "love\\n", "NLP\\n"])
+			>>> field = Sentence()
+			>>> field.get_next(dataset)
+			"I"
+			>>> field.get_next(dataset)
+			"love"
+			>>> field.get_next(dataset)
+			"NLP"
+		"""
+		return next(dataset).rstrip()
+
+	def convert_to_tokens(self, element, tokenize):
+		"""Convert the element(sentence) to a list of tokens.
+
+		Args:{DataField.CONVERT_TO_TOKENS_ARG}
+		"""
+		return tokenize(element)
+
+	def iter_sentence(self, element):
+		yield element
+
+	def convert_to_ids(self, element, word2id, dataloader):
+		"""Convert the element(sentence) to ids(a list of integers).
+
+		Args:{DataField.CONVERT_TO_IDS_ARG}"""
+
+		return [dataloader.go_id] + \
+					list(map(lambda word: word2id[word] if word in word2id else dataloader.unk_id, element)) \
+					+ [dataloader.eos_id]
+
+	# pylint: disable=W0221
+	def cut(self, element, max_sent_length=None, **_):
+		"""Cut the element(sentence) if it's too long.
+
+		Args:{DataField.CUT_ARG}
+			max_sent_length(int): If the length of `element`(sentence) is more than `max_sent_length`,
+				it'll be cut off. If `max_sent_length` is None, the sentence won't be cut. Default, None.
+		"""
+		return element[: max_sent_length] if max_sent_length is not None else element
+
+
+class Session(DataField):
+	"""Several(one or more) elements in a dataset(Iterator), the last one of which is '\\n', represent a session."""
+	def get_next(self, dataset):
+		r"""read **several(one or more)** elements and returns the next session. The first several non-space elements,
+		followed by a '\\n', are regarded as a session. The first element must not be empty string or '\\n'.
+		Note that it may raise StopIteration.
+
+		Args:{DataField.GET_NEXT_ARG}
+
+		Examples:
+			>>> dataset = iter(["a\n", "b\n", "\n", "c\n", "d\e", "e\n", '\n'])
+			>>> field = Session()
+			>>> field.get_next(dataset)
+			['a', 'b']
+			>>> field.get_next(dataset)
+			['c', 'd', 'e']
+		"""
+		session = []
+		while True:
+			try:
+				line = next(dataset)
+				if line == '\n':
+					break
+				session.append(line.rstrip())
+			except StopIteration:
+				break
+		if not session:
+			raise StopIteration
+		return session
+
+	def convert_to_tokens(self, element, tokenize):
+		"""Convert the element(session) to a list of lists of tokens.
+
+		Args:{DataField.CONVERT_TO_TOKENS_ARG}
+		"""
+		return [tokenize(sentence) for sentence in element]
+
+	def iter_sentence(self, element):
+		yield from element
+
+	# pylint: disable=W0221
+	def cut(self, element, max_sent_length=None, max_turn_length=None, **_):
+		"""Cut the element(element) if it's too long.
+
+		Args:{DataField.CUT_ARG}
+			max_sent_length(int): If the length of `element`(sentence) is more than `max_sent_length`,
+				it'll be cut off. If `max_sent_length` is None, the sentence won't be cut.
+			max_turn_length(int): If the number of sentences in the element(session) is more than `max_turn_length`, the
+				session will be cut off. If `max_turn_length` is None, the session won't be cut. Default, None.
+		"""
+		return [Sentence().cut(sentence, max_sent_length) for sentence in element[: max_turn_length]]
+
+	def convert_to_ids(self, element, word2id, dataloader):
+		"""Convert the element(session) to ids(a list of lists of integers).
+
+		Args:{DataField.CONVERT_TO_IDS_ARG}"""
+		return [Sentence().convert_to_ids(sentence, word2id, dataloader) for sentence in element]
+
+
+class Label(DataField):
+	"""Each element in a dataset(Iterator) represents a label."""
+	def get_next(self, dataset):
+		r"""read text and returns the next label(integer). Note that it may raise StopIteration.
+
+		Args:{DataField.GET_NEXT_ARG}
+
+		Examples:
+			>>> dataset = iter(["1\n", "0\n"])
+			>>> field = Label()
+			>>> field.get_next(dataset)
+			1
+			>>> field.get_next(dataset)
+			0
+		"""
+		label = next(dataset)
+		return int(label.strip())
 
 
 class Dataloader(LoadClassInterface, metaclass=DocStringInheritor):
@@ -106,21 +346,30 @@ class LanguageProcessingBase(Dataloader):
 		else:
 			raise ValueError('tokenizer of dataloader should be either "nltk" or "space"')
 
-	def _general_load_data(self, file_path, data_format, min_vocab_times, max_sent_length, max_turn_length,
+	def _general_load_data(self, file_path, data_fields, min_vocab_times, max_sent_length, max_turn_length,
 						   invalid_vocab_times):
 		r'''This function implements a general loading process.
 
 		Arguments:
 			file_path (str): A string indicating the path of dataset.
-			data_format (list): A list of (key, data_type) pairs, which indicate what the dataset contains. data_type
-				must be in ('label', 'sentence', 'session').
-				For example, data_format=[['key1', 'sentence'], ['key2', 'label']] means that, in the raw file,
-				the first line is a sentence and the second line is a label. They are saved in a dict.
-				dataset = {'key1': [line1, line3, line5, ...], 'key2': [line2, line4, line6, ...]}
+			data_fields (dict, list, tuple): If it's a list(tuple), it must be a list of (key, field) pairs.
+				Field must be a DataField instance,
+				or a subclass of DataField(in this case, its instance will be used, assuming its constructor accepts no arguments),
+				or a string(in this case, the instance of the class, whose __name__ is field, will be used).
 
-				data_format=[['key1', 'session], ['key2', 'label']], means that, in the raw file, the first *several lines*
+				For example, data_fields=[['post', 'Sentence'], ['label', Label]] means that,
+				in the raw file, the first line is a sentence and the second line is a label. They are saved in a dict.
+				dataset = {'post': [line1, line3, line5, ...], 'label': [line2, line4, line6, ...]}
+
+				data_fields=[['key1', 'Session'], ['key2', Label()]], means that, in the raw file, the first *several lines*
 				is a session, *followed by an empty line*, and the next line is a label.
 				dataset = {'key1': [session1, session2, ...], 'key2': [label1, label2, ...]}
+
+				If it's a dict, different datasets may have different formats.(If `data_fields` is a list or a tuple, different datasets have the same format).
+				Its keys are the same as `self.key_name` that indicate the datasets, and the values are lists as mentioned above.
+				For example, data_fields = {'train': [['sess', 'Session'], ['label', 'Label']], 'test': [['sess', 'session']]},
+				means that the train set contains sessions and labels, but the test set only contains sessions.
+
 			min_vocab_times (int): A cut-off threshold of valid tokens. All tokens appear
 				not less than `min_vocab_times` in **training set** will be marked as valid words.
 			max_sent_length (int): All sentences longer than ``max_sent_length`` will be shortened
@@ -143,81 +392,55 @@ class LanguageProcessingBase(Dataloader):
 			* **data** (dict): a dict contains data.
 			* **data_size** (dict): a dict contains size of each item in data.
 		'''
-		unknown_type = set(type_ for _, type_ in data_format) - {'label', 'sentence', 'session'}
-		if unknown_type:
-			raise ValueError('data type must be in ["label", "sentence", "session"]. %s are not allowed' % list(unknown_type))
+		def get_fields(fields):
+			assert isinstance(fields, list) or isinstance(fields, tuple)
+			return [(data_key, DataField.get_field(field)) for data_key, field in fields]
 
-		def read_sentence(lines):
-			return next(lines).rstrip()
+		if isinstance(data_fields, dict):
+			no_field_keys = [key for key in self.key_name if key not in data_fields]
+			if no_field_keys:
+				raise ValueError('There is no data fields for dataset(%s) ' % ', '.join(no_field_keys))
+			try:
+				data_fields = {key: get_fields(data_fields[key]) for key in self.key_name}
+			except AssertionError:
+				raise TypeError('If `data_field` is a dict, its value must be a list(or tuple) of lists(or tuples).')
+		elif isinstance(data_fields, list) or isinstance(data_fields, tuple):
+			data_fields = get_fields(data_fields)
+			data_fields = {key: data_fields for key in self.key_name}
+		else:
+			raise TypeError('`data_fields` must be a dict, or a list, or a tuple.')
 
-		def read_session(lines):
-			session = []
-			while True:
-				try:
-					line = next(lines)
-					if line == '\n':
-						break
-					session.append(line.rstrip())
-				except StopIteration:
-					break
-			if not session:
-				raise StopIteration
-			return session
+		# now data_fields is a dict. Keys are the same as self.key_name('train', 'test', 'dev', etc.). Each value is
+		# a list(tuple) of lists(tuples), which means (data_key(str), data_field(DataField)) pairs.
+		# For example,
+		# data_fields == {'train': [['sent', Sentence()], ['label', Label()]],
+		# 'test': [['sent', Sentence()], ['label', Label()]]}.
+		# Note, different dataset may have different fields.
 
-		def read_label(lines):
-			label = int(next(lines).strip())
-			return label
-
-		read_functions = {
-			'label': read_label,
-			'sentence': read_sentence,
-			'session': read_session,
-		}
-
-		def read(lines, type_):
-			return read_functions[type_](lines)
-
-		def to_tokens(element, type_, tokenize):
-			if type_ == 'label':
-				return element
-			if type_ == 'sentence':
-				return tokenize(element)
-			if type_ == 'session':
-				return [tokenize(sentence) for sentence in element]
-
-		def iter_sentence(element, type_):
-			if type_ == 'label':
-				pass
-			elif type_ == 'sentence':
-				yield element
-			elif type_ == 'session':
-				yield from element
-			else:
-				pass
-
-		def iter_token(element, type_):
-			for sentence in iter_sentence(element, type_):
-				yield from sentence
-
+		special_tokens = set(self.ext_vocab)
 		origin_data = {}
 		for key in self.key_name:
-			origin_data[key] = {data_key: [] for data_key, _ in data_format}
+			origin_data[key] = {data_key: [] for data_key, _ in data_fields[key]}
 			with open("%s/%s.txt" % (file_path, key), encoding='utf-8') as f_file:
 				while True:
 					try:
-						for data_key, type_ in data_format:
-							origin_data[key][data_key].append(to_tokens(read(f_file, type_), type_, self.tokenize))
+						for data_key, field in data_fields[key]:
+							element = field.convert_to_tokens(field.get_next(f_file), self.tokenize)
+							for token in field.iter_tokens(element):
+								if token in special_tokens:
+									raise RuntimeError('The dataset contains special token "%s". This is not allowed.' % token)
+							origin_data[key][data_key].append(element)
 					except StopIteration:
 						break
 
-		def chain_allvocab(dic):
-			li = []
-			for key, type_ in data_format:
-				for element in dic[key]:
-					li.extend(iter_token(element, type_))
-			return li
+		def chain_allvocab(dic, fields):
+			vocabs = []
+			for data_key, field in fields:
+				for element in dic[data_key]:
+					vocabs.extend(field.iter_tokens(element))
+			return vocabs
 
-		raw_vocab_list = chain_allvocab(origin_data['train'])
+		raw_vocab_list = chain_allvocab(origin_data['train'], data_fields['train'])
 		# Important: Sort the words preventing the index changes between
 		# different runs
 		vocab = sorted(Counter(raw_vocab_list).most_common(), \
@@ -230,7 +453,7 @@ class LanguageProcessingBase(Dataloader):
 		for key in self.key_name:
 			if key == 'train':
 				continue
-			raw_vocab_list.extend(chain_allvocab(origin_data[key]))
+			raw_vocab_list.extend(chain_allvocab(origin_data[key], data_fields[key]))
 
 		vocab = sorted(Counter(raw_vocab_list).most_common(), \
 					   key=lambda pair: (-pair[1], pair[0]))
@@ -242,53 +465,35 @@ class LanguageProcessingBase(Dataloader):
 
 		word2id = {w: i for i, w in enumerate(vocab_list)}
 
-		def line2id(line):
-			return [self.go_id] + \
-					list(map(lambda word: word2id[word] if word in word2id else self.unk_id, line)) \
-					+ [self.eos_id]
-
-		def to_id(element, type_):
-			if type_ == 'label':
-				return element
-			if type_ == 'sentence':
-				return line2id(element)
-			if type_ == 'session':
-				return [line2id(sentence) for sentence in element]
-
-		def cut(element, type_):
-			if type_ == 'label':
-				return element
-			if type_ == 'sentence':
-				return element[: max_sent_length]
-			if type_ == 'session':
-				return [sentence[:max_sent_length] for sentence in element[:max_turn_length]]
-
 		data = {}
 		data_size = {}
 		for key in self.key_name:
 			data[key] = {}
-			for data_key, type_ in data_format:
-				origin_data[key][data_key] = [to_id(element, type_) for element in origin_data[key][data_key]]
-				data[key][data_key] = [cut(element, type_) for element in origin_data[key][data_key]]
+			for data_key, field in data_fields[key]:
+				origin_data[key][data_key] = [field.convert_to_ids(element, word2id, self) for element in origin_data[key][data_key]]
+				data[key][data_key] = [
+					field.cut(element, max_sent_length=max_sent_length, max_turn_length=max_turn_length) for element in
+					origin_data[key][data_key]]
 				if key not in data_size:
 					data_size[key] = len(data[key][data_key])
 				elif data_size[key] != len(data[key][data_key]):
 					raise RuntimeError(
 						"The data of input %s.txt contains different numbers of fields" % key)
 
-			vocab = chain_allvocab(origin_data[key])
+			vocab = chain_allvocab(origin_data[key], data_fields[key])
 			vocab_num = len(vocab)
 			oov_num = sum([word not in word2id for word in vocab])
 			invalid_num = sum([word not in valid_vocab_set for word in vocab]) - oov_num
 
 			sent_length = []
-			for data_key, type_ in data_format:
-				if type_ != 'label':
-					sent_length.extend([len(sent) for element in origin_data[key][data_key] for sent in iter_sentence(element, type_)])
+			for data_key, field in data_fields[key]:
+				sent_length.extend([len(sent) for element in origin_data[key][data_key] for sent in field.iter_sentence(element)])
 
 			cut_word_num = np.sum(np.maximum(np.array(sent_length) - max_sent_length, 0))
-			if 'session' in [type_ for _, type_ in data_format]:
-				turn_length = list(map(len, origin_data[key]['session']))
+
+			session_keys = [data_key for data_key, field in data_fields[key] if field.__class__ == Session]
+			if session_keys:
+				turn_length = list(map(len, chain.from_iterable((origin_data[key][sess_key] for sess_key in session_keys))))
 				max_turn_length_before_cut = max(turn_length)
 				sent_num = sum(turn_length)
 				cut_sentence_rate = np.sum(np.maximum(np.array(turn_length) - max_turn_length, 0)) / sent_num

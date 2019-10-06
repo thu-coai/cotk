@@ -4,6 +4,7 @@ import os
 import zipfile
 import shutil
 import json
+from itertools import chain
 from .metaclass import LoadClassInterface
 
 def unzip_file(src_path, dst_dir):
@@ -137,6 +138,62 @@ class SwitchboardCorpusResourceProcessor(BaseResourceProcessor):
 		'''Preprocess after download and before save.
 		'''
 		return self.basepreprocess(local_path, 'switchboard_corpus')
+
+	def postprocess(self, local_path):
+		local_path = super().postprocess(local_path)
+		new_local_path = os.path.join(local_path, 'processed')
+		os.makedirs(new_local_path, exist_ok=True)
+
+		for key in ['train', 'test', 'dev', 'multi_ref']:
+			filepath = os.path.join(local_path, 'switchboard_corpus_%s.jsonl' % key)
+			new_filepath = os.path.join(new_local_path, '%s.txt' % key)
+			res = self._read_file(filepath, key == 'multi_ref')
+
+			with open(new_filepath, 'w', encoding='utf-8') as fout:
+				if key != 'multi_ref':
+					dataset = res  # sessions
+				else:
+					sessions, responses = res
+					dataset = chain.from_iterable(zip(sessions, responses))  # [session1, response1, session2, response2, ...]
+					# response is like a session. Both contain several sentences.
+				for sess in dataset:
+					assert sess
+					for line in sess:
+						if line[-1] != '\n':
+							line += '\n'
+						fout.write(line)
+					fout.write('\n')
+		return new_local_path
+
+	def _read_file(self, filepath, read_multi_ref=False):
+		"""
+		Arguments:
+			filepath (str): Name of the file to read from
+			read_multi_ref (bool):
+				If False, add turn ``<d>`` ahead of each session
+				If True, add turn ``<d>`` at the end of each session and read candidate ``responses``
+		"""
+		sessions = []
+		if read_multi_ref:
+			responses = []
+		with open(filepath, "r", encoding='utf-8') as data_file:
+			for line in data_file:
+				line = json.loads(line)
+				prefix_utts = [['X', '<d>']] + line['utts']
+				# pylint: disable=cell-var-from-loop
+				suffix_utts = list(map(lambda utt: utt[1][1].strip() + ' ' \
+							if prefix_utts[utt[0]][0] == utt[1][0] \
+							else '<eos> ' + utt[1][1].strip() + ' ', enumerate(line['utts'])))
+				utts = ('<d> ' + "".join(suffix_utts).strip()).split("<eos>")
+				sess = utts[1:] + ['<d>'] if read_multi_ref else utts
+				sessions.append(sess)
+
+				if read_multi_ref:
+					responses.append([resp for _, resp in line['responses']])
+		if read_multi_ref:
+			return sessions, responses
+		else:
+			return sessions
 
 
 class SSTResourceProcessor(BaseResourceProcessor):

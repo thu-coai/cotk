@@ -63,11 +63,8 @@ class TestFileUtils():
 		res_path = get_resource_file_path(str(pathlib.Path('./tests/_utils/data/switchboard_corpus.zip#SwitchboardCorpus')))
 		assert os.path.isdir(res_path)
 
-		filenames = os.listdir(res_path)
-		assert res_path == str(pathlib.Path('./tests/_utils/data/switchboard_corpus.zip_unzip/switchboard_corpus'))
-		assert sorted(filenames) == sorted(os.listdir(os.path.join(data_dir, 'switchboard_corpus')))
-		for filename in filenames:
-			check(os.path.join(res_path, filename), os.path.join(data_dir, 'switchboard_corpus', filename))
+		for key in ['train', 'test', 'dev', 'multi_ref']:
+			assert os.path.isfile(os.path.join(res_path, key + '.txt'))
 
 		shutil.rmtree(str(pathlib.Path('./tests/_utils/data/switchboard_corpus.zip_unzip')))
 

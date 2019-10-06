@@ -255,7 +255,7 @@ class TestUbuntuCorpus(TestMultiTurnDialog):
 @pytest.fixture
 def load_switchboardcorpus():
 	def _load_switchboardcorpus(invalid_vocab_times=0):
-		return SwitchboardCorpus("./tests/dataloader/dummy_switchboardcorpus", invalid_vocab_times=invalid_vocab_times)
+		return SwitchboardCorpus("./tests/dataloader/dummy_switchboardcorpus#SwitchboardCorpus", invalid_vocab_times=invalid_vocab_times)
 	return _load_switchboardcorpus
 
 class TestSwitchboardCorpus(TestMultiTurnDialog):

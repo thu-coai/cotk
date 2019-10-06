@@ -1,5 +1,6 @@
 """A lib for decorator and metaclass"""
 import re
+import inspect
 
 class DocStringInheritor(type):
 	"""
@@ -103,7 +104,13 @@ class LoadClassInterface:
 		Returns:
 			(class) The subclass specified by ``class_name``
 		'''
+		result = None
 		for subclass in cls.get_all_subclasses():
 			if subclass.__name__ == class_name:
-				return subclass
-		return None
+				if result is None:
+					result = subclass
+				else:
+					raise RuntimeError('There are two classes with the name "{}" located at "{}" and "{}". \
+						You have to remove one of them to make "load_class" work normally.'.format(\
+						class_name, inspect.getfile(result), inspect.getfile(subclass)))
+		return result

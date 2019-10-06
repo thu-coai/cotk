@@ -1,17 +1,13 @@
 """
 A module for multi turn dialog.
 """
-import csv
-from collections import Counter
 from itertools import chain
-import json
 
 import numpy as np
 
-from nltk.tokenize import WordPunctTokenizer
 from .._utils.file_utils import get_resource_file_path
 from .._utils import hooks
-from .dataloader import LanguageProcessingBase
+from .dataloader import LanguageProcessingBase, Session
 from ..metric import MetricChain, MultiTurnPerplexityMetric, MultiTurnBleuCorpusMetric, \
 	MultiTurnDialogRecorder
 from ..metric import BleuPrecisionRecallMetric, EmbSimilarityPrecisionRecallMetric
@@ -345,11 +341,12 @@ class UbuntuCorpus(MultiTurnDialog):
 	def _load_data(self):
 		r'''Loading dataset, invoked during the initialization of :class:`MultiTurnDialog`.
 		'''
-		return super()._general_load_data(self._file_path, [['session', 'session']], self._min_vocab_times,
+		return super()._general_load_data(self._file_path, [['session', 'Session']], self._min_vocab_times,
 										  self._max_sent_length, self._max_turn_length, self._invalid_vocab_times)
 
 	def tokenize(self, sentence, remains_capital=False, tokenizer='nltk'):
 		return super().tokenize(sentence, remains_capital, tokenizer)
+
 
 class SwitchboardCorpus(MultiTurnDialog):
 	'''A dataloader for Switchboard dataset.
@@ -384,123 +381,26 @@ class SwitchboardCorpus(MultiTurnDialog):
 		self.word2id = {}
 		super().__init__()
 
-	def _convert2ids(self, origin_data):
-		'''Convert topic, da, word to ids, invoked by :meth:`._load_data`
-
-		Arguments:
-			origin_data (dict): Contains at least:
-
-				* session (list): A 3-d list, utterances in words.
-				  The size of the outermost list is num_data.
-				  The size of the second innermost list is the number of utterances in a session.
-				  The size of the innermost list is the number of words in a utterance.
-
-		Returns:
-			(dict): Contains:
-
-			* session (list): utterances represented in index form. Size: same as input
-		'''
-		data = {}
-		sess2id = lambda sess: [([self.go_id] + \
-								 list(map(lambda word: self.word2id.get(word, self.unk_id), utt)) + \
-								 [self.eos_id])[:self._max_sent_length] for utt in sess]
-		cand2id = lambda cand: [list(map(lambda word: self.word2id.get(word, self.unk_id), resp)) \
-								for resp in cand]
-		data['session'] = list(map(sess2id, origin_data['session']))
-		if 'candidate_allvocabs' in origin_data:
-			data['candidate_allvocabs'] = list(map(cand2id, origin_data['candidate_allvocabs']))
-		return data
-
-	def _read_file(self, filepath, read_multi_ref=False):
-		'''Reading data from file, invoked during the initialization of :class:`MultiTurnDialog`.
-
-		Arguments:
-			filepath (str): Name of the file to read from
-			read_multi_ref (bool):
-				If False, add turn ``<d>`` ahead of each session
-				If True, add turn ``<d>`` at the end of each session and read candidate ``responses``
-		'''
-		origin_data = {'session': []}
-		if read_multi_ref:
-			origin_data['candidate_allvocabs'] = []
-		with open(filepath, "r", encoding='utf-8') as data_file:
-			for line in data_file:
-				line = json.loads(line)
-				prefix_utts = [['X', '<d>']] + line['utts']
-				# pylint: disable=cell-var-from-loop
-				suffix_utts = list(map(lambda utt: utt[1][1].strip() + ' ' \
-							if prefix_utts[utt[0]][0] == utt[1][0] \
-							else '<eos> ' + utt[1][1].strip() + ' ', enumerate(line['utts'])))
-				utts = ('<d> ' + "".join(suffix_utts).strip()).split("<eos>")
-				sess = list(map(lambda utt: WordPunctTokenizer().tokenize(utt), utts))
-				sess = sess[1:] + [['<d>']] if read_multi_ref else sess
-				origin_data['session'].append(sess[:self._max_turn_length])
-
-				if read_multi_ref:
-					origin_data['candidate_allvocabs'].append(list(map(\
-						lambda resp: WordPunctTokenizer().tokenize(resp[1]), line['responses'])))
-		return origin_data
-
-	def _build_vocab(self, origin_data):
-		r'''Building vocabulary(words, topics, da), invoked by `SwitchboardCorpus._load_data`
-		'''
-		raw_vocab = list(chain(*chain(*origin_data['train']['session'])))
-		vocab = sorted(Counter(raw_vocab).most_common(), key=lambda pair: (-pair[1], pair[0]))
-		left_vocab = list(filter(lambda x: x[1] >= self._min_vocab_times, vocab))
-		left_vocab = list(map(lambda x: x[0], left_vocab))
-		vocab_list = self.ext_vocab + left_vocab
-		self.valid_vocab_len = len(vocab_list)
-		valid_vocab_set = set(vocab_list)
-
-		for key in self.key_name:
-			if key == 'train':
-				continue
-			if key == 'multi_ref':
-				raw_vocab.extend(list(chain(*chain(*origin_data[key]['candidate_allvocabs']))))
-			raw_vocab.extend(list(chain(*chain(*(origin_data[key]['session'])))))
-		vocab = sorted(Counter(raw_vocab).most_common(), key=lambda pair: (-pair[1], pair[0]))
-		left_vocab = list(filter(lambda x: \
-				x[1] >= self._invalid_vocab_times and x[0] not in valid_vocab_set, vocab))
-		left_vocab = list(map(lambda x: x[0], left_vocab))
-		vocab_list.extend(left_vocab)
-
-		self.word2id = {w: i for i, w in enumerate(vocab_list)}
-
-		print("valid vocab list length = %d" % self.valid_vocab_len)
-		print("vocab list length = %d" % len(vocab_list))
-		return vocab_list, valid_vocab_set
-
 	def _load_data(self):
 		r'''Loading dataset, invoked during the initialization of :class:`MultiTurnDialog`.
 		'''
-		origin_data = {}
-		self.key_name.append('multi_ref')
-		for key in self.key_name:
-			origin_data[key] = self._read_file('%s/switchboard_corpus_%s.jsonl' % (self._file_path, key), \
-											   read_multi_ref=(key == 'multi_ref'))
+		if 'multi_ref' not in self.key_name:
+			self.key_name.append('multi_ref')
+		data_fields = {key: [['session', 'Session']] for key in self.key_name}
 
-		vocab_list, valid_vocab_set = self._build_vocab(origin_data)
+		class Candidate(Session):
+			"""Each candidate contains several sentences. These sentences won't be cut."""
+			def cut(self, element, max_sent_length=None, max_turn_length=None):
+				# don\'t cut
+				return super().cut(element, None, None)
 
-		data = {}
-		data_size = {s: 0 for s in self.key_name}
-		for key in self.key_name:
-			data[key] = self._convert2ids(origin_data[key])
-			data_size[key] = len(data[key]['session'])
-
-			vocab = list(chain(*chain(*(origin_data[key]['session']))))
-			vocab_num = len(vocab)
-			oov_num = len(list(filter(lambda word: word not in self.word2id, vocab)))
-			invalid_vocab_num = len(list(filter(lambda word: \
-											word not in valid_vocab_set, vocab))) - oov_num
-			sent_lens = list(map(len, chain(*origin_data[key]['session'])))
-			cut_word_num = np.sum(np.maximum(np.array(sent_lens) - self._max_sent_length + 2, 0))
-			turn_lens = list(map(len, origin_data[key]['session']))
-			cut_sent_num = np.sum(np.maximum(np.array(turn_lens) - self._max_turn_length, 0))
-			print(("%s set. invalid rate: %f, unknown rate: %f, max sentence length before cut: %d, " + \
-				   "cut word rate: %f\n\tmax turn length before cut: %d, cut sentence rate: %f") % \
-				  (key, invalid_vocab_num / vocab_num, oov_num / vocab_num, max(sent_lens), \
-				   cut_word_num / vocab_num, max(turn_lens), cut_sent_num / np.sum(turn_lens)))
-		return vocab_list, len(valid_vocab_set), data, data_size
+		data_fields['multi_ref'].append(['candidate_allvocabs', Candidate()])
+		return super()._general_load_data(self._file_path,
+										  data_fields,
+										  self._min_vocab_times,
+										  self._max_sent_length,
+										  self._max_turn_length,
+										  self._invalid_vocab_times)
 
 	def tokenize(self, sentence):
 		r'''Convert sentence(str) to list of token(str)
@@ -511,7 +411,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 		Returns:
 			sent (list): list of token(str)
 		'''
-		return WordPunctTokenizer().tokenize(sentence)
+		return super().tokenize(sentence, True, 'nltk')
 
 	def get_batch(self, key, indexes):
 		'''{LanguageProcessingBase.GET_BATCH_DOC_WITHOUT_RETURNS}
