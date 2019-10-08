@@ -12,6 +12,7 @@ Load common used dataset and preprocess for you:
 * Construct vocabulary list
 
 ```python
+    >>> import cotk.dataloader
     >>> # automatically download online resources
     >>> dataloader = cotk.dataloader.MSCOCO("resources://MSCOCO_small")
     >>> # or download from a url
@@ -83,6 +84,7 @@ We provide unified metrics implementation for all models. The metric object
 receives data in batch.
 
 ```python
+    >>> import cotk.metric
     >>> metric = cotk.metric.SelfBleuCorpusMetric(dataloader, gen_key="gen")
     >>> metric.forward({
     ...    "gen":

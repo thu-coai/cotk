@@ -19,8 +19,14 @@ Features included:
  * A dashboard to show experiments, compare your and others' models fairly.
  * Long-term maintenance and consistent development.
 
-This project is a part of ``thutk`` (Toolkits for Dialog System by Tsinghua University), you can follow [thutk](http://coai.cs.tsinghua.edu.cn/thutk/) or 
-[cotk](http://coai.cs.tsinghua.edu.cn/thutk/cotk/) on our home page.
+This project is a part of ``dialtk`` (Toolkits for Dialog System by Tsinghua University), you can follow [dialtk](http://coai.cs.tsinghua.edu.cn/dialtk/) or [cotk](http://coai.cs.tsinghua.edu.cn/dialtk/cotk/) on our home page.
+
+**Quick links**
+
+* [Tutorial & Documents](https://thu-coai.github.io/cotk_docs/)
+* [Dashboard](http://coai.cs.tsinghua.edu.cn/dashboard/)
+
+**Index**
 
 - [Installation](#installation)
   - [Requirements](#requirements)
@@ -32,7 +38,6 @@ This project is a part of ``thutk`` (Toolkits for Dialog System by Tsinghua Univ
   - [Publish Experiments](#publish-experiments)
   - [Reproduce Experiments](#reproduce-experiments)
   - [Predefined Models](#predefined-models)
-- [Documents & Tutorials](#documents--tutorials)
 - [Issues](#issues)
 - [Contributions](#Contributions)
 - [Team](#team)
@@ -42,10 +47,6 @@ This project is a part of ``thutk`` (Toolkits for Dialog System by Tsinghua Univ
 ~~ include ./meta_installation.md
 
 ~~ include ./meta_quickstart.md
-
-## Documents & Tutorials
-
-Follow [the link to document and tutorials](https://thu-coai.github.io/cotk_docs/).
 
 ## Issues
 

@@ -12,11 +12,11 @@ It easy to use and make you focus on designing your models!
 
 Features included:
 
-* Light-weight, easy to start. Don't bother your way to construct models.
-* Predefined standard datasets, in the domain of language modeling, dialog generation and more.
-* Predefined evaluation suites, test your model with multiple metrics in several lines.
-* A dashboard to show experiments, compare your and others' models fairly.
-* Long-term maintenance and consistent development.
+ * Light-weight, easy to start. Don't bother your way to construct models.
+ * Predefined standard datasets, in the domain of language modeling, dialog generation and more.
+ * Predefined evaluation suites, test your model with multiple metrics in several lines.
+ * A dashboard to show experiments, compare your and others' models fairly.
+ * Long-term maintenance and consistent development.
 
 This project is a part of ``dialtk`` (Toolkits for Dialog System by Tsinghua University), you can follow [dialtk](http://coai.cs.tsinghua.edu.cn/dialtk/) or [cotk](http://coai.cs.tsinghua.edu.cn/dialtk/cotk/) on our home page.
 
@@ -96,6 +96,7 @@ Load common used dataset and preprocess for you:
 * Construct vocabulary list
 
 ```python
+    >>> import cotk.dataloader
     >>> # automatically download online resources
     >>> dataloader = cotk.dataloader.MSCOCO("resources://MSCOCO_small")
     >>> # or download from a url
@@ -112,8 +113,8 @@ Inspect vocabulary list
 ```python
     >>> print("Vocabulary size:", dataloader.vocab_size)
     Vocabulary size: 2588
-    >>> print("Frist 10 tokens in vocabulary:", dataloader.vocab_list[:10])
-    Frist 10 tokens in vocabulary: ['<pad>', '<unk>', '<go>', '<eos>', '.', 'a', 'A', 'on', 'of', 'in']
+    >>> print("First 10 tokens in vocabulary:", dataloader.vocab_list[:10])
+    First 10 tokens in vocabulary: ['<pad>', '<unk>', '<go>', '<eos>', '.', 'a', 'A', 'on', 'of', 'in']
 ```
 
 Convert between ids and strings
@@ -152,7 +153,7 @@ or using ``while`` if you like
 ```
 
 
-**note**: If you want to know more about data loader, please refer to [docs](https://thu-coai.github.io/cotk_docs/index.html#model-zoo).
+**note**: If you want to know more about data loader, please refer to [dataloader docs](https://thu-coai.github.io/cotk_docs/index.html#model-zoo).
 
 ### Metrics
 
@@ -165,6 +166,7 @@ We provide unified metrics implementation for all models. The metric object
 receives data in batch.
 
 ```python
+    >>> import cotk.metric
     >>> metric = cotk.metric.SelfBleuCorpusMetric(dataloader, gen_key="gen")
     >>> metric.forward({
     ...    "gen":
@@ -174,6 +176,24 @@ receives data in batch.
     >>> print(metric.close())
     {'self-bleu': 0.02206768072402293,
      'self-bleu hashvalue': 'c206893c2272af489147b80df306ee703e71d9eb178f6bb06c73cb935f474452'}
+```
+
+You can merge multiple metrics together by :class:``.cotk.metric.MetricChain``
+
+```python
+    >>> metric = cotk.metric.MetricChain()
+    >>> metric.add_metric(cotk.metric.SelfBleuCorpusMetric(dataloader, gen_key="gen"))
+    >>> metric.add_metric(cotk.metric.FwBwBleuCorpusMetric(dataloader, reference_test_list=dataloader.get_all_batch()['sent_allvocabs'], gen_key="gen"))
+    >>> metric.forward({
+    ...    "gen":
+    ...        [[2, 181, 13, 26, 145, 177, 8, 22, 12, 5, 3755, 1099, 4, 3],
+    ...         [2, 46, 145, 500, 1764, 207, 11, 5, 93, 7, 31, 4, 3]]
+    ... })
+    >>> print(metric.close())
+    {'self-bleu': 0.02206768072402293,
+     'self-bleu hashvalue': 'c206893c2272af489147b80df306ee703e71d9eb178f6bb06c73cb935f474452',
+     'fw-bleu': 0.3831004349785445, 'bw-bleu': 0.025958979254273006, 'fw-bw-bleu': 0.04862323612604027,
+     'fw-bw-bleu hashvalue': '530d449a096671d13705e514be13c7ecffafd80deb7519aa7792950a5468549e'}
 ```
 
 We also provide standard metrics for selected dataloader.
@@ -199,11 +219,11 @@ We also provide standard metrics for selected dataloader.
 ``Hash value`` is provided for checking whether the same dataset is used.
 
 
-**note**: If you want to know more about metrics, please refer to [docs](https://thu-coai.github.io/cotk_docs/metric.html).
+**note**: If you want to know more about metrics, please refer to [metrics docs](https://thu-coai.github.io/cotk_docs/metric.html).
 
 ### Publish Experiments
 
-We provide an online dashboard to manage your experiments.
+We provide an online [dashboard](http://coai.cs.tsinghua.edu.cn/dashboard/) to manage your experiments.
 
 Here we give an simple example for you.
 
@@ -247,10 +267,10 @@ Next, commit your changes and set upstream branch in your command line.
 Finally, type ``cotk run`` to run your model and upload to cotk dashboard.
 
 ``cotk`` will automatically collect your git repo, username, commit and ``result.json``
-to the cotk dashboard (TO BE ONLINE).The dashboard is a website where you can manage
+to the cotk dashboard.The dashboard is a website where you can manage
 your experiments or share results with others.
 
-FILL AN IMAGE HERE
+![dashboard](https://github.com/thu-coai/cotk/blob/master/docs/source/notes/dashboard.png)
 
 If you don't want to use cotk's dashboard, you can also choose to directly upload your model
 to github.
@@ -301,6 +321,7 @@ You can also download directly from github if the maintainer has set the ``.mode
 We have provided some baselines for the classical tasks, see [Model Zoo](https://thu-coai.github.io/cotk_docs/index.html#model-zoo) in docs for details.
 
 You can also use ``cotk download thu-coai/MODEL_NAME/master`` to get the codes.
+
 
 ## Issues
 
