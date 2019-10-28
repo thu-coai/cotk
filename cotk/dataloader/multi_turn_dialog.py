@@ -33,9 +33,9 @@ class MultiTurnDialog(LanguageProcessingBase):
 		super().__init__(ext_vocab, key_name)
 
 	GET_BATCH_RETURNS_DICT = r'''
-			* turn_length(list): A 1-d list, the number of turns in sessions.
+			* turn_length(:class:`numpy.ndarray`): A 1-d list, the number of turns in sessions.
 			  Size: ``[batch_size]``
-			* sent_length(list): A 2-d non-padded list, the length of sentence in turns.
+			* sent_length(:class:`numpy.ndarray`): A 2-d non-padded list, the length of sentence in turns.
 			  The second dimension is various in different session.
 			  Length of outer list: ``[batch_size]``
 			* sent(:class:`numpy.ndarray`): A 3-d padding array containing words of index form.
@@ -73,8 +73,8 @@ class MultiTurnDialog(LanguageProcessingBase):
 					[0, 0, 0, 0, 0, 0],
 					[0, 0, 0, 0, 0, 0]]
 				]),
-				"turn_length": [4, 2], # the number of turns in each session
-				"sent_length": [[3, 3, 5, 5], [6, 5]], # length of sentences'''
+				"turn_length": np.array([4, 2]), # the number of turns in each session
+				"sent_length": np.array([np.array([3, 3, 5, 5]), np.array([6, 5])]), # length of sentences'''
 
 	def get_batch(self, key, indexes):
 		'''{LanguageProcessingBase.GET_BATCH_DOC_WITHOUT_RETURNS}
@@ -92,11 +92,12 @@ class MultiTurnDialog(LanguageProcessingBase):
 		if key not in self.key_name:
 			raise ValueError("No set named %s." % key)
 		res = {}
-		res["turn_length"] = [len(self.data[key]['session'][i]) for i in indexes]
+		res["turn_length"] = np.array([len(self.data[key]['session'][i]) for i in indexes], dtype=int)
 		res["sent_length"] = []
 		for i in indexes:
-			sent_length = [len(sent) for sent in self.data[key]['session'][i]]
+			sent_length = np.array([len(sent) for sent in self.data[key]['session'][i]], dtype=int)
 			res["sent_length"].append(sent_length)
+		res["sent_length"] = np.array(res["sent_length"])
 		res_sent = res["sent"] = np.zeros((len(indexes), np.max(res['turn_length']), \
 			np.max(list(chain(*res['sent_length'])))), dtype=int)
 		for i, index_i in enumerate(indexes):
@@ -437,10 +438,10 @@ class SwitchboardCorpus(MultiTurnDialog):
 			}
 		'''
 		res = super().get_batch(key, indexes)
-		gather = lambda sub_key: [self.data[key][sub_key][i] for i in indexes]
-		for sub_key in self.data[key]:
-			if sub_key not in res:
-				res[sub_key] = gather(sub_key)
+		if "candidate_allvocabs" in self.data[key]:
+			res['candidate_allvocabs'] = []
+			for i in indexes:
+				res['candidate_allvocabs'].append(self.data[key]['candidate_allvocabs'][i])
 		return res
 
 	def get_multi_ref_metric(self, generated_num_per_context=20, word2vec=None,\

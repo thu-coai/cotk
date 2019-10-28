@@ -141,8 +141,8 @@ class SingleTurnDialog(LanguageProcessingBase):
 			raise ValueError("No set named %s." % key)
 		res = {}
 		batch_size = len(indexes)
-		res["post_length"] = np.array(list(map(lambda i: len(self.data[key]['post'][i]), indexes)))
-		res["resp_length"] = np.array(list(map(lambda i: len(self.data[key]['resp'][i]), indexes)))
+		res["post_length"] = np.array(list(map(lambda i: len(self.data[key]['post'][i]), indexes)), dtype=int)
+		res["resp_length"] = np.array(list(map(lambda i: len(self.data[key]['resp'][i]), indexes)), dtype=int)
 		res_post = res["post"] = np.zeros((batch_size, np.max(res["post_length"])), dtype=int)
 		res_resp = res["resp"] = np.zeros((batch_size, np.max(res["resp_length"])), dtype=int)
 		for i, j in enumerate(indexes):
@@ -282,8 +282,8 @@ class BERTSingleTurnDialog(BERTLanguageProcessingBase):
 			raise ValueError("No set named %s." % key)
 		res = {}
 		batch_size = len(indexes)
-		res["post_length"] = np.array(list(map(lambda i: len(self.data[key]['post'][i]), indexes)))
-		res["resp_length"] = np.array(list(map(lambda i: len(self.data[key]['resp'][i]), indexes)))
+		res["post_length"] = np.array(list(map(lambda i: len(self.data[key]['post'][i]), indexes)), dtype=int)
+		res["resp_length"] = np.array(list(map(lambda i: len(self.data[key]['resp'][i]), indexes)), dtype=int)
 		res_post = res["post"] = np.zeros((batch_size, np.max(res["post_length"])), dtype=int)
 		res_resp = res["resp"] = np.zeros((batch_size, np.max(res["resp_length"])), dtype=int)
 		res_post_bert = res["post_bert"] = np.zeros((batch_size, np.max(res["post_length"])), dtype=int)

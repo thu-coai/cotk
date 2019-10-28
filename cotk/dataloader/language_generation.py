@@ -117,7 +117,7 @@ class LanguageGeneration(LanguageProcessingBase):
 		res = {}
 		batch_size = len(indexes)
 		res["sent_length"] = np.array( \
-			list(map(lambda i: len(self.data[key]['sent'][i]), indexes)))
+			list(map(lambda i: len(self.data[key]['sent'][i]), indexes)), dtype=int)
 		res_sent = res["sent"] = np.zeros( \
 			(batch_size, np.max(res["sent_length"])), dtype=int)
 		for i, j in enumerate(indexes):

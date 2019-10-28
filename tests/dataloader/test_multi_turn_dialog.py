@@ -3,6 +3,7 @@ from itertools import chain
 import pytest
 import random
 import operator
+import numpy as np
 from cotk.dataloader import MultiTurnDialog, UbuntuCorpus, SwitchboardCorpus
 from cotk.metric import MetricBase
 from cotk.wordvector.gloves import Glove
@@ -83,7 +84,7 @@ class TestMultiTurnDialog():
 			assert len(dl.index[key]) >= 2
 			assert len(batch["turn_length"]) == 2
 			assert len(batch["sent_length"]) == 2
-			assert isinstance(batch['sent_length'][0], list)
+			assert isinstance(batch['sent_length'][0], np.ndarray)
 			assert batch['sent'].shape[0] == 2
 			assert batch['sent'].shape[1] == max(batch['turn_length'])
 			assert batch['sent'].shape[2] == max(chain(*batch['sent_length']))
