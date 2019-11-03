@@ -403,7 +403,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 
 		bleu_irl_fw, bleu_irl_bw = [], []
 
-		tasks = ((self.refs, self.hyps[i]) for i in range(sample_hyps))
+		tasks = ((self.refs[:sample_refs], self.hyps[i]) for i in range(sample_hyps))
 		if sample_hyps >= 1000 and self.cpu_count > 1:
 			pool = Pool(self.cpu_count)
 			values = pool.imap_unordered(_sentence_bleu, tasks, chunksize=20)
@@ -418,7 +418,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 			pool.close()
 			pool.join()
 
-		tasks = ((self.hyps, self.refs[i]) for i in range(sample_refs))
+		tasks = ((self.hyps[:sample_refs], self.refs[i]) for i in range(sample_refs))
 		if sample_refs >= 1000 and self.cpu_count > 1:
 			pool = Pool(self.cpu_count)
 			values = pool.imap_unordered(_sentence_bleu, tasks, chunksize=20)
