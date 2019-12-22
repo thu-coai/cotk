@@ -44,8 +44,9 @@ setup(
 			"requests-mock",
 			"pytest>=3.6.0",
 			"pytest-cov==2.4.0",
+			"coverage<5.0",
 			"checksumdir",
-			"pytorch-transformers>=1.1.0"
+			"transformers"
 		]
 	},
 	cmdclass={'test': LibTest},

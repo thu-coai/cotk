@@ -5,7 +5,7 @@ from .dataloader import LanguageProcessingBase
 from .._utils import trim_before_target
 
 try:
-	from pytorch_transformers import BertTokenizer
+	from transformers import BertTokenizer
 except ImportError as err:
 	from .._utils.imports import DummyObject
 	BertTokenizer = DummyObject(err)
@@ -22,8 +22,8 @@ class BERTLanguageProcessingBase(LanguageProcessingBase):
 
 	BERT_VOCAB_NAME = r"""
 			bert_vocab_name (str): A string indicates which bert model is used, it will be a
-					parameter passed to `pytorch-transformers.BertTokenizer.from_pretrained
-					<https://github.com/huggingface/pytorch-transformers#berttokenizer>`_.
+					parameter passed to `transformers.BertTokenizer.from_pretrained
+					<https://github.com/huggingface/transformers#berttokenizer>`_.
 					It can be 'bert-[base|large]-[uncased|cased]' or a local path."""
 
 	ARGUMENTS = LanguageProcessingBase.ARGUMENTS + BERT_VOCAB_NAME
