@@ -412,22 +412,34 @@ class BERTOpenSubtitles(BERTSingleTurnDialog):
 	def _set_tokenizer(cls, tokenizer):
 		cls.tokenizer = tokenizer
 
+	MP_SMALL_SIZE = 100
 	def _mp_process(self, posts, resps):
 		tasks = ((post, resp) for post, resp in zip(posts, resps))
 
+		pool = None
+		map_func = None
+		if len(posts) < __class__.MP_SMALL_SIZE:
+			self._set_tokenizer(self.tokenizer)
+			map_func = map
+		else:
+			pool = Pool(self.cpu_count, \
+				initializer=self._set_tokenizer, initargs=(self.tokenizer, ))
+			map_func = lambda func, tasks: tqdm.tqdm(pool.imap_unordered(func, tasks, chunksize=500), \
+				total=len(posts))
+				
 		post_tokens, post_bert_ids = [], []
 		resp_tokens, resp_bert_ids = [], []
-		pool = Pool(self.cpu_count, \
-	      initializer=self._set_tokenizer, initargs=(self.tokenizer, ))
+		
 		for _post_tokens, _post_bert_ids, _resp_tokens, _resp_bert_ids in \
-				tqdm.tqdm(pool.imap_unordered(self._run_tokenize, tasks, chunksize=500), \
-				total=len(posts)):
+				map_func(self._run_tokenize, tasks):
 			post_tokens.append(_post_tokens)
 			post_bert_ids.append(_post_bert_ids[:self._max_sent_length])
 			resp_tokens.append(_resp_tokens)
 			resp_bert_ids.append(_resp_bert_ids[:self._max_sent_length])
-		pool.close()
-		pool.join()
+
+		if pool is not None:
+			pool.close()
+			pool.join()
 
 		return post_tokens, post_bert_ids, resp_tokens, resp_bert_ids
 
