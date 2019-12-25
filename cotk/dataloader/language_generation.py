@@ -44,6 +44,8 @@ class LanguageGeneration(LanguageProcessingBase):
 
 	ATTRIBUTES = LanguageProcessingBase.ATTRIBUTES
 
+	_version = 1
+
 	@hooks.hook_dataloader
 	def __init__(self, file_id, min_vocab_times, \
 			max_sent_length, invalid_vocab_times, \

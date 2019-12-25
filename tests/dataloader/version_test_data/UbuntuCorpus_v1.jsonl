@@ -1,0 +1,3 @@
+{"args": ["./tests/dataloader/dummy_ubuntucorpus#Ubuntu", 10, 50, 20, 4], "kwargs": {}, "hash_value": "2de924bca8d81c2dd41ababfa6a9a46a18da1dda262f699c62b39de1583bced5"}
+{"args": ["./tests/dataloader/dummy_ubuntucorpus#Ubuntu", 10, 50, 20, 0], "kwargs": {}, "hash_value": "bf7acfdb354f7f07b35937647ac94d09d276b430624c3fface7424b926bec560"}
+{"args": ["./tests/dataloader/dummy_ubuntucorpus#Ubuntu", 10, 1, 20, 0], "kwargs": {}, "hash_value": "a4ec69f8f69afdbda00ecca408320e894bb3cce7e1f5de566320cc43b11adb8a"}

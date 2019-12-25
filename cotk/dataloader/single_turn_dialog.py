@@ -30,6 +30,8 @@ class SingleTurnDialog(LanguageProcessingBase):
 	Attributes:{ATTRIBUTES}
 	"""
 
+	_version = 1
+
 	ARGUMENTS = r'''
 			file_id (str): A string indicating the source of single turn dialog dataset. {FILE_ID_DEFAULT}
 			valid_vocab_times (int): A cut-off threshold of valid tokens. All tokens appear

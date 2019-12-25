@@ -1,0 +1,3 @@
+{"args": ["tests/dataloader/dummy_opensubtitles#OpenSubtitles", 10, 50, 0, "nltk", false], "kwargs": {}, "hash_value": "c93de1d65e8ca6d2411d50dbc9b47d957f1d0d2880e76237718caa9a56e8ff22"}
+{"args": ["tests/dataloader/dummy_opensubtitles#OpenSubtitles", 20, 50, 0, "nltk", false], "kwargs": {}, "hash_value": "c93de1d65e8ca6d2411d50dbc9b47d957f1d0d2880e76237718caa9a56e8ff22"}
+{"args": ["tests/dataloader/dummy_opensubtitles#OpenSubtitles", 10, 50, 0, "nltk", true], "kwargs": {}, "hash_value": "c93de1d65e8ca6d2411d50dbc9b47d957f1d0d2880e76237718caa9a56e8ff22"}

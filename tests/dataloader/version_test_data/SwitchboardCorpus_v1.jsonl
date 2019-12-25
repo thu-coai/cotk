@@ -1,0 +1,3 @@
+{"args": ["./tests/dataloader/dummy_switchboardcorpus#SwitchboardCorpus", 5, 50, 1000, 0], "kwargs": {}, "hash_value": "10c0e155ebfce9cec7298299bd5be76711d672e699e55a07a47661f637505849"}
+{"args": ["./tests/dataloader/dummy_switchboardcorpus#SwitchboardCorpus", 5, 50, 1000, 1], "kwargs": {}, "hash_value": "10c0e155ebfce9cec7298299bd5be76711d672e699e55a07a47661f637505849"}
+{"args": ["./tests/dataloader/dummy_switchboardcorpus#SwitchboardCorpus", 2, 50, 1000, 0], "kwargs": {}, "hash_value": "12852c4374653375d94bfdc9faff60304dc29b2184e8f2a2ded0e7d8ee38a6c6"}

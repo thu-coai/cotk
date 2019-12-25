@@ -1,0 +1,3 @@
+{"args": ["./tests/dataloader/dummy_mscoco#MSCOCO", 10, 50, 0, "nltk", true], "kwargs": {}, "hash_value": "d6eb40ed3ab1d70ce6c09d778fc5650275ff640d42474780b31996258ac47a75"}
+{"args": ["./tests/dataloader/dummy_mscoco#MSCOCO", 10, 50, 0, "nltk", true], "kwargs": {}, "hash_value": "d6eb40ed3ab1d70ce6c09d778fc5650275ff640d42474780b31996258ac47a75"}
+{"args": ["./tests/dataloader/dummy_mscoco#MSCOCO", 10, 50, 0, "nltk", false], "kwargs": {}, "hash_value": "d6eb40ed3ab1d70ce6c09d778fc5650275ff640d42474780b31996258ac47a75"}

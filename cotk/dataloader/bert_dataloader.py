@@ -35,6 +35,8 @@ class BERTLanguageProcessingBase(LanguageProcessingBase):
 					at most times, see :meth:`convert_tokens_to_bert_ids` instead.
 	"""
 
+	_version = 1
+
 	def __init__(self, ext_vocab=None, \
 					key_name=None, \
 					bert_vocab_name='bert-base-uncased'):

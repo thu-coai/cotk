@@ -1,0 +1,4 @@
+{"args": ["./tests/dataloader/dummy_sst#SST", 10, 50, 1], "kwargs": {}, "hash_value": "5452929e768680c08598e32e0fc8cce9fe866811fc43ea01404688c96f357540"}
+{"args": ["./tests/dataloader/dummy_sst#SST", 10, 50, 0], "kwargs": {}, "hash_value": "5452929e768680c08598e32e0fc8cce9fe866811fc43ea01404688c96f357540"}
+{"args": ["./tests/dataloader/dummy_sst#SST", 10, 10, 0], "kwargs": {}, "hash_value": "4d1a66af5ae1a485c90f0a0fa4514d7b017e2cc2bca5633870f6f4ef7754af67"}
+{"args": ["./tests/dataloader/dummy_sst#SST", 8, 50, 0], "kwargs": {}, "hash_value": "41a7367c7834e7b49e0838d5dc7782823f3fd1681faaea3d63910891f7f474ab"}

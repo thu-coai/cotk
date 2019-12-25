@@ -2,6 +2,8 @@
 A module for dataloader
 '''
 import random
+import hashlib
+from functools import partial
 from collections import Counter
 from itertools import chain
 
@@ -10,6 +12,7 @@ from nltk.tokenize import WordPunctTokenizer
 
 from .._utils import trim_before_target
 from .._utils.metaclass import DocStringInheritor, LoadClassInterface
+from .._utils.unordered_hash import UnorderedSha256
 
 
 class DataField(LoadClassInterface, metaclass=DocStringInheritor):
@@ -20,15 +23,15 @@ class DataField(LoadClassInterface, metaclass=DocStringInheritor):
 	@classmethod
 	def get_field(cls, field):
 		"""If field is an instance of DataField, return it.
-			If field is a subclass of DataField, return its instance(assumes that its `__init__` method accepts no arguments).
-			If field is a string, we assume it's the name of a subclass of DataField. Search the class and return its instance.
+		If field is a subclass of DataField, return its instance(assumes that its `__init__` method accepts no arguments).
+		If field is a string, we assume it's the name of a subclass of DataField. Search the class and return its instance.
 
-			Args:
-				field (str, type, DataField): the data format of dataset.
+		Args:
+			field (str, type, DataField): the data format of dataset.
 
-			Returns　(DataField):
+		Returns　(DataField):
 
-			"""
+		"""
 		if isinstance(field, str):
 			field = DataField.load_class(field)
 		if isinstance(field, type) and issubclass(field, DataField):
@@ -122,6 +125,46 @@ class DataField(LoadClassInterface, metaclass=DocStringInheritor):
 			**kwargs: Keyword arguments.
 		"""
 		return element
+
+	@staticmethod
+	def convert_obj_to_bytes(obj):
+		"""
+		Use repr to convert an object to bytes.
+
+		Args:
+			obj(object): Any object.
+
+		Returns(bytes):
+			Corresponding bytes.
+		"""
+		return repr(obj).encode()
+
+	def convert_element_to_bytes(self, element, convert_ids_to_tokens):
+		"""
+		Convert an element to bytes.
+
+		Args:
+			element: An element of a dataset.
+			convert_ids_to_tokens: A function that converts a list of ids to a list of tokens.
+
+		Returns (bytes):
+			Corresponding bytes of element.
+		"""
+		return self.convert_obj_to_bytes((self.__class__, self._map_fun(element, convert_ids_to_tokens)))
+
+	def _map_fun(self, element, convert_ids_to_tokens):
+		"""
+		A function that converts an element to another object.
+		Generally, if the element is a sentence or a sessions, it will be converted to a list of lists of tokens.
+
+		Args:
+			element: An element of a dataset.
+			convert_ids_to_tokens: A function that converts a list of ids to a list of tokens.
+
+		Returns:
+
+		"""
+		return [convert_ids_to_tokens(sentence) for sentence in self.iter_sentence(element)]
 
 
 class Sentence(DataField):
@@ -250,6 +293,16 @@ class Label(DataField):
 		label = next(dataset)
 		return int(label.strip())
 
+	def _map_fun(self, element, convert_ids_to_tokens=None):
+		"""
+		Returns the element itself.
+
+		Args:
+			element: An element of a dataset.
+			convert_ids_to_tokens: It's useless. This argument exists, just to keep the signature the same as that of super class.
+		"""
+		return element
+
 
 class Dataloader(LoadClassInterface, metaclass=DocStringInheritor):
 	'''Base class of Dataloader.
@@ -257,6 +310,126 @@ class Dataloader(LoadClassInterface, metaclass=DocStringInheritor):
 
 	def __init__(self):
 		pass
+
+
+class DataloaderHash(metaclass=DocStringInheritor):
+	"""
+	A class that can calculate hash value for a dataloader.
+	"""
+	def __init__(self, ignore_tokens, unk_id=None):
+		"""
+		Initialize.
+
+		Args:
+			ignore_tokens (Iterable): Iterable of integers. Each of them represent an id of a token.
+				All these tokens are ignored, when calculating hash value.
+			unk_id (int): Id of unknown token(`unk`). If it's None, we assume that there's no `unk` in dataset.
+		"""
+		self.ignore_tokens = set(ignore_tokens)
+		self.unk_id = unk_id
+		if unk_id is not None and not isinstance(unk_id, int):
+			raise TypeError('`unk_id` must be None, or an integer.')
+		for i in self.ignore_tokens:
+			if not isinstance(i, int):
+				raise ValueError(
+					'`ignore_tokens`must be an Iterable of integers, but contains an {}.'.format(i.__class__))
+
+	def convert_ids_to_tokens(self, sentence, id_to_word):
+		"""
+		Convert a sentence to a list of tokens.
+
+		Args:
+			sentence (Iterable): An Iterable object, that contains ids(integers).
+			id_to_word (dict, list): An object that has method `__getitem__` and can map integers to strings.
+
+		Returns (list):
+			A list of tokens.
+		"""
+		unknown_token = None
+		invalid_token = (None, None)
+		tokens = []
+		for id_ in sentence:
+			if id_ == self.unk_id:
+				tokens.append(unknown_token)
+			elif id_ in self.ignore_tokens:
+				continue
+			else:
+				try:
+					token = id_to_word[id_]
+					tokens.append(token)
+				except (KeyError, IndexError):
+					tokens.append(invalid_token)
+		return tokens
+
+	__HASH_DATASET_DOC = \
+		"""
+		Calculate the hash value of a dataset.
+
+		Args:
+			dataset (dict): A dataset that contains several fields.
+			fields (dict, list, tuple): If it's a dict, it maps a data_key to a field. If it's a list, it must be a list of lists.
+			id_to_word (dict, list): An object that has method `__getitem__` and can map integers to strings.
+
+		"""
+
+	def _hash_dataset(self, dataset, fields, id_to_word):
+		if isinstance(fields, list) or isinstance(fields, tuple):
+			for item in fields:
+				if not ((isinstance(item, list) or isinstance(item, tuple)) and len(item) == 2):
+					raise ValueError(
+						"If `fields` is a list(tuple), each element of it must be a list(tuple) with length==2.")
+			fields = dict(fields)
+		elif isinstance(fields, dict):
+			pass
+		else:
+			raise TypeError("`fields` must be a dict, or a lit(tuple) of lists(tuples).")
+
+		convert_ids_to_tokens = partial(self.convert_ids_to_tokens, id_to_word=id_to_word)
+
+		ordered_hash_obj = hashlib.sha256()
+		for data_key in sorted(dataset.keys()):
+			if data_key not in fields:
+				raise ValueError('There isn\'t corresponding field for %s.' % data_key)
+			field = fields[data_key]
+			field = DataField.get_field(field)
+			unordered_hash_obj = UnorderedSha256()
+			for element in dataset[data_key]:
+				unordered_hash_obj.update_data(field.convert_element_to_bytes(element, convert_ids_to_tokens))
+			ordered_hash_obj.update(unordered_hash_obj.result.tobytes())
+		return ordered_hash_obj.digest()
+
+	_hash_dataset.__doc__ = __HASH_DATASET_DOC + \
+		"""
+		Returns (bytes):
+			hash value(length==32)
+		"""
+
+	def hash_dataset(self, dataset, fields, id_to_word):
+		return self._hash_dataset(dataset, fields, id_to_word).hex()
+
+	hash_dataset.__doc__ = __HASH_DATASET_DOC + \
+		"""
+		Returns (str):
+			hex hash value(length==64) of the dataset
+		"""
+	del __HASH_DATASET_DOC
+
+	def hash_datasets(self, datasets, field_dict, id_to_word):
+		"""
+		Calculate the hash value of several datasets.
+
+		Args:
+			datasets (dict): Several datasets.
+			field_dict (dict): A dict that maps a key of a dataset to its fields.
+			id_to_word (dict, list): An object that has method `__getitem__` and can map integers to strings.
+
+		Returns (str):
+			hex hash value(length==64) of datasets
+		"""
+		hash_obj = hashlib.sha256()
+		for key in sorted(datasets.keys()):
+			hash_obj.update(self._hash_dataset(datasets[key], field_dict[key], id_to_word))
+		return hash_obj.hexdigest()
 
 
 class LanguageProcessingBase(Dataloader):
@@ -295,6 +468,7 @@ class LanguageProcessingBase(Dataloader):
 		self.go_id = 2
 		self.eos_id = 3
 		self.key_name = key_name or ["train", "dev", "test"]
+		self.__hash_value = None  # it's assigned in `_general_load`
 
 		# initialize by subclass
 		self.all_vocab_list, self.valid_vocab_len, self.data, self.data_size = self._load_data()
@@ -308,6 +482,11 @@ class LanguageProcessingBase(Dataloader):
 			self.batch_id[key] = 0
 			self.batch_size[key] = None
 			self.index[key] = list(range(self.data_size[key]))
+
+	@property
+	def hash_value(self):
+		"""return hash value of dataset"""
+		return self.__hash_value
 
 	def _valid_word2id(self, word):
 		'''This function return the id for a valid word, otherwise return ``unk_id``.
@@ -504,6 +683,13 @@ class LanguageProcessingBase(Dataloader):
 				   "cut word rate: %f\n\tmax turn length before cut: %d, cut sentence rate: %f") % \
 				  (key, invalid_num / vocab_num, oov_num / vocab_num, max(sent_length), \
 				   cut_word_num / vocab_num, max_turn_length_before_cut, cut_sentence_rate))
+
+		# calculate hash value
+		hash_value = DataloaderHash(ignore_tokens=(self.go_id, self.eos_id, self.pad_id),
+									unk_id=self.unk_id).hash_datasets(data, data_fields, vocab_list[len(
+			self.ext_vocab):valid_vocab_len])
+		self.__hash_value = hash_value
+
 		return vocab_list, valid_vocab_len, data, data_size
 
 	def _load_data(self):

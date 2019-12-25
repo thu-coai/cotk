@@ -9,6 +9,8 @@ from cotk.metric import MetricBase
 from cotk.dataloader import Dataloader
 from cotk.dataloader import LanguageProcessingBase
 
+from version_test_base import base_test_version
+
 def setup_module():
 	import random
 	random.seed(0)
@@ -237,3 +239,5 @@ class TestMSCOCO(TestLanguageGeneration):
 	def test_init_multi_runs(self, load_mscoco):
 		super().base_test_multi_runs([load_mscoco() for i in range(3)])
 
+
+base_test_version(MSCOCO)

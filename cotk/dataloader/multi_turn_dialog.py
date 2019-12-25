@@ -22,6 +22,8 @@ class MultiTurnDialog(LanguageProcessingBase):
 	Attributes:{ATTRIBUTES}
 	"""
 
+	_version = 1
+
 	ARGUMENTS = LanguageProcessingBase.ARGUMENTS
 	ATTRIBUTES = LanguageProcessingBase.ATTRIBUTES
 
