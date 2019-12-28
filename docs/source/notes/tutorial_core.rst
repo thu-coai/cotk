@@ -138,7 +138,7 @@ First we construct a simple GRU Language model using ``pytorch``.
 
 If you are familiar with GRU, you can see the codes constructed a
 network for predicting next token. Then, we will train our model with
-the help of ``cotk``. (It may takes several minites too train the model.)
+the help of ``cotk``. (It may takes several minutes to train the model.)
 
 .. code-block:: python
 
@@ -183,7 +183,7 @@ the help of ``cotk``. (It may takes several minites too train the model.)
 Evaluations
 -----------------------------------------
 
-How well our model can fit the data? ``cotk`` have provided
+How well our model can fit the data? ``cotk`` provides
 some standard metrics for language generation model.
 
 Teacher Forcing
@@ -220,8 +220,8 @@ token is the real data.
 
 .. note ::
 
-    The type of ``data['gen_log_prob']`` is ``torch.Tensor``, but most metrics can
-    **not** receive a tensor input as we are trying to implement a library **not**
+    The type of ``data['gen_log_prob']`` is ``torch.Tensor``, but most metrics **do not**
+    receive a tensor input as we are trying to implement a library **not**
     depending on any deep learning framework. :class:`.metric.PerplexityMetric` just use ``torch``
     to accelerate the calculation, a :class:`numpy.ndarray` can also be accepted.
 
@@ -229,7 +229,7 @@ Free Run
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A language model can also generate sentences by sending the
-generated token back to input in each step. We call it "freerun"
+generated token back to input in each step. It is called "freerun"
 or "inference" mode.
 
 ``Pytorch`` doesn't provide a convenience api for freerun, here we implement a
@@ -286,7 +286,7 @@ Hash value
 ~~~~~~~~~~~~~~~~~~
 
 Hash value is for checking whether you use the test set correctly.
-We can refer to dashboard (TO BE ONLINE) for the state of art on this dataset,
+We can refer to the `dashboard <http://coai.cs.tsinghua.edu.cn/dashboard/>`__ for the state of art on this dataset,
 and we find our hashvalue is correct.
 
 However, if teacher forcing is tested as following codes, we will
@@ -302,7 +302,7 @@ see a different hash value, which means the implementation is not correct.
             net(data)
         assert "gen_log_prob" in data
         metric.forward(data)
-        if i >= 15: #ignore the following batches
+        if i >= 15: #ignore the following batches leading to an incorrect implementation
             break
     pprint(metric.close(), width=150)
 

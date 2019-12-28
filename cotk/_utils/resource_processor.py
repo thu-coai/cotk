@@ -36,6 +36,23 @@ class DefaultResourceProcessor(ResourceProcessor):
 		'''
 		return local_path
 
+class ZipResourceProcessor(ResourceProcessor):
+	'''Processor for default resource: extract zip.
+	'''
+	def preprocess(self, local_path):
+		'''Preprocess after download and before save.
+		'''
+		if os.path.isdir(local_path):
+			return local_path
+		dst_dir = local_path + '_unzip'
+		unzip_file(local_path, dst_dir)
+		return dst_dir
+
+	def postprocess(self, local_path):
+		'''Postprocess before read.
+		'''
+		return local_path
+
 class BaseResourceProcessor(ResourceProcessor):
 	"""Basic processor for MSCOCO, OpenSubtitles, Ubuntu..."""
 	def basepreprocess(self, local_path, name):
@@ -79,6 +96,7 @@ class OpenSubtitlesResourceProcessor(BaseResourceProcessor):
 		'''Preprocess after download and before save.
 		'''
 		return self.basepreprocess(local_path, 'opensubtitles')
+
 	def postprocess(self, local_path):
 		local_path = super().postprocess(local_path)
 		new_local_path = os.path.join(local_path, 'processed')

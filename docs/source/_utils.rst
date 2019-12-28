@@ -55,6 +55,14 @@ imports
   :members:
   :private-members:
 
+.. autoclass:: LazyModule
+  :members:
+  :private-members:
+
+.. autoclass:: LazyObject
+  :members:
+  :private-members:
+
 metaclass
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: cotk._utils.metaclass

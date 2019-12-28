@@ -2,13 +2,13 @@
 
 ## Quick Start
 
-Let us skim through the whole package to find what you want. 
+Let's skim through the whole package to find what you want. 
 
 ### Dataloader
 
-Load common used dataset and preprocess for you:
+Load common used dataset and do preprocessing:
 
-* Download online resources or import from local
+* Download online resources or import from local path
 * Split training set, development set and test set
 * Construct vocabulary list
 
@@ -20,7 +20,7 @@ Load common used dataset and preprocess for you:
     >>> dl_url = cotk.dataloader.MSCOCO("http://cotk-data.s3-ap-northeast-1.amazonaws.com/mscoco_small.zip#MSCOCO")
     >>> # or import from local file
     >>> dl_zip = cotk.dataloader.MSCOCO("./MSCOCO.zip#MSCOCO")
-    
+
     >>> print("Dataset is split into:", dataloader.key_name)
     ["train", "dev", "test"]
 ```
@@ -59,7 +59,7 @@ Iterate over batches
     ......
 ```
 
-or using ``while`` if you like
+Or using ``while`` if you like
 
 ```python
     >>> dataloader.restart("train", batch_size=1):
@@ -72,22 +72,22 @@ or using ``while`` if you like
 ~~ contentstart sphinx
 .. note::
 
-   If you want to know more about data loader, please refer to :mod:`dataloader docs <cotk.dataloader>`.
+   If you want to know more about ``Dataloader``, please refer to :mod:`docs of dataloader <cotk.dataloader>`.
 ~~ contentend sphinx
 
 ~~ contentstart readme
-**note**: If you want to know more about data loader, please refer to [dataloader docs](https://thu-coai.github.io/cotk_docs/index.html#model-zoo).
+**note**: If you want to know more about ``Dataloader``, please refer to [docs of dataloader](https://thu-coai.github.io/cotk_docs/index.html#model-zoo).
 ~~ contentend readme
 
 ### Metrics
 
-We found there are different versions of the same metric in released codes on Github,
-which leads to unfair compare between models. For example, whether considering
+We found there are different versions of the same metric in different papers,
+which leads to **unfair comparison between models**. For example, whether considering
 ``unk``, calculating the mean of NLL across sentences or tokens in
-``perplexity`` may introduce **an error of several times** and **extremely** harm the evaluation.
+``perplexity`` may introduce huge differences.
 
-We provide unified metrics implementation for all models. The metric object
-receives data in batch.
+We provide a unified implementation for metrics, where ``hashvalue`` is provided for
+checking whether the same data is used. The metric object receives mini-batches.
 
 ```python
     >>> import cotk.metric
@@ -102,7 +102,13 @@ receives data in batch.
      'self-bleu hashvalue': 'c206893c2272af489147b80df306ee703e71d9eb178f6bb06c73cb935f474452'}
 ```
 
-You can merge multiple metrics together by :class:``.cotk.metric.MetricChain``
+~~ contentstart sphinx
+You can merge multiple metrics together by :class:`cotk.metric.MetricChain`.
+~~ contentend sphinx
+~~ contentstart readme
+You can merge multiple metrics together by cotk.metric.MetricChain.
+~~ contentend readme
+
 
 ```python
     >>> metric = cotk.metric.MetricChain()
@@ -120,7 +126,7 @@ You can merge multiple metrics together by :class:``.cotk.metric.MetricChain``
      'fw-bw-bleu hashvalue': '530d449a096671d13705e514be13c7ecffafd80deb7519aa7792950a5468549e'}
 ```
 
-We also provide standard metrics for selected dataloader.
+We also provide recommended metrics for selected dataloader.
 
 ```python
     >>> metric = dataloader.get_inference_metric(gen_key="gen")
@@ -140,16 +146,14 @@ We also provide standard metrics for selected dataloader.
      ]}
 ```
 
-``Hash value`` is provided for checking whether the same dataset is used.
-
 ~~ contentstart sphinx
 .. note::
 
-   If you want to know more about metrics, please refer to :mod:`metrics docs <cotk.metric>`.
+   If you want to know more about metrics, please refer to :mod:`docs of metrics <cotk.metric>`.
 ~~ contentend sphinx
 
 ~~ contentstart readme
-**note**: If you want to know more about metrics, please refer to [metrics docs](https://thu-coai.github.io/cotk_docs/metric.html).
+**note**: If you want to know more about metrics, please refer to [docs of metrics](https://thu-coai.github.io/cotk_docs/metric.html).
 ~~ contentend readme
 
 ### Publish Experiments
@@ -161,15 +165,15 @@ We provide an online `dashboard <http://coai.cs.tsinghua.edu.cn/dashboard/>`__ t
 We provide an online [dashboard](http://coai.cs.tsinghua.edu.cn/dashboard/) to manage your experiments.
 ~~ contentend readme
 
-Here we give an simple example for you.
+Here we provide an simple example:
 
-First initialize a git repo in your command line.
+* Initialize a git repository in your command line.
 
 ```bash
     git init
 ```
 
-Then write your model with an entry function in ``main.py``.
+* Write your model with an entry function in ``main.py``.
 
 ```python
     import cotk.dataloader
@@ -189,7 +193,7 @@ Then write your model with an entry function in ``main.py``.
 ~~ contentstart sphinx
 .. note::
 
-    The only requirement of your model is to output a file named ``result.json``,
+    The only requirement of your function is to output a file named ``result.json``,
     you can do whatever you want (even don't load data using ``cotk``).
 ~~ contentend sphinx
 
@@ -199,7 +203,7 @@ you can do whatever you want (even don't load data using ``cotk``).
 ~~ contentend readme
 
 
-Next, commit your changes and set upstream branch in your command line.
+* Commit your changes and set upstream branch in your command line.
 
 ```bash
     git add -A
@@ -208,11 +212,25 @@ Next, commit your changes and set upstream branch in your command line.
     git push origin -u master
 ```
 
-Finally, type ``cotk run`` to run your model and upload to cotk dashboard.
+~~ contentstart sphinx
+.. note::
 
-``cotk`` will automatically collect your git repo, username, commit and ``result.json``
-to the cotk dashboard.The dashboard is a website where you can manage
-your experiments or share results with others.
+    In this version, we only support github for identifying your repository and commit.
+    However, you can use private repositories or do not push your commit to the repository.
+    That means the others cannot access your code or reproduce your results.
+~~ contentend sphinx
+
+~~ contentstart readme
+**note**: In current version, we only support github for identifying your repository and commit.
+However, you can use private repositories or do not push your commit to the repository.
+That means the others cannot access your code or reproduce your results.
+~~ contentend readme
+
+* Type ``cotk run`` to run your model and upload to cotk dashboard.
+
+``cotk`` will automatically collect your git repository, username (of the dashboard), commit
+and ``result.json`` to the cotk dashboard. You can manage your experiments or share results
+with others on the dashboard.
 
 ~~ contentstart sphinx
 .. image:: dashboard.png
@@ -221,33 +239,35 @@ your experiments or share results with others.
 ![dashboard](https://github.com/thu-coai/cotk/blob/master/docs/source/notes/dashboard.png)
 ~~ contentend readme
 
-If you don't want to use cotk's dashboard, you can also choose to directly upload your model
-to github.
+~~ contentstart sphinx
+If you don't want to use the cotk dashboard, you can also directly upload your model
+to github. Follow the instructions at :ref:`Fast Model Reproduction <fast_model_reproduction>`.
+~~ contentend sphinx
 
-Use ``cotk run --only-run`` instead of ``cotk run``, you will find a ``.model_config.json``
-is generated. Commit the file and push it to github, the other can automatically download
-your model as the way described in next section.
+~~ contentstart readme
+If you don't want to use the cotk dashboard, you can also directly upload your model
+to github. Follow the instructions at [Fast Model Reproduction](https://thu-coai.github.io/cotk_docs/notes/tutorial_reproduction.html).
+~~ contentend readme
 
 ~~ contentstart sphinx
 .. note::
 
-    The reproducibility should be maintained by the author. We only make sure all the input
-    is the same, but difference can be introduced by different random seed, device or other
-    affects. Before you upload, run ``cotk run --only-run`` twice and find whether the results
-    is the same.
+    The reproducibility should be maintained by the author. We only make sure all the inputs
+    are the same, but differences can be introduced by different random seeds, devices or other
+    affects. Before you upload, run ``cotk run --only-run`` several times and check whether
+    the results are the same.
 ~~ contentend sphinx
 
 ~~ contentstart readme
-**note**: The reproducibility should be maintained by the author. We only make sure all the input
-is the same, but difference can be introduced by different random seed, device or other
-affects. Before you upload, run ``cotk run --only-run`` twice and find whether the results
-is the same.
+**note**: The reproducibility should be maintained by the author. We only make sure all the inputs
+are the same, but differences can be introduced by different random seeds, devices or other
+affects. Before you upload, run ``cotk run --only-run`` several times  and check whether the results
+are the same.
 ~~ contentend readme
 
 ### Reproduce Experiments
 
-You can download others' model in dashboard
-and try to reproduce their results.
+You can download models in dashboard and try to reproduce their results.
 
 ```bash
     cotk download ID
@@ -264,15 +284,21 @@ INFO: Model running cmd written in run_model.sh
 Model running cmd:  cd ./PATH && cotk run --only-run --entry main
 ```
 
-Type ``cotk run --only-run --entry main`` will reproduce the same experiments.
+Type ``cotk run --only-run`` will reproduce the same experiments.
 
-You can also download directly from github if the maintainer has set the ``.model_config.json``.
+~~ contentstart sphinx
+You can also directly download your model from github.
+Follow the instructions at :ref:`Fast Model Reproduction <fast_model_reproduction>`. For example:
+~~ contentend sphinx
+
+~~ contentstart readme
+You can also directly download your model from github.
+Follow the instructions at [Fast Model Reproduction](https://thu-coai.github.io/cotk_docs/notes/tutorial_reproduction.html). For example:
+~~ contentend readme
 
 ```bash
-    cotk download USER/REPO/COMMIT
+    cotk download thu-coai/seq2seq-pytorch/master
 ```
-
-``cotk`` will download the codes from github and generate commands by the config file.
 
 ### Predefined Models
 

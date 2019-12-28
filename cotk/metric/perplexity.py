@@ -2,15 +2,14 @@ r"""
 Containing some classes and functions about perplexity evaluating results of models.
 """
 import random
+
 import numpy as np
 from .metric import MetricBase
-from .._utils.imports import DummyObject
+from .._utils.imports import LazyObject, LazyModule
 from .._utils import hooks
-try:
-	import torch
-except ImportError as err:
-	torch = DummyObject(err)
-	torch.Tensor = DummyObject(err)
+
+torch = LazyModule("torch", globals())
+torch.Tensor = LazyObject("torch.Tensor")
 
 class PerplexityMetric(MetricBase):
 	'''Metric for calculating perplexity.

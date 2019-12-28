@@ -23,7 +23,7 @@ class TestScripts():
 	@pytest.mark.parametrize('url, error, match', \
 		[("http://wrong_url", ValueError, "can't match any pattern"),\
 		('user/repo/commit/wrong_commit', RuntimeError, "fatal"),\
-		('http://github.com/thu-coai/cotk-test-CVAE/no_result_file/', FileNotFoundError, r"Config file .* is not found."),\
+		#('http://github.com/thu-coai/cotk-test-CVAE/no_result_file/', FileNotFoundError, r"Config file .* is not found."),\  // no config file is acceptable
 		('https://github.com/thu-coai/cotk-test-CVAE/tree/invalid_json', json.JSONDecodeError, ""),\
 		])
 	def test_download_error(self, url, error, match):

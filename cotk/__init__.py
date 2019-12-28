@@ -11,3 +11,14 @@ Features include:
  * A dashboard to show the performance, compare your and others' models fairly.
  * Long-term maintenance and consistent development.
 """
+
+from ._utils.imports import LazyModule
+
+dataloader = LazyModule("cotk.dataloader", globals())
+metric = LazyModule("cotk.metric", globals())
+wordvector = LazyModule("cotk.wordvector", globals())
+models = LazyModule("cotk.models", globals())
+scripts = LazyModule("cotk.scripts", globals())
+_utils = LazyModule("cotk._utils", globals())
+
+__all__ = ['dataloader', 'metric', 'wordvector', 'models', 'scripts', '_utils']

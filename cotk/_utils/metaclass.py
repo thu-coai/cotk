@@ -4,7 +4,7 @@ import inspect
 
 class DocStringInheritor(type):
 	"""
-	A meta class. It let the class have the following functions:
+	A meta class. It make the class:
 
 	* Docstring can inherit the parent class.
 	* {STRING} in docs will be replaced by self.STRING

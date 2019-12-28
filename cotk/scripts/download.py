@@ -48,11 +48,12 @@ r"""A string indicates model path. It can be one of following:
              USER/REPO/BRANCH
              USER/REPO/COMMIT (full commit id should be included)
 """)
-	parser.add_argument("--result", type=str, default=None, \
+	parser.add_argument("--result", type=str, default="dashboard_result", \
 						help="Only works when model is from dashboard. \
 Path to dump dashboard result.")
 	cargs = parser.parse_args(args)
 
+	info = None
 	if cargs.model.isdigit():
 		# download from dashboard
 		board_id = int(cargs.model)
@@ -84,32 +85,35 @@ Path to dump dashboard result.")
 		main.LOGGER.info("Codes from {}/{}/{} fetched.".format(git_user, git_repo, git_commit))
 
 		config_path = "{}/.model_config.json".format(code_dir)
-		if not os.path.isfile(config_path):
-			raise FileNotFoundError("Config file ({}) is not found.".format(config_path))
-		try:
-			info = json.load(open(config_path, "r", encoding='utf-8'))
-		except json.JSONDecodeError as err:
-			raise json.JSONDecodeError("{} is not a valid json. {}".format(config_path, err.msg), \
-										err.doc, err.pos)
+		if os.path.isfile(config_path):
+			try:
+				info = json.load(open(config_path, "r", encoding='utf-8'))
+			except json.JSONDecodeError as err:
+				raise json.JSONDecodeError("{} is not a valid json. {}".format(config_path, err.msg), \
+											err.doc, err.pos)
 
-		if 'args' not in info:
-			info['args'] = []
-		if 'working_dir' not in info or 'working_dir' == '':
-			info['working_dir'] = "."
-		if 'entry' not in info:
-			info['entry'] = "main"
+			if 'args' not in info:
+				info['args'] = []
+			if 'working_dir' not in info or 'working_dir' == '':
+				info['working_dir'] = "."
+			if 'entry' not in info:
+				info['entry'] = "main"
 
-	# cmd construction
-	cmd = "cd {}/{} && cotk run --entry {} --only-run".\
-			format(code_dir, info['working_dir'], info['entry'])
-	if not isinstance(info['args'], list):
-		raise ValueError("`args` in `config.json` should be of type `list`.")
 
-	cmd += " {}".format(" ".join(info['args']))
-	with open("run_model.sh", "w", encoding='utf-8') as file:
-		file.write(cmd)
-	main.LOGGER.info("Model running cmd written in {}".format("run_model.sh"))
-	print("Model running cmd: \t{}".format(cmd))
+	if info:
+		# cmd construction
+		cmd = "cd {}/{} && cotk run --entry {} --only-run".\
+				format(code_dir, info['working_dir'], info['entry'])
+		if not isinstance(info['args'], list):
+			raise ValueError("`args` in `config.json` should be of type `list`.")
+
+		cmd += " {}".format(" ".join(info['args']))
+		with open("run_model.sh", "w", encoding='utf-8') as file:
+			file.write(cmd)
+		main.LOGGER.info("Model running cmd written in {}".format("run_model.sh"))
+		print("Model running cmd: \t{}".format(cmd))
+	else:
+		main.LOGGER.info("Code downloaded successful but config file is not found.")
 
 	# run model
 	# result_path = "{}/result.json".format(code_dir)

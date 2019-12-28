@@ -3,12 +3,9 @@ A module for BERT dataloader
 '''
 from .dataloader import LanguageProcessingBase
 from .._utils import trim_before_target
+from .._utils.imports import LazyObject
 
-try:
-	from transformers import BertTokenizer
-except ImportError as err:
-	from .._utils.imports import DummyObject
-	BertTokenizer = DummyObject(err)
+BertTokenizer = LazyObject("transformers.BertTokenizer")
 
 #pylint: disable=abstract-method
 class BERTLanguageProcessingBase(LanguageProcessingBase):

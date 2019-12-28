@@ -15,7 +15,7 @@ install:
 script:
   - python setup.py test
   - cd docs && make html && mv ./build/html ./build/docs && rm -r ./build/doctrees && cd ..
-  - cd docs/meta && python update_doc.py && cd ../..
+  - cd docs/meta && python update_doc.py --check && cd ../..
 
 deploy:
   - provider: pages

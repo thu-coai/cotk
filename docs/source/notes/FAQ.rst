@@ -2,7 +2,7 @@ Frequently Asked Questions
 ==============================
 
 
-Why my codes seem running from beginning after calling metric.close ?
+On windows, why my codes seem running from beginning after calling metric.close ?
 ----------------------------------------------------------------------------------
 
 **TL;DR: Use if __name__ == "__main__" at your start point of program.**
