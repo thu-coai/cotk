@@ -1,11 +1,11 @@
 name: windows
 
-on: 
+on:
   push:
-    branches: 
+    branches:
       - master
   pull_request:
-    branches: 
+    branches:
       - master
   schedule:
     - cron: "0 4 * * *"
