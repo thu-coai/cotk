@@ -2,9 +2,11 @@
 # Conversational Toolkits
 
 [![CodeFactor](https://www.codefactor.io/repository/github/thu-coai/cotk/badge)](https://www.codefactor.io/repository/github/thu-coai/cotk)
+[![codebeat badge](https://codebeat.co/badges/dc64db27-7e25-4fea-a231-3c9baac916f8)](https://codebeat.co/projects/github-com-thu-coai-cotk-master)
 [![Coverage Status](https://coveralls.io/repos/github/thu-coai/cotk/badge.svg?branch=master)](https://coveralls.io/github/thu-coai/cotk?branch=master)
 [![Build Status](https://travis-ci.com/thu-coai/cotk.svg?branch=master)](https://travis-ci.com/thu-coai/cotk)
-[![codebeat badge](https://codebeat.co/badges/dc64db27-7e25-4fea-a231-3c9baac916f8)](https://codebeat.co/projects/github-com-thu-coai-cotk-master)
+[![Actions Status](https://github.com/thu-coai/cotk/workflows/windows/badge.svg)](https://github.com/thu-coai/cotk/actions)
+[![Actions Status](https://github.com/thu-coai/cotk/workflows/macOS/badge.svg)](https://github.com/thu-coai/cotk/actions)
 
 ``cotk`` is an open-source lightweight framework for model building and evaluation.
 We provides standard dataset and evaluation suites in the domain of general language generation.
