@@ -6,7 +6,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/thu-coai/cotk/badge.svg?branch=master)](https://coveralls.io/github/thu-coai/cotk?branch=master)
 [![Build Status](https://travis-ci.com/thu-coai/cotk.svg?branch=master)](https://travis-ci.com/thu-coai/cotk)
 [![Actions Status](https://github.com/thu-coai/cotk/workflows/windows/badge.svg)](https://github.com/thu-coai/cotk/actions)
-[![Actions Status](https://github.com/thu-coai/cotk/workflows/macOS/badge.svg)](https://github.com/thu-coai/cotk/actions)
+[![Actions Status](https://github.com/thu-coai/cotk/workflows/macos/badge.svg)](https://github.com/thu-coai/cotk/actions)
 
 ``cotk`` is an open-source lightweight framework for model building and evaluation.
 We provides standard dataset and evaluation suites in the domain of general language generation.
@@ -58,7 +58,7 @@ This project is a part of ``dialtk`` (Toolkits for Dialog System by Tsinghua Uni
 -  pytorch >= 1.0.0 (optional, used for calculation of perplexity)
 -  transformers (optional, used for tokenizer of pretrained models)
 
-We support Unix, Windows, and macOS, but we only test the whole toolkits over Ubuntu.
+We support Unix, Windows, and macOS.
 
 ### Install from pip
 

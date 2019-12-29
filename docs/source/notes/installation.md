@@ -11,7 +11,7 @@
 -  pytorch >= 1.0.0 (optional, used for calculation of perplexity)
 -  transformers (optional, used for tokenizer of pretrained models)
 
-We support Unix, Windows, and macOS, but we only test the whole toolkits over Ubuntu.
+We support Unix, Windows, and macOS.
 
 ### Install from pip
 
