@@ -345,6 +345,9 @@ class DataloaderHash(metaclass=DocStringInheritor):
 		Returns (list):
 			A list of tokens.
 		"""
+
+		# It doesn't matter what the types of `unknown_token` and `invalid_token` are.
+		# But it's important that they are different from any other tokens.
 		unknown_token = None
 		invalid_token = (None, None)
 		tokens = []
