@@ -26,14 +26,6 @@ class MultiTurnDialog(LanguageProcessingBase):
 
 	ARGUMENTS = LanguageProcessingBase.ARGUMENTS
 	ATTRIBUTES = LanguageProcessingBase.ATTRIBUTES
-
-	def __init__(self, \
-				 ext_vocab=None, \
-				 key_name=None,	\
-		):
-		ext_vocab = ext_vocab or ["<pad>", "<unk>", "<go>", "<eos>"]
-		super().__init__(ext_vocab, key_name)
-
 	GET_BATCH_RETURNS_DICT = r'''
 			* turn_length(:class:`numpy.ndarray`): A 1-d list, the number of turns in sessions.
 			  Size: ``[batch_size]``
@@ -339,16 +331,13 @@ class UbuntuCorpus(MultiTurnDialog):
 		self._max_sent_length = max_sent_length
 		self._max_turn_length = max_turn_length
 		self._invalid_vocab_times = invalid_vocab_times
-		super(UbuntuCorpus, self).__init__()
+		super(UbuntuCorpus, self).__init__(remains_capital=False, tokenizer='nltk')
 
 	def _load_data(self):
 		r'''Loading dataset, invoked during the initialization of :class:`MultiTurnDialog`.
 		'''
 		return super()._general_load_data(self._file_path, [['session', 'Session']], self._min_vocab_times,
 										  self._max_sent_length, self._max_turn_length, self._invalid_vocab_times)
-
-	def tokenize(self, sentence, remains_capital=False, tokenizer='nltk'):
-		return super().tokenize(sentence, remains_capital, tokenizer)
 
 
 class SwitchboardCorpus(MultiTurnDialog):
@@ -382,7 +371,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 		self._invalid_vocab_times = invalid_vocab_times
 
 		self.word2id = {}
-		super().__init__()
+		super().__init__(remains_capital=True, tokenizer='nltk')
 
 	def _load_data(self):
 		r'''Loading dataset, invoked during the initialization of :class:`MultiTurnDialog`.
@@ -404,17 +393,6 @@ class SwitchboardCorpus(MultiTurnDialog):
 										  self._max_sent_length,
 										  self._max_turn_length,
 										  self._invalid_vocab_times)
-
-	def tokenize(self, sentence):
-		r'''Convert sentence(str) to list of token(str)
-
-		Arguments:
-			sentence (str)
-
-		Returns:
-			sent (list): list of token(str)
-		'''
-		return super().tokenize(sentence, True, 'nltk')
 
 	def get_batch(self, key, indexes):
 		'''{LanguageProcessingBase.GET_BATCH_DOC_WITHOUT_RETURNS}

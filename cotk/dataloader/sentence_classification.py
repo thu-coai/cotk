@@ -141,7 +141,7 @@ class SST(SentenceClassification):
 		self._min_vocab_times = min_vocab_times
 		self._max_sent_length = max_sent_length
 		self._invalid_vocab_times = invalid_vocab_times
-		super(SST, self).__init__()
+		super(SST, self).__init__(remains_capital=True, tokenizer='space')
 
 	def _load_data(self):
 		r'''Loading dataset, invoked by `LanguageProcessingBase.__init__`
@@ -158,14 +158,14 @@ class SST(SentenceClassification):
 				data[key]['label'] = json.load(fp)
 		return vocab_list, valid_vocab_len, data, data_size
 
-	def tokenize(self, sentence):
-		r'''Convert sentence(str) to list of token(str)
-
-		Arguments:
-			sentence (str)
-
-		Returns:
-			sent (list): list of token(str)
-		'''
-		# return [x.split(' ')[-1].lower() for x in sentence if x != '']
-		return super().tokenize(sentence, True, 'space')
+	# def tokenize(self, sentence):
+	# 	r'''Convert sentence(str) to list of token(str)
+	#
+	# 	Arguments:
+	# 		sentence (str)
+	#
+	# 	Returns:
+	# 		sent (list): list of token(str)
+	# 	'''
+	# 	# return [x.split(' ')[-1].lower() for x in sentence if x != '']
+	# 	return super().tokenize(sentence, True, 'space')

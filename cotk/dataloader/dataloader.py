@@ -14,6 +14,8 @@ from .._utils import trim_before_target
 from .._utils.metaclass import DocStringInheritor, LoadClassInterface
 from .._utils.unordered_hash import UnorderedSha256
 
+from .tokenizer import Tokenizer
+
 
 class DataField(LoadClassInterface, metaclass=DocStringInheritor):
 	"""A class that helps process a dataset. It knows the structure of a dataset. Thus, It can get sentences(or sessions,
@@ -169,6 +171,7 @@ class DataField(LoadClassInterface, metaclass=DocStringInheritor):
 
 class Sentence(DataField):
 	"""Each element in a dataset(Iterator) represent a sentence."""
+
 	def get_next(self, dataset):
 		"""read **several(one or more)** elements and returns the next sentence. Note that it may raise StopIteration.
 
@@ -202,8 +205,8 @@ class Sentence(DataField):
 		Args:{DataField.CONVERT_TO_IDS_ARG}"""
 
 		return [dataloader.go_id] + \
-					list(map(lambda word: word2id[word] if word in word2id else dataloader.unk_id, element)) \
-					+ [dataloader.eos_id]
+			   list(map(lambda word: word2id[word] if word in word2id else dataloader.unk_id, element)) \
+			   + [dataloader.eos_id]
 
 	# pylint: disable=W0221
 	def cut(self, element, max_sent_length=None, **_):
@@ -218,6 +221,7 @@ class Sentence(DataField):
 
 class Session(DataField):
 	"""Several(one or more) elements in a dataset(Iterator), the last one of which is '\\n', represent a session."""
+
 	def get_next(self, dataset):
 		r"""read **several(one or more)** elements and returns the next session. The first several non-space elements,
 		followed by a '\\n', are regarded as a session. The first element must not be empty string or '\\n'.
@@ -277,6 +281,7 @@ class Session(DataField):
 
 class Label(DataField):
 	"""Each element in a dataset(Iterator) represents a label."""
+
 	def get_next(self, dataset):
 		r"""read text and returns the next label(integer). Note that it may raise StopIteration.
 
@@ -316,6 +321,7 @@ class DataloaderHash(metaclass=DocStringInheritor):
 	"""
 	A class that can calculate hash value for a dataloader.
 	"""
+
 	def __init__(self, ignore_tokens, unk_id=None):
 		"""
 		Initialize.
@@ -402,19 +408,19 @@ class DataloaderHash(metaclass=DocStringInheritor):
 		return ordered_hash_obj.digest()
 
 	_hash_dataset.__doc__ = __HASH_DATASET_DOC + \
-		"""
-		Returns (bytes):
-			hash value(length==32)
-		"""
+							"""
+							Returns (bytes):
+								hash value(length==32)
+							"""
 
 	def hash_dataset(self, dataset, fields, id_to_word):
 		return self._hash_dataset(dataset, fields, id_to_word).hex()
 
 	hash_dataset.__doc__ = __HASH_DATASET_DOC + \
-		"""
-		Returns (str):
-			hex hash value(length==64) of the dataset
-		"""
+						   """
+						   Returns (str):
+							   hex hash value(length==64) of the dataset
+						   """
 	del __HASH_DATASET_DOC
 
 	def hash_datasets(self, datasets, field_dict, id_to_word):
@@ -435,7 +441,7 @@ class DataloaderHash(metaclass=DocStringInheritor):
 		return hash_obj.hexdigest()
 
 
-class LanguageProcessingBase(Dataloader):
+class LanguageProcessingBase(Dataloader, Tokenizer):
 	r"""Base class for all language processing tasks. This is an abstract class.
 
 	Arguments:{ARGUMENTS}
@@ -461,8 +467,18 @@ class LanguageProcessingBase(Dataloader):
 
 	def __init__(self, \
 				 ext_vocab=None, \
-				 key_name=None):
+				 key_name=None,
+				 remains_capital=None,
+				 tokenizer=None):
 		super().__init__()
+
+		# TODO: check tokenizer not None
+
+		# TODO: update subclass and docs.
+		# arguments for self.tokenize
+		self.remains_capital = remains_capital
+		self.tokenizer = tokenizer
+		# Tokenizer.__init__(self, tokenizer)
 
 		# initialize by default value. (can be overwritten by subclass)
 		self.ext_vocab = ext_vocab or ["<pad>", "<unk>", "<go>", "<eos>"]
@@ -505,7 +521,7 @@ class LanguageProcessingBase(Dataloader):
 			idx = self.unk_id
 		return idx
 
-	def tokenize(self, sentence, remains_capital, tokenizer):
+	def tokenize(self, sentence):
 		r'''Convert sentence(str) to a list of tokens(str)
 
 		Arguments:
@@ -517,13 +533,13 @@ class LanguageProcessingBase(Dataloader):
 		Returns:
 			list: a list of tokens(str)
 		'''
-		if remains_capital:
+		if self.remains_capital:
 			sentence = sentence.strip()
 		else:
 			sentence = sentence.lower().strip()
-		if tokenizer == 'nltk':
+		if self.tokenizer == 'nltk':
 			return WordPunctTokenizer().tokenize(sentence)
-		elif tokenizer == 'space':
+		elif self.tokenizer == 'space':
 			return sentence.split()
 		else:
 			raise ValueError('tokenizer of dataloader should be either "nltk" or "space"')
@@ -574,6 +590,7 @@ class LanguageProcessingBase(Dataloader):
 			* **data** (dict): a dict contains data.
 			* **data_size** (dict): a dict contains size of each item in data.
 		'''
+
 		def get_fields(fields):
 			assert isinstance(fields, list) or isinstance(fields, tuple)
 			return [(data_key, DataField.get_field(field)) for data_key, field in fields]
@@ -610,7 +627,8 @@ class LanguageProcessingBase(Dataloader):
 							element = field.convert_to_tokens(field.get_next(f_file), self.tokenize)
 							for token in field.iter_tokens(element):
 								if token in special_tokens:
-									raise RuntimeError('The dataset contains special token "%s". This is not allowed.' % token)
+									raise RuntimeError(
+										'The dataset contains special token "%s". This is not allowed.' % token)
 							origin_data[key][data_key].append(element)
 					except StopIteration:
 						break
@@ -652,7 +670,8 @@ class LanguageProcessingBase(Dataloader):
 		for key in self.key_name:
 			data[key] = {}
 			for data_key, field in data_fields[key]:
-				origin_data[key][data_key] = [field.convert_to_ids(element, word2id, self) for element in origin_data[key][data_key]]
+				origin_data[key][data_key] = [field.convert_to_ids(element, word2id, self) for element in
+											  origin_data[key][data_key]]
 				data[key][data_key] = [
 					field.cut(element, max_sent_length=max_sent_length, max_turn_length=max_turn_length) for element in
 					origin_data[key][data_key]]
@@ -669,13 +688,15 @@ class LanguageProcessingBase(Dataloader):
 
 			sent_length = []
 			for data_key, field in data_fields[key]:
-				sent_length.extend([len(sent) for element in origin_data[key][data_key] for sent in field.iter_sentence(element)])
+				sent_length.extend(
+					[len(sent) for element in origin_data[key][data_key] for sent in field.iter_sentence(element)])
 
 			cut_word_num = np.sum(np.maximum(np.array(sent_length) - max_sent_length, 0))
 
 			session_keys = [data_key for data_key, field in data_fields[key] if field.__class__ == Session]
 			if session_keys:
-				turn_length = list(map(len, chain.from_iterable((origin_data[key][sess_key] for sess_key in session_keys))))
+				turn_length = list(
+					map(len, chain.from_iterable((origin_data[key][sess_key] for sess_key in session_keys))))
 				max_turn_length_before_cut = max(turn_length)
 				sent_num = sum(turn_length)
 				cut_sentence_rate = np.sum(np.maximum(np.array(turn_length) - max_turn_length, 0)) / sent_num
