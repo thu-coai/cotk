@@ -66,21 +66,7 @@ class SingleTurnDialog(LanguageProcessingBase):
 		self._min_vocab_times = min_vocab_times
 		self._max_sent_length = max_sent_length
 		self._invalid_vocab_times = invalid_vocab_times
-		self._tokenizer = tokenizer
-		self._remains_capital = remains_capital
-		super().__init__()
-
-	def tokenize(self, sentence, remains_capital=None, tokenizer=None):
-		r'''Convert sentence(str) to a list of tokens(str)
-
-		Arguments:
-			sentence (str): a string to be tokenized
-
-		Returns:
-			list: a list of tokens(str)
-		'''
-		return super().tokenize(sentence, remains_capital or self._remains_capital, \
-			tokenizer or self._tokenizer)
+		super().__init__(remains_capital=remains_capital, tokenizer=tokenizer)
 
 	def _load_data(self):
 		r'''Loading dataset, invoked during the initialization of :class:`LanguageProcessingBase`.
