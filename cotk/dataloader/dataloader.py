@@ -484,9 +484,7 @@ class LanguageProcessingBase(Dataloader):
 		elif not self._is_tokenizer_pretrained:
 			self.ext_vocab = default_special_tokens
 		else:
-			# Assert here. So code hinting for `self.tokenizer` is available.
-			# assert isinstance(self.tokenizer, PreTrainedTokenizer)
-			# `self.tokenizer`
+			# use PreTrainedTokenizer
 			self.ext_vocab = []
 			special_tokens_keys = ["pad_token", 'unk_token', 'bos_token', 'eos_token']
 			if not all(key in PreTrainedTokenizer.SPECIAL_TOKENS_ATTRIBUTES for key in special_tokens_keys):

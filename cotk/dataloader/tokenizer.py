@@ -93,9 +93,6 @@ class Tokenizer(BaseTokenizer):
 		except:
 			return False
 
-	# def __getattr__(self, item):
-	# 	return getattr(self.tokenizer, item)
-
 	attrs = {
 		'_check_callable_tokenizer',
 		'tokenizer',
