@@ -13,7 +13,6 @@ from transformers import PreTrainedTokenizer
 from .._utils import trim_before_target
 from .._utils.metaclass import DocStringInheritor, LoadClassInterface
 from .._utils.unordered_hash import UnorderedSha256
-
 from .tokenizer import Tokenizer
 
 
