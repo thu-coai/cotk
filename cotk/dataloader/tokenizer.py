@@ -2,6 +2,9 @@
 import typing
 from nltk.tokenize import WordPunctTokenizer
 from .._utils.metaclass import DocStringInheritor
+from .._utils.imports import LazyObject
+
+PreTrainedTokenizer = LazyObject('transformers.PreTrainedTokenizer')
 
 
 class BaseTokenizer(metaclass=DocStringInheritor):
@@ -83,6 +86,32 @@ class Tokenizer(BaseTokenizer):
 
 	def tokenize(self, sentence: str, **kwargs) -> typing.List[str]:
 		return self.tokenizer.tokenize(sentence, **kwargs)
+
+	def is_tokenizer_pretrained(self):
+		try:
+			return PreTrainedTokenizer.__instancecheck__(self.tokenizer)
+		except:
+			return False
+
+	# def __getattr__(self, item):
+	# 	return getattr(self.tokenizer, item)
+
+	attrs = {
+		'_check_callable_tokenizer',
+		'tokenizer',
+		'tokenize',
+		'from_string',
+		'is_tokenizer_pretrained',
+		'__getattribute__'
+	}
+	def __getattribute__(self, item):
+		if item in __class__.attrs:
+			return super().__getattribute__(item)
+		try:
+			return getattr(super().__getattribute__('tokenizer'), item)
+		except AttributeError:
+			return super().__getattribute__(item)
+
 
 	@staticmethod
 	def from_string(tokenizer: str) -> BaseTokenizer:
