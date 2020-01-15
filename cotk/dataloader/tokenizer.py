@@ -43,6 +43,7 @@ class TokenizerAdapter(BaseTokenizer):
 
 class Tokenizer(BaseTokenizer):
 	"""A general Tokenizer.
+
 	Notes:
 		This class overrides method `__getattribute__`. Thus, except some attributes `Tokenizer` owns(see attribute `own_attrs`),
 		all `self.ATTRIBUTE` statements will obtain the attribute of `self.tokenizer`, including magic attributes and magic methods.

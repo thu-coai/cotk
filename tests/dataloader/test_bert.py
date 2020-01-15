@@ -198,6 +198,7 @@ def load_opensubtitles():
 					bert_vocab_name="bert-base-uncased")
 	return _load_opensubtitles
 
+@pytest.mark.skip(reason='Bert dataloader will be updated in the future.')
 class TestBertOpenSubtitles(TestBertBase):
 
 	@pytest.mark.dependency()
