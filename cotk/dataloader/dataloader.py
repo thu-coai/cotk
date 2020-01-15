@@ -496,13 +496,12 @@ class LanguageProcessingBase(Dataloader, Tokenizer):
 						  key not in special_tokens_keys and key != 'additional_special_tokens'):
 				self.ext_vocab.append(special_token)
 
-		if self._is_tokenizer_pretrained:
-			self._build_pretrained_vocab()
-
 		self.pad_id = 0
 		self.unk_id = 1
 		self.go_id = 2
 		self.eos_id = 3
+		if self._is_tokenizer_pretrained:
+			self._build_pretrained_vocab()
 		self.key_name = key_name or ["train", "dev", "test"]
 		self.__hash_value = None  # it's assigned in `_general_load`
 
