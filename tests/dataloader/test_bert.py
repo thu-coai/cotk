@@ -173,13 +173,13 @@ class TestBertBase():
 
 	def base_test_convert_bert(self, dl):
 		origin_sent = ["[UNK]", "[CLS]", "[PAD]", "[PAD]", "[SEP]"]
-		bert_id = dl.convert_tokens_to_bert_ids(origin_sent)
-		new_sent = dl.convert_bert_ids_to_tokens(bert_id)
+		bert_id = dl.convert_tokens_to_pretrained_ids(origin_sent)
+		new_sent = dl.convert_pretrained_ids_to_tokens(bert_id)
 		assert new_sent == origin_sent[:2]
 
 		sent_id = [1, 2, 0, 0, 3]
-		assert sent_id == dl.convert_bert_ids_to_ids(bert_id)
-		assert bert_id == dl.convert_ids_to_bert_ids(sent_id)
+		assert sent_id == dl.convert_pretrained_ids_to_ids(bert_id)
+		assert bert_id == dl.convert_ids_to_pretrained_ids(sent_id)
 
 	def base_test_teacher_forcing_metric(self, dl):
 		assert isinstance(dl.get_teacher_forcing_metric(), MetricBase)

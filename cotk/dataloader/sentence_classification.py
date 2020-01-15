@@ -135,13 +135,13 @@ class SST(SentenceClassification):
 
 	@hooks.hook_dataloader
 	def __init__(self, file_id, min_vocab_times=10, \
-				 max_sent_length=50, invalid_vocab_times=0):
+				 max_sent_length=50, invalid_vocab_times=0, tokenizer='space'):
 		self._file_id = file_id
 		self._file_path = get_resource_file_path(file_id)
 		self._min_vocab_times = min_vocab_times
 		self._max_sent_length = max_sent_length
 		self._invalid_vocab_times = invalid_vocab_times
-		super(SST, self).__init__(remains_capital=True, tokenizer='space')
+		super(SST, self).__init__(remains_capital=True, tokenizer=tokenizer)
 
 	def _load_data(self):
 		r'''Loading dataset, invoked by `LanguageProcessingBase.__init__`
@@ -157,15 +157,3 @@ class SST(SentenceClassification):
 			with open(os.path.join(self._file_path, key + '_labels.json'), 'r', encoding='utf-8') as fp:
 				data[key]['label'] = json.load(fp)
 		return vocab_list, valid_vocab_len, data, data_size
-
-	# def tokenize(self, sentence):
-	# 	r'''Convert sentence(str) to list of token(str)
-	#
-	# 	Arguments:
-	# 		sentence (str)
-	#
-	# 	Returns:
-	# 		sent (list): list of token(str)
-	# 	'''
-	# 	# return [x.split(' ')[-1].lower() for x in sentence if x != '']
-	# 	return super().tokenize(sentence, True, 'space')

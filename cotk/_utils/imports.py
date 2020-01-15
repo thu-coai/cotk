@@ -129,7 +129,7 @@ class LazyObject(object):
 			try:
 				obj = getattr(obj, arr[i])
 			except AttributeError:
-				raise AttributeError("No attribute %s in %s." % arr[i], ".".join(arr[:i]))
+				raise AttributeError("No attribute %s in %s." % (arr[i], ".".join(arr[:i])))
 		return obj
 
 	def __getattribute__(self, key):

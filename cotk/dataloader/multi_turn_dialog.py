@@ -362,7 +362,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 
 	@hooks.hook_dataloader
 	def __init__(self, file_id="resources://SwitchboardCorpus", min_vocab_times=5, \
-				max_sent_length=50, max_turn_length=1000, invalid_vocab_times=0):
+				max_sent_length=50, max_turn_length=1000, invalid_vocab_times=0, tokenizer='nltk'):
 		self._file_id = file_id
 		self._file_path = get_resource_file_path(file_id)
 		self._min_vocab_times = min_vocab_times
@@ -371,7 +371,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 		self._invalid_vocab_times = invalid_vocab_times
 
 		self.word2id = {}
-		super().__init__(remains_capital=True, tokenizer='nltk')
+		super().__init__(remains_capital=True, tokenizer=tokenizer)
 
 	def _load_data(self):
 		r'''Loading dataset, invoked during the initialization of :class:`MultiTurnDialog`.
