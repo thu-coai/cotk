@@ -78,7 +78,7 @@ class FakeDataloader(LanguageProcessingBase):
 		self.max_sent_length = max_sent_length
 		self.max_turn_length = max_turn_length
 		self.invalid_vocab_times = invalid_vocab_times
-		super().__init__(ext_vocab, key_name)
+		super().__init__(ext_vocab, key_name, tokenizer='space')
 
 	def get_batch(self, key, indexes):
 		pass

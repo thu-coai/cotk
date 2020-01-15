@@ -3,12 +3,14 @@ A module for dataloader
 '''
 import random
 import hashlib
+import warnings
 from functools import partial
 from collections import Counter
 from itertools import chain
 
 import numpy as np
 from nltk.tokenize import WordPunctTokenizer
+from transformers import PreTrainedTokenizer
 
 from .._utils import trim_before_target
 from .._utils.metaclass import DocStringInheritor, LoadClassInterface
@@ -451,7 +453,8 @@ class LanguageProcessingBase(Dataloader, Tokenizer):
 
 	ARGUMENTS = r"""
 			ext_vocab (list): special tokens. Default: ``["<pad>", "<unk>", "<go>", "<eos>"]``
-			key_name (list): name of subsets of the data. Default: ``["train", "dev", "test"]``"""
+			key_name (list): name of subsets of the data. Default: ``["train", "dev", "test"]``""" + \
+		Tokenizer.ARGUMENTS
 	ATTRIBUTES = r"""
 			ext_vocab (list): special tokens, placed at beginning of ``vocab_list``.
 					For example: ``["<pad>", "<unk>", "<go>", "<eos>"]``.
@@ -463,25 +466,44 @@ class LanguageProcessingBase(Dataloader, Tokenizer):
 			all_vocab_list (list): vocabulary list of the datasets,
 					including valid vocabs and invalid vocabs.
 			word2id (dict): a dict mapping tokens to its id. You don't need to use it 
-					at most times, see :meth:`convert_tokens_to_ids` instead."""
+					at most times, see :meth:`convert_tokens_to_ids` instead.""" + \
+		Tokenizer.ATTRIBUTES
 
-	def __init__(self, \
-				 ext_vocab=None, \
+	def __init__(self,
+				 ext_vocab=None,
 				 key_name=None,
-				 remains_capital=None,
+				 remains_capital=True,
 				 tokenizer=None):
-		super().__init__()
-
-		# TODO: check tokenizer not None
-
-		# TODO: update subclass and docs.
-		# arguments for self.tokenize
-		self.remains_capital = remains_capital
-		self.tokenizer = tokenizer
-		# Tokenizer.__init__(self, tokenizer)
+		Dataloader.__init__(self)
+		self.remains_capital = remains_capital # arguments for self.tokenize
+		Tokenizer.__init__(self, tokenizer)
+		self._is_tokenizer_pretrained = isinstance(self.tokenizer, PreTrainedTokenizer)
 
 		# initialize by default value. (can be overwritten by subclass)
-		self.ext_vocab = ext_vocab or ["<pad>", "<unk>", "<go>", "<eos>"]
+		default_special_tokens = ["<pad>", "<unk>", "<go>", "<eos>"]
+		if ext_vocab:
+			self.ext_vocab = ext_vocab
+		elif not self._is_tokenizer_pretrained:
+			self.ext_vocab = default_special_tokens
+		else:
+			# Assert here. So code hinting for `self.tokenizer` is available.
+			assert isinstance(self.tokenizer, PreTrainedTokenizer)
+			self.ext_vocab = []
+			special_tokens_keys = ["pad_token", 'unk_token', 'bos_token', 'eos_token']
+			if not all(key in self.tokenizer.SPECIAL_TOKENS_ATTRIBUTES for key in special_tokens_keys):
+				raise RuntimeError('Module `transformers` is not compatible with cotk.')
+			default_special_tokens_map = dict(zip(special_tokens_keys, default_special_tokens))
+
+			for key in special_tokens_keys:
+				special_token = self.tokenizer.special_tokens_map.get(key, default_special_tokens_map[key])
+				self.ext_vocab.append(special_token)
+			for special_token in (value for key, value in self.tokenizer.special_tokens_map.items() if
+						  key not in special_tokens_keys and key != 'additional_special_tokens'):
+				self.ext_vocab.append(special_token)
+
+		if self._is_tokenizer_pretrained:
+			self._build_pretrained_vocab()
+
 		self.pad_id = 0
 		self.unk_id = 1
 		self.go_id = 2
@@ -502,6 +524,7 @@ class LanguageProcessingBase(Dataloader, Tokenizer):
 			self.batch_size[key] = None
 			self.index[key] = list(range(self.data_size[key]))
 
+
 	@property
 	def hash_value(self):
 		"""return hash value of dataset"""
@@ -521,6 +544,24 @@ class LanguageProcessingBase(Dataloader, Tokenizer):
 			idx = self.unk_id
 		return idx
 
+	def _valid_pretrained_id_to_id(self, bert_id):
+		'''This function return the id for a valid bert id, otherwise return ``unk_id``.
+
+		Arguments:
+			bert_id (str): a bert id.
+
+		Returns:
+			int
+		'''
+		token = self.pretrained_id2word[bert_id]
+		return self._valid_word2id(token)
+
+	def _build_pretrained_vocab(self):
+		self.word2pretrained_id = dict(self.tokenizer.vocab)
+		self.pretrained_id2word = [None] * len(self.word2pretrained_id)
+		for key, value in self.word2pretrained_id.items():
+			self.pretrained_id2word[value] = key
+
 	def tokenize(self, sentence):
 		r'''Convert sentence(str) to a list of tokens(str)
 
@@ -537,12 +578,69 @@ class LanguageProcessingBase(Dataloader, Tokenizer):
 			sentence = sentence.strip()
 		else:
 			sentence = sentence.lower().strip()
-		if self.tokenizer == 'nltk':
-			return WordPunctTokenizer().tokenize(sentence)
-		elif self.tokenizer == 'space':
-			return sentence.split()
-		else:
-			raise ValueError('tokenizer of dataloader should be either "nltk" or "space"')
+		return super().tokenize(sentence)
+
+	def _assert_pretrained_tokenizer_available(self):
+		if not self._is_tokenizer_pretrained:
+			raise RuntimeError('No bert tokenizer is available.')
+
+	def convert_tokens_to_pretrained_ids(self, sent):
+		'''Convert list of token(str) to list of bert id(int)
+
+		Arguments:
+				sent (list): list of token(str)
+
+		Returns:
+				bert_ids (list): list of bert id(int)
+		'''
+		self._assert_pretrained_tokenizer_available()
+		return self.tokenizer.convert_tokens_to_ids(sent)
+
+	def convert_pretrained_ids_to_tokens(self, bert_ids, trim=True):
+		'''Convert list of bert id(int) to list of token(str)
+
+		Arguments:
+				bert_ids (list): list of bert id(int)
+
+		Returns:
+				(list): list of token(str)
+		'''
+		self._assert_pretrained_tokenizer_available()
+		if trim:
+			bert_ids = trim_before_target(list(bert_ids), self.eos_id)
+			idx = len(bert_ids)
+			while idx > 0 and bert_ids[idx - 1] == self.pad_id:
+				idx -= 1
+			bert_ids = bert_ids[:idx]
+		return list(map(lambda word: self.pretrained_id2word[word], bert_ids))
+
+	def convert_pretrained_ids_to_ids(self, bert_ids, invalid_vocab=False):
+		'''Convert list of bert id(int) to list of id(int)
+
+		Arguments:
+				bert_ids (list): list of bert id(int)
+				invalid_vocab (bool): whether to provide invalid vocabs.
+					If ``False``, invalid vocabs will be replaced by ``unk_id``.
+					If ``True``, invalid vocabs will using their own id.
+					Default: ``False``
+
+		Returns:
+				(list): list of id(int)
+		'''
+		self._assert_pretrained_tokenizer_available()
+		return self.convert_tokens_to_ids(self.convert_pretrained_ids_to_tokens(bert_ids, False), invalid_vocab)
+
+	def convert_ids_to_pretrained_ids(self, ids):
+		'''Convert list of id(int) to list of bert id(int)
+
+		Arguments:
+				ids (list): list of id(int)
+
+		Returns:
+				bert_ids (list): list of bert id(int)
+		'''
+		self._assert_pretrained_tokenizer_available()
+		return self.convert_tokens_to_pretrained_ids(self.convert_ids_to_tokens(ids, False))
 
 	def _general_load_data(self, file_path, data_fields, min_vocab_times, max_sent_length, max_turn_length,
 						   invalid_vocab_times):

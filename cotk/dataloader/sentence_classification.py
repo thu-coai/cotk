@@ -135,13 +135,13 @@ class SST(SentenceClassification):
 
 	@hooks.hook_dataloader
 	def __init__(self, file_id, min_vocab_times=10, \
-				 max_sent_length=50, invalid_vocab_times=0):
+				 max_sent_length=50, invalid_vocab_times=0, tokenizer='space'):
 		self._file_id = file_id
 		self._file_path = get_resource_file_path(file_id)
 		self._min_vocab_times = min_vocab_times
 		self._max_sent_length = max_sent_length
 		self._invalid_vocab_times = invalid_vocab_times
-		super(SST, self).__init__(remains_capital=True, tokenizer='space')
+		super(SST, self).__init__(remains_capital=True, tokenizer=tokenizer)
 
 	def _load_data(self):
 		r'''Loading dataset, invoked by `LanguageProcessingBase.__init__`
