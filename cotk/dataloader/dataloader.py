@@ -1,6 +1,4 @@
-'''
-A module for dataloader
-'''
+'''A module for dataloader'''
 import random
 import hashlib
 from functools import partial

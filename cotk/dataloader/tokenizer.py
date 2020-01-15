@@ -1,3 +1,4 @@
+"""A module for Tokenizer"""
 import typing
 from nltk.tokenize import WordPunctTokenizer
 from .._utils.metaclass import DocStringInheritor
