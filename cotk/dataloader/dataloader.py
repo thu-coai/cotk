@@ -6,12 +6,14 @@ from collections import Counter
 from itertools import chain
 
 import numpy as np
-from transformers import PreTrainedTokenizer
 
 from .._utils import trim_before_target
 from .._utils.metaclass import DocStringInheritor, LoadClassInterface
 from .._utils.unordered_hash import UnorderedSha256
+from .._utils.imports import LazyObject
 from .tokenizer import Tokenizer
+
+PreTrainedTokenizer = LazyObject('transformers.PreTrainedTokenizer')
 
 
 class DataField(LoadClassInterface, metaclass=DocStringInheritor):
@@ -438,7 +440,7 @@ class DataloaderHash(metaclass=DocStringInheritor):
 		return hash_obj.hexdigest()
 
 
-class LanguageProcessingBase(Dataloader, Tokenizer):
+class LanguageProcessingBase(Dataloader):
 	r"""Base class for all language processing tasks. This is an abstract class.
 
 	Arguments:{ARGUMENTS}
@@ -461,8 +463,9 @@ class LanguageProcessingBase(Dataloader, Tokenizer):
 			all_vocab_list (list): vocabulary list of the datasets,
 					including valid vocabs and invalid vocabs.
 			word2id (dict): a dict mapping tokens to its id. You don't need to use it 
-					at most times, see :meth:`convert_tokens_to_ids` instead.""" + \
-		Tokenizer.ATTRIBUTES
+					at most times, see :meth:`convert_tokens_to_ids` instead.
+			tokenizer(Tokenizer): converts a sentence to a list of tokens.
+			"""
 
 	def __init__(self,
 				 ext_vocab=None,
@@ -471,8 +474,8 @@ class LanguageProcessingBase(Dataloader, Tokenizer):
 				 tokenizer=None):
 		Dataloader.__init__(self)
 		self.remains_capital = remains_capital # arguments for self.tokenize
-		Tokenizer.__init__(self, tokenizer)
-		self._is_tokenizer_pretrained = isinstance(self.tokenizer, PreTrainedTokenizer)
+		self.tokenizer = Tokenizer(tokenizer)
+		self._is_tokenizer_pretrained = self.tokenizer.is_tokenizer_pretrained()
 
 		# initialize by default value. (can be overwritten by subclass)
 		default_special_tokens = ["<pad>", "<unk>", "<go>", "<eos>"]
@@ -481,11 +484,10 @@ class LanguageProcessingBase(Dataloader, Tokenizer):
 		elif not self._is_tokenizer_pretrained:
 			self.ext_vocab = default_special_tokens
 		else:
-			# Assert here. So code hinting for `self.tokenizer` is available.
-			assert isinstance(self.tokenizer, PreTrainedTokenizer)
+			# use PreTrainedTokenizer
 			self.ext_vocab = []
 			special_tokens_keys = ["pad_token", 'unk_token', 'bos_token', 'eos_token']
-			if not all(key in self.tokenizer.SPECIAL_TOKENS_ATTRIBUTES for key in special_tokens_keys):
+			if not all(key in PreTrainedTokenizer.SPECIAL_TOKENS_ATTRIBUTES for key in special_tokens_keys):
 				raise RuntimeError('Module `transformers` is not compatible with cotk.')
 			default_special_tokens_map = dict(zip(special_tokens_keys, default_special_tokens))
 
@@ -572,7 +574,7 @@ class LanguageProcessingBase(Dataloader, Tokenizer):
 			sentence = sentence.strip()
 		else:
 			sentence = sentence.lower().strip()
-		return super().tokenize(sentence)
+		return self.tokenizer.tokenize(sentence)
 
 	def _assert_pretrained_tokenizer_available(self):
 		if not self._is_tokenizer_pretrained:

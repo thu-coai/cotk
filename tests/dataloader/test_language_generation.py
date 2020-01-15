@@ -56,16 +56,18 @@ class TestLanguageGeneration():
 		Dataloader().load_class('LanguageGeneration')
 		Dataloader().load_class('None')
 
+		with pytest.raises(TypeError):
+			_ = LanguageProcessingBase()
 
 		with pytest.raises(NotImplementedError):
-			basic = LanguageProcessingBase()
+			basic = LanguageProcessingBase(tokenizer='space')
 
 
 
 		with pytest.raises(NotImplementedError):
 			class MyLanguageGeneration(LanguageProcessingBase):
 				def __init__(self):
-					pass
+					super().__init__(tokenizer='space')
 			MyLanguageGeneration().get_batch(None, None)
 
 

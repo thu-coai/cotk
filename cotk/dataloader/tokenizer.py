@@ -2,6 +2,9 @@
 import typing
 from nltk.tokenize import WordPunctTokenizer
 from .._utils.metaclass import DocStringInheritor
+from .._utils.imports import LazyObject
+
+PreTrainedTokenizer = LazyObject('transformers.PreTrainedTokenizer')
 
 
 class BaseTokenizer(metaclass=DocStringInheritor):
@@ -40,6 +43,10 @@ class TokenizerAdapter(BaseTokenizer):
 
 class Tokenizer(BaseTokenizer):
 	"""A general Tokenizer.
+
+	Notes:
+		This class overrides method `__getattribute__`. Thus, except some attributes `Tokenizer` owns(see attribute `own_attrs`),
+		all `self.ATTRIBUTE` statements will obtain the attribute of `self.tokenizer`, including magic attributes and magic methods.
 
 	Arguments:{ARGUMENTS}
 
@@ -83,6 +90,30 @@ class Tokenizer(BaseTokenizer):
 
 	def tokenize(self, sentence: str, **kwargs) -> typing.List[str]:
 		return self.tokenizer.tokenize(sentence, **kwargs)
+
+	def is_tokenizer_pretrained(self):
+		try:
+			return PreTrainedTokenizer.__instancecheck__(self.tokenizer)
+		except:
+			return False
+
+	own_attrs = {
+		'_check_callable_tokenizer',
+		'tokenizer',
+		'tokenize',
+		'from_string',
+		'is_tokenizer_pretrained',
+		'__getattribute__'
+	}
+
+	def __getattribute__(self, item):
+		if item in __class__.own_attrs:
+			return super().__getattribute__(item)
+		try:
+			return getattr(super().__getattribute__('tokenizer'), item)
+		except AttributeError:
+			return super().__getattribute__(item)
+
 
 	@staticmethod
 	def from_string(tokenizer: str) -> BaseTokenizer:
