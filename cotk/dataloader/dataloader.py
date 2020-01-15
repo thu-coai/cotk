@@ -407,19 +407,19 @@ class DataloaderHash(metaclass=DocStringInheritor):
 		return ordered_hash_obj.digest()
 
 	_hash_dataset.__doc__ = __HASH_DATASET_DOC + \
-							"""
-							Returns (bytes):
-								hash value(length==32)
-							"""
+		"""
+			Returns (bytes):
+				hash value(length==32)
+		"""
 
 	def hash_dataset(self, dataset, fields, id_to_word):
 		return self._hash_dataset(dataset, fields, id_to_word).hex()
 
 	hash_dataset.__doc__ = __HASH_DATASET_DOC + \
-						   """
-						   Returns (str):
-							   hex hash value(length==64) of the dataset
-						   """
+		"""
+			Returns (str):
+				hex hash value(length==64) of the dataset
+		"""
 	del __HASH_DATASET_DOC
 
 	def hash_datasets(self, datasets, field_dict, id_to_word):
