@@ -3,13 +3,11 @@ A module for dataloader
 '''
 import random
 import hashlib
-import warnings
 from functools import partial
 from collections import Counter
 from itertools import chain
 
 import numpy as np
-from nltk.tokenize import WordPunctTokenizer
 from transformers import PreTrainedTokenizer
 
 from .._utils import trim_before_target
