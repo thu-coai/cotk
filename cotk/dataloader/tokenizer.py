@@ -105,8 +105,9 @@ class Tokenizer(BaseTokenizer):
 		'is_tokenizer_pretrained',
 		'__getattribute__'
 	}
+
 	def __getattribute__(self, item):
-		if item in __class__.attrs:
+		if item in __class__.own_attrs:
 			return super().__getattribute__(item)
 		try:
 			return getattr(super().__getattribute__('tokenizer'), item)
