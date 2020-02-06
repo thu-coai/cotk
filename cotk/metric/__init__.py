@@ -45,6 +45,7 @@ from .perplexity import PerplexityMetric, MultiTurnPerplexityMetric
 from .accuracy import AccuracyMetric
 from .recorder import SingleTurnDialogRecorder, LanguageGenerationRecorder, MultiTurnDialogRecorder
 from .ngram_perplexity import NgramFwBwPerplexityMetric
+from .distinct import DistinctNgramsCorpus
 
 __all__ = ["MetricBase", "PerplexityMetric", "BleuCorpusMetric", "SelfBleuCorpusMetric", \
         "FwBwBleuCorpusMetric", "SingleTurnDialogRecorder", "LanguageGenerationRecorder", \

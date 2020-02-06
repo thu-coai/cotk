@@ -65,7 +65,7 @@ Use a resources name
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This time, you have to change some codes in ``cotk``.
-First you have to understand the usage of resources at 
+First you have to understand the usage of resources at
 :ref:`here <resources_reference>`. Then see the json file under
 ``/cotk/resource_config/``, you will find each predefined resource
 corresponds to a json file, like

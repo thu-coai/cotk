@@ -2,14 +2,16 @@ r"""
 Containing some classes and functions about perplexity evaluating results of models.
 """
 import random
-
 import numpy as np
+from typing import Union, List, Any, Optional
+
+from ..dataloader import LanguageProcessing, Sentence
 from .metric import MetricBase
 from .._utils.imports import LazyObject, LazyModule
-from .._utils import hooks
+from ..hooks import hooks
 
 torch = LazyModule("torch", globals())
-torch.Tensor = LazyObject("torch.Tensor")
+torch.Tensor = LazyObject("torch.Tensor") #type: ignore
 
 class PerplexityMetric(MetricBase):
 	'''Metric for calculating perplexity.
@@ -20,7 +22,7 @@ class PerplexityMetric(MetricBase):
 		{MetricBase.REFERENCE_LEN_KEY_ARGUMENTS}
 		gen_log_prob_key (str): The key of **log** probability over words.
 			Default: ``gen_log_prob``.
-		invalid_vocab (bool): Whether ``gen_log_prob`` contains :ref:`invalid vocab <vocab_ref>`.
+		generate_rare_vocab (bool): Whether ``gen_log_prob`` contains :ref:`invalid vocab <vocab_ref>`.
 			Default: ``False``.
 		full_check (bool): Whether perform a full check on ``gen_log_prob`` to make sure the sum
 			of probability is 1. Otherwise, a random check will be performed for efficiency.
@@ -53,11 +55,11 @@ class PerplexityMetric(MetricBase):
 	_version = 1
 
 	@hooks.hook_metric
-	def __init__(self, dataloader, \
+	def __init__(self, dataloader: Union[LanguageProcessing, Sentence], \
 					   reference_allvocabs_key="ref_allvocabs", \
 					   reference_len_key="ref_length", \
 					   gen_log_prob_key="gen_log_prob", \
-					   invalid_vocab=False, \
+					   generate_rare_vocab=False, \
 					   full_check=False \
 			  ):
 		super().__init__(self._name, self._version)
@@ -67,14 +69,16 @@ class PerplexityMetric(MetricBase):
 		self.gen_log_prob_key = gen_log_prob_key
 		self.word_loss = 0
 		self.length_sum = 0
-		self.invalid_vocab = invalid_vocab
+		self.generate_rare_vocab = generate_rare_vocab
 		self.full_check = full_check
-		self.engine_version = "unknown" # can be 'default', 'pytorch' when first forward time
+		self.engine_version = "unknown" # after first forward, it will be filled with 'default' or 'pytorch'
 
-		self.resp = []
+		self.resp: List[str] = []
 		#self.resp_length = []
-		self.gen_valid_log_prob = []
-		self.gen_unk_log_prob = []
+		self.gen_valid_log_prob: List[np.ndarray] = []
+		self.gen_unk_log_prob: List[np.ndarray] = []
+
+		self.have_unk = "unk" in self.dataloader.get_special_tokens_mapping()
 
 	def forward(self, data):
 		'''Processing a batch of data. Smoothing will be performed for :ref:`invalid vocabs <vocab_ref>`.
@@ -89,8 +93,8 @@ class PerplexityMetric(MetricBase):
 				  The **log softmax** probability of the sentence generations model outputs.
 				  A 3-d jagged or padded array of float.
 				  Contains end token (eg:``<eos>``), but without start token (eg: ``<go>``).
-				  Size: ``[batch_size, ~gen_sentence_length, vocab_size]`` for ``invalid_vocab = False``, or
-				  ``[batch_size, ~gen_sentence_length, all_vocab_size]`` for ``invalid_vocab = True``,
+				  Size: ``[batch_size, ~gen_sentence_length, vocab_size]`` for ``generate_rare_vocab = False``, or
+				  ``[batch_size, ~gen_sentence_length, all_vocab_size]`` for ``generate_rare_vocab = True``,
 				  where "~" means different sizes in this dimension is allowed.
 				  If :class:`torch.Tensor` is used, the following data should also be
 				  :class:`torch.Tensor`.
@@ -149,7 +153,7 @@ class PerplexityMetric(MetricBase):
 			raise ValueError("resp_length must no less than 2, because <go> and <eos> are always included.")
 		checkrow = random.randint(0, resp_length[checkid]-2)
 
-		random_check_expsum = np.sum(np.exp(gen_log_prob[checkid][checkrow]))
+		random_check_expsum = float(np.sum(np.exp(gen_log_prob[checkid][checkrow])))
 		if not np.isclose(random_check_expsum, 1):
 			raise ValueError("data[gen_log_prob_key] must be processed after log_softmax. \
 				gen_log_prob[%d][%d] exp sum is equal to %f." % (checkid, checkrow, \
@@ -175,29 +179,30 @@ class PerplexityMetric(MetricBase):
 				if not np.allclose(expsum, [1] * (resp_len - 1)):
 					raise ValueError("data[gen_log_prob_key] must be processed after log_softmax.")
 
-			if not self.invalid_vocab:
-				if gen_now.shape[1] != self.dataloader.vocab_size:
-					raise ValueError("The third dimension gen_log_prob should be equals to vocab_size when \
-						invalid_vocab = False, \
-						but %d != %d" % (gen_now.shape[1], self.dataloader.vocab_size))
+			if not self.generate_rare_vocab:
+				if gen_now.shape[1] != self.dataloader.all_vocab_size:
+					raise ValueError(("The third dimension gen_log_prob should be equals to frequent_vocab_size when "
+						"generate_rare_vocab = False, "
+						"but %d != %d") % (gen_now.shape[1], self.dataloader.frequent_vocab_size))
 			else:
 				if gen_now.shape[1] != self.dataloader.all_vocab_size:
-					raise ValueError("The third dimension gen_log_prob should be equals to all_vocab_size \
-						when invalid_vocab = True, \
-						but %d != %d" % (gen_now.shape[1], self.dataloader.all_vocab_size))
+					raise ValueError(("The third dimension gen_log_prob should be equals to all_vocab_size "
+						"when generate_rare_vocab = True, "
+						"but %d != %d") % (gen_now.shape[1], self.dataloader.all_vocab_size))
 
 			resp = resp_now
 			self.resp.append(resp)
 			#self.resp_length.append(resp_len)
 
 			resp_known = resp.copy()
-			if not self.invalid_vocab:
-				resp_known[resp_known >= self.dataloader.vocab_size] = self.dataloader.unk_id
+			if not self.generate_rare_vocab and self.have_unk:
+				resp_known[resp_known >= self.dataloader.all_vocab_size] = self.dataloader.unk_id
 
 			self.gen_valid_log_prob.append(gen_now[list(range(resp_len-1)), resp_known])
-			self.gen_unk_log_prob.append(gen_now[:resp_len-1, self.dataloader.unk_id])
+			if self.have_unk:
+				self.gen_unk_log_prob.append(gen_now[:resp_len-1, self.dataloader.unk_id])
 
-		self._hash_relevant_data(relevant_data)
+		self._hash_unordered_list(relevant_data)
 
 	def _pytorch_forward(self, resp_allvocabs, resp_length, gen_log_prob):
 		if len(resp_allvocabs) != len(resp_length) or len(resp_allvocabs) != len(gen_log_prob):
@@ -214,55 +219,59 @@ class PerplexityMetric(MetricBase):
 
 			resp_now = resp_allvocabs[i, 1:resp_len]
 			gen_now = gen_log_prob[i, :resp_len - 1]
-			relevant_data.append(resp_now.tolist())
+			relevant_data.append(self.dataloader.convert_ids_to_tokens(resp_now.tolist()))
 
 			# perform full check to assert the probability is valid
 			expsum = gen_now.exp().sum(-1)
 			if not expsum.allclose(torch.ones_like(expsum)):
 				raise ValueError("data[gen_log_prob_key] must be processed after log_softmax.")
 
-			if not self.invalid_vocab:
-				if gen_now.shape[1] != self.dataloader.vocab_size:
-					raise ValueError("The third dimension gen_log_prob should be equals to vocab_size when \
-						invalid_vocab = False, \
-						but %d != %d" % (gen_now.shape[1], self.dataloader.vocab_size))
+			if not self.generate_rare_vocab:
+				if gen_now.shape[1] != self.dataloader.frequent_vocab_size:
+					raise ValueError(("The third dimension gen_log_prob should be equals to frequent_vocab_size when "
+						"generate_rare_vocab = False, "
+						"but %d != %d") % (gen_now.shape[1], self.dataloader.frequent_vocab_size))
 			else:
 				if gen_now.shape[1] != self.dataloader.all_vocab_size:
-					raise ValueError("The third dimension gen_log_prob should be equals to all_vocab_size \
-						when invalid_vocab = True, \
-						but %d != %d" % (gen_now.shape[1], self.dataloader.all_vocab_size))
+					raise ValueError(("The third dimension gen_log_prob should be equals to all_vocab_size "
+						"when generate_rare_vocab = True, "
+						"but %d != %d") % (gen_now.shape[1], self.dataloader.all_vocab_size))
 
 			resp_known = resp_now.clone()
-			if not self.invalid_vocab:
-				resp_known[resp_known >= self.dataloader.vocab_size] = self.dataloader.unk_id
+			if not self.generate_rare_vocab and self.have_unk:
+				resp_known[resp_known >= self.dataloader.frequent_vocab_size] = self.dataloader.unk_id
 
-			unk_id = self.dataloader.unk_id
-			vocab_size = self.dataloader.vocab_size
-			invalid_vocab_size = self.dataloader.all_vocab_size - vocab_size
+			unk_id = self.dataloader.unk_id if self.have_unk else None
+			frequent_vocab_size = self.dataloader.frequent_vocab_size
+			rare_vocab_size = self.dataloader.all_vocab_size - frequent_vocab_size
 
 			# calc normal vocab
-			normal_mask = ((resp_now != unk_id) & (resp_now < vocab_size)).float()
+			if self.have_unk:
+				normal_mask = ((resp_now != unk_id) & (resp_now < frequent_vocab_size)).float()
+			else:
+				normal_mask = (resp_now < frequent_vocab_size).float()
 			word_loss = -(gen_now.gather(-1, resp_known.unsqueeze(1))[:, 0] * normal_mask).sum()
 			length_sum = normal_mask.sum()
 			# calc invalid vocab
 			# smoothing from unk
-			invalid_mask = (resp_now >= vocab_size).float()
-			invalid_log_prob = (gen_now[:, unk_id] - \
-						(torch.ones_like(gen_now[:, unk_id]) * invalid_vocab_size).log()) * invalid_mask
+			if self.have_unk:
+				invalid_mask = (resp_now >= frequent_vocab_size).float()
+				invalid_log_prob = (gen_now[:, unk_id] - \
+							(torch.ones_like(gen_now[:, unk_id]) * rare_vocab_size).log()) * invalid_mask
 
-			if self.invalid_vocab:
-				extra_invalid_log_prob = gen_now.gather(-1, resp_now.unsqueeze(1))[:, 0] * invalid_mask
-				word_loss -= ((invalid_log_prob.exp() + extra_invalid_log_prob.exp()).log() \
-						* invalid_mask).sum()
-			else:
-				word_loss -= invalid_log_prob.sum()
+				if self.generate_rare_vocab:
+					extra_invalid_log_prob = gen_now.gather(-1, resp_now.unsqueeze(1))[:, 0] * invalid_mask
+					word_loss -= ((invalid_log_prob.exp() + extra_invalid_log_prob.exp()).log() \
+							* invalid_mask).sum()
+				else:
+					word_loss -= invalid_log_prob.sum()
 
-			length_sum += invalid_mask.sum()
+				length_sum += invalid_mask.sum()
 
 			self.word_loss += word_loss.tolist()
 			self.length_sum += length_sum.tolist()
 
-		self._hash_relevant_data(relevant_data)
+		self._hash_unordered_list(relevant_data)
 
 	@classmethod
 	def _run_f(cls, ele):
@@ -276,22 +285,26 @@ class PerplexityMetric(MetricBase):
 				invalid_vocab, vocab_size, all_vocab_size, unk_id = ele
 
 		# calc normal vocab
-		normal_idx = np.where(np.logical_and(resp_now != unk_id, \
-								resp_now < vocab_size))
+		if unk_id is not None:
+			normal_idx = np.where(np.logical_and(resp_now != unk_id, \
+									resp_now < vocab_size))
+		else:
+			normal_idx = np.where(resp_now < vocab_size)
 		word_loss = -np.sum(valid_log_prob[normal_idx])
 		length_sum = np.array(normal_idx).shape[1]
 		# calc invalid vocab
 		# smoothing from unk
-		invalid_idx = np.where(resp_now >= vocab_size)
-		invalid_log_prob = unk_log_prob[invalid_idx] - np.log(all_vocab_size - vocab_size)
-		if invalid_vocab:
-			extra_invalid_log_prob = valid_log_prob[invalid_idx]
-			word_loss -= np.sum(np.log( \
-					np.exp(invalid_log_prob) + np.exp(extra_invalid_log_prob) \
-				))
-		else:
-			word_loss -= np.sum(invalid_log_prob)
-		length_sum += np.array(invalid_idx).shape[1]
+		if unk_id is not None:
+			invalid_idx = np.where(resp_now >= vocab_size)
+			invalid_log_prob = unk_log_prob[invalid_idx] - np.log(all_vocab_size - vocab_size)
+			if invalid_vocab:
+				extra_invalid_log_prob = valid_log_prob[invalid_idx]
+				word_loss -= np.sum(np.log( \
+						np.exp(invalid_log_prob) + np.exp(extra_invalid_log_prob) \
+					))
+			else:
+				word_loss -= np.sum(invalid_log_prob)
+			length_sum += np.array(invalid_idx).shape[1]
 
 		return word_loss, length_sum
 
@@ -316,8 +329,9 @@ class PerplexityMetric(MetricBase):
 				raise RuntimeError("The metric has not been forwarded data correctly.")
 
 			loader = self.dataloader
+			unk_id = loader.unk_id if self.have_unk else None
 			tasks = ((self.gen_valid_log_prob[i], self.gen_unk_log_prob[i], self.resp[i], \
-							self.invalid_vocab, loader.vocab_size, loader.all_vocab_size, loader.unk_id) \
+							self.generate_rare_vocab, loader.all_vocab_size, loader.all_vocab_size, unk_id) \
 							for i, _ in enumerate(self.gen_valid_log_prob))
 
 			# Multiprocessing seems can't boost the speed
@@ -351,7 +365,7 @@ class MultiTurnPerplexityMetric(MetricBase):
 		{MetricBase.MULTI_TURN_REFERENCE_LEN_KEY_ARGUMENTS}
 		gen_log_prob_key (str): The key of **log** probability over words.
 			Default: ``multi_turn_gen_log_prob``.
-		invalid_vocab (bool): whether ``gen_log_prob`` contains :ref:`invalid vocab <vocab_ref>`.
+		generate_rare_vocab (bool): whether ``gen_log_prob`` contains :ref:`invalid vocab <vocab_ref>`.
 			Default: ``False``.
 		full_check (bool): whether perform full checks on ``gen_log_prob`` to make sure the sum
 			of probability is 1. Otherwise, a random check will be performed for efficiency.
@@ -389,7 +403,7 @@ class MultiTurnPerplexityMetric(MetricBase):
 	def __init__(self, dataloader, multi_turn_reference_allvocabs_key="multi_turn_ref_allvocabs", \
 					   multi_turn_reference_len_key="multi_turn_ref_length", \
 					   multi_turn_gen_log_prob_key="multi_turn_gen_log_prob", \
-					   invalid_vocab=False, \
+					   generate_rare_vocab=False, \
 					   full_check=False \
 			  ):
 		super().__init__(self._name, self._version)
@@ -397,12 +411,12 @@ class MultiTurnPerplexityMetric(MetricBase):
 		self.multi_turn_reference_allvocabs_key = multi_turn_reference_allvocabs_key
 		self.multi_turn_reference_len_key = multi_turn_reference_len_key
 		self.multi_turn_gen_log_prob_key = multi_turn_gen_log_prob_key
-		self.invalid_vocab = invalid_vocab
+		self.generate_rare_vocab = generate_rare_vocab
 		self.sub_metric = PerplexityMetric(dataloader, \
 				reference_allvocabs_key="ref_allvocabs", \
 				reference_len_key="ref_length", \
 				gen_log_prob_key="gen_log_prob", \
-				invalid_vocab=invalid_vocab, \
+				generate_rare_vocab=generate_rare_vocab, \
 				full_check=full_check)
 
 	def forward(self, data):
@@ -418,8 +432,8 @@ class MultiTurnPerplexityMetric(MetricBase):
 				  The **log softmax** probability of the sentence generations model outputs.
 				  A 4-d jagged or padded array. **log softmax** probability.
 				  Contains end token (eg:``<eos>``), but without start token (eg: ``<go>``).
-				  Size: ``[batch_size, ~gen_sentence_length, vocab_size]`` for ``invalid_vocab = False``, or
-				  ``[batch_size, ~gen_sentence_length, all_vocab_size]` for ``invalid_vocab = True``,
+				  Size: ``[batch_size, ~gen_sentence_length, vocab_size]`` for ``generate_rare_vocab = False``, or
+				  ``[batch_size, ~gen_sentence_length, all_vocab_size]` for ``generate_rare_vocab = True``,
 				  where "~" means different sizes in this dimension is allowed.
 				  If :class:`torch.Tensor` is used, the following data should also be
 				  :class:`torch.Tensor`.

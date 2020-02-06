@@ -1,6 +1,7 @@
 r"""
 Containing some classes and functions about bleu evaluating results of models.
 """
+from typing import Union, List, Any, Optional, Iterable
 import random
 import os
 import multiprocessing
@@ -8,29 +9,14 @@ from multiprocessing import Pool
 import numpy as np
 import tqdm
 from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunction
+
 from .metric import MetricBase
-from .._utils import hooks
+from ..hooks import hooks
+from ..dataloader.tokenizer import Tokenizer, SimpleTokenizer
+from .._utils import replace_unk
 
-
-def _replace_unk(_input, _unk_id, _target=-1):
-	r'''Auxiliary function for replacing the unknown words:
-
-	Arguments:
-		_input (list): the references or hypothesis.
-		_unk_id (int): id for unknown words.
-		_target: the target word index used to replace the unknown words.
-
-	Returns:
-
-		* list: processed result.
-	'''
-	output = []
-	for _list in _input:
-		_output = []
-		for ele in _list:
-			_output.append(_target if ele == _unk_id else ele)
-		output.append(_output)
-	return output
+if False: # for type check
+	from ..dataloader.dataloader import LanguageProcessing
 
 def _sentence_bleu(ele):
 	'''Auxiliary function for computing sentence bleu:
@@ -42,7 +28,8 @@ def _sentence_bleu(ele):
 
 		* int: **sentence-bleu** value.
 	'''
-	return sentence_bleu(ele[0], ele[1], smoothing_function=SmoothingFunction().method1)
+
+	return sentence_bleu(ele[0], ele[1], weights=ele[2], smoothing_function=SmoothingFunction().method1)
 
 class BleuCorpusMetric(MetricBase):
 	'''Metric for calculating BLEU.
@@ -52,7 +39,9 @@ class BleuCorpusMetric(MetricBase):
 		{MetricBase.REFERENCE_ALLVOCABS_KEY_ARGUMENTS}
 		{MetricBase.GEN_KEY_ARGUMENTS}
 
-	Here is an exmaple:
+		reference_num can be none, which means uncertain multiple reference number, it will be determined by the argument of forward
+
+	Here is an example:
 
 		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
 		>>> reference_allvocabs_key = "ref_allvocabs"
@@ -78,15 +67,22 @@ class BleuCorpusMetric(MetricBase):
 	_version = 1
 
 	@hooks.hook_metric
-	def __init__(self, dataloader, ignore_smoothing_error=False,\
-			reference_allvocabs_key="ref_allvocabs", gen_key="gen"):
+	def __init__(self, dataloader: "LanguageProcessing", ngram=4, *, tokenizer: Union[None, Tokenizer, str] = None, \
+			reference_num=1, ignore_smoothing_error=False,\
+			reference_allvocabs_key="ref_allvocabs", gen_key="gen", \
+			reference_str_key="ref_str"):
 		super().__init__(self._name, self._version)
+		#self._hash_ordered_data(self.ngram)
 		self.dataloader = dataloader
+		self.ngram = ngram
+		self.tokenizer = tokenizer
+		self.reference_num = reference_num
 		self.ignore_smoothing_error = ignore_smoothing_error
 		self.reference_allvocabs_key = reference_allvocabs_key
+		self.reference_str_key = reference_str_key
 		self.gen_key = gen_key
-		self.refs = []
-		self.hyps = []
+		self.hyps: List[Any] = []
+		self.refs: List[List[Any]] = []
 
 	def forward(self, data):
 		'''Processing a batch of data.
@@ -107,6 +103,12 @@ class BleuCorpusMetric(MetricBase):
 					... }
 		'''
 		super().forward(data)
+		if self.tokenizer is None:
+			self._direct_forward(data)
+		else:
+			self._re_tokenize_forward(data)
+
+	def _direct_forward(self, data):
 		gen = data[self.gen_key]
 		resp = data[self.reference_allvocabs_key]
 
@@ -120,11 +122,48 @@ class BleuCorpusMetric(MetricBase):
 
 		relevant_data = []
 		for gen_sen, resp_sen in zip(gen, resp):
-			self.hyps.append(self.dataloader.trim(gen_sen))
-			reference = list(self.dataloader.trim(resp_sen[1:]))
-			relevant_data.append(reference)
-			self.refs.append([reference])
-		self._hash_relevant_data(relevant_data)
+			hyp = self.dataloader.convert_ids_to_tokens(gen_sen, remove_special=True, trim=True)
+			if self.reference_num == 1:
+				refs = [self.dataloader.convert_ids_to_tokens(resp_sen, remove_special=True, trim=True)]
+			else:
+				if self.reference_num is not None and len(resp_sen) != self.reference_num:
+					raise RuntimeError("Require %d references but get %d" % (self.reference_num, len(resp_sen)))
+				refs = [self.dataloader.convert_ids_to_tokens(resp_single_sen, remove_special=True, trim=True) for resp_single_sen in resp_sen]
+			self.hyps.append(hyp)
+			self.refs.append(refs)
+			relevant_data.append(refs)
+		self._hash_unordered_list(relevant_data)
+
+	def _re_tokenize_forward(self, data):
+		gen = data[self.gen_key]
+		resp = data.get(self.reference_allvocabs_key, None)
+		resp_str = data.get(self.reference_str_key, None)
+
+		if not isinstance(gen, (np.ndarray, list)):
+			raise TypeError("Unknown type for gen.")
+		#fill more typeerror hints
+
+		relevant_data = []
+		for i, gen_sen in enumerate(gen):
+			hyp = self.dataloader.convert_ids_to_sentence(gen_sen, remove_special=True, trim=True)
+			if resp_str:
+				if self.reference_num == 1:
+					refs = [resp_str[i]]
+				else:
+					if self.reference_num is not None and len(resp_str[i]) != self.reference_num:
+						raise RuntimeError("Require %d references but get %d" % (self.reference_num, len(resp_str[i])))
+					refs = resp_str[i]
+			else:
+				if self.reference_num == 1:
+					refs = [self.dataloader.convert_ids_to_sentence(resp[i], remove_special=None, trim=True)]
+				else:
+					if self.reference_num is not None and len(resp[i]) != self.reference_num:
+						raise RuntimeError("Require %d references but get %d" % (self.reference_num, len(resp[i])))
+					refs = [self.dataloader.convert_ids_to_sentence(resp_single_sen, remove_special=True, trim=True) for resp_single_sen in resp[i]]
+			self.hyps.append(hyp)
+			self.refs.append(refs)
+			relevant_data.append(refs)
+		self._hash_unordered_list(relevant_data)
 
 	@hooks.hook_metric_close
 	def close(self):
@@ -140,19 +179,37 @@ class BleuCorpusMetric(MetricBase):
 		if (not self.hyps) or (not self.refs):
 			raise RuntimeError("The metric has not been forwarded data correctly.")
 
-		self.hyps = _replace_unk(self.hyps, self.dataloader.unk_id)
+		if self.tokenizer:
+			self._do_tokenize()
+
+		if "unk" in self.dataloader.get_special_tokens_mapping():
+			self.hyps = replace_unk(self.hyps, self.dataloader.get_special_tokens_mapping()["unk"])
 		try:
+			weights = np.ones(self.ngram) / self.ngram
 			result.update({"bleu": \
-				corpus_bleu(self.refs, self.hyps, smoothing_function=SmoothingFunction().method3), \
+				corpus_bleu(self.refs, self.hyps, weights=weights, smoothing_function=SmoothingFunction().method3), \
 				"bleu hashvalue": self._hashvalue()})
 		except ZeroDivisionError as _:
 			if not self.ignore_smoothing_error:
 				raise ZeroDivisionError("Bleu smoothing divided by zero. This is a known bug of corpus_bleu, \
-				usually caused when there is only one sample and the sample length is 1.")
+				usually caused when there is only one sample and the sample length is 1.") from None
 			result.update({"bleu": \
 					0, \
 					"bleu hashvalue": self._hashvalue()})
 		return result
+
+	def _do_tokenize(self):
+		tokenizer: Tokenizer
+		if isinstance(self.tokenizer, str):
+			tokenizer = SimpleTokenizer(self.tokenizer)
+		elif isinstance(self.tokenizer, Tokenizer):
+			tokenizer = self.tokenizer
+		else:
+			raise TypeError("Unknown type of tokenizer")
+
+		self.refs = tokenizer.tokenize_sessions(self.refs)
+		self.hyps = tokenizer.tokenize_sentences(self.hyps)
+
 
 class SelfBleuCorpusMetric(MetricBase):
 	r'''Metric for calculating Self-BLEU.
@@ -168,7 +225,7 @@ class SelfBleuCorpusMetric(MetricBase):
 		the calculation of ``hashvalue`` considers the actual sample size of hypotheses which
 			will be less than ``sample`` if the size of hypotheses is smaller than ``sample``
 
-	Here is an exmaple:
+	Here is an example:
 
 		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
 		>>> gen_key = 'gen'
@@ -187,16 +244,19 @@ class SelfBleuCorpusMetric(MetricBase):
 	_version = 1
 
 	@hooks.hook_metric
-	def __init__(self, dataloader, \
+	def __init__(self, dataloader: "LanguageProcessing", ngram=4, *, \
+		tokenizer: Union[None, Tokenizer, str] = None, \
 		gen_key="gen", \
 		sample=1000, \
 		seed=1229, \
 		cpu_count=None):
 		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
+		self.ngram = ngram
+		self.tokenizer = tokenizer
 		self.gen_key = gen_key
 		self.sample = sample
-		self.hyps = []
+		self.hyps: List[Any] = []
 		self.seed = seed
 		if cpu_count is not None:
 			self.cpu_count = cpu_count
@@ -227,8 +287,7 @@ class SelfBleuCorpusMetric(MetricBase):
 		if not isinstance(gen, (np.ndarray, list)):
 			raise TypeError("Unknown type for gen.")
 
-		for gen_sen in gen:
-			self.hyps.append(self.dataloader.trim(gen_sen))
+		self.hyps.extend(gen)
 
 	@hooks.hook_metric_close
 	def close(self):
@@ -256,11 +315,30 @@ class SelfBleuCorpusMetric(MetricBase):
 		random.setstate(rng_state)
 
 		ref = self.hyps[:self.sample]
-		_ref = _replace_unk(ref, self.dataloader.unk_id)
+
+		if self.tokenizer:
+			tokenizer: Tokenizer
+			if isinstance(self.tokenizer, str):
+				tokenizer = SimpleTokenizer(self.tokenizer)
+			else:
+				tokenizer = tokenizer
+			ref = [self.dataloader.convert_ids_to_sentence(ids, remove_special=True, trim=True) for ids in ref]
+			ref = tokenizer.tokenize_sentences(ref)
+		else:
+			ref = [self.dataloader.convert_ids_to_tokens(ids, remove_special=True, trim=True) for ids in ref]
+
+		if "unk" in self.dataloader.get_special_tokens_mapping():
+			_ref = replace_unk(ref, self.dataloader.get_special_tokens_mapping()["unk"])
+		else:
+			_ref = ref
 
 		bleu_irl = []
 
-		tasks = ((ref[:i]+ref[i+1:self.sample], _ref[i]) for i in range(self.sample))
+		weights = np.ones(self.ngram) / self.ngram
+		tasks = ((ref[:i]+ref[i+1:self.sample], _ref[i], weights) for i in range(self.sample))
+
+		pool: Optional[Any]
+		values: Iterable[Any]
 		if self.sample >= 1000 and self.cpu_count > 1:
 			# use multiprocessing
 			pool = Pool(self.cpu_count)
@@ -277,7 +355,7 @@ class SelfBleuCorpusMetric(MetricBase):
 			pool.close()
 			pool.join()
 
-		self._hash_relevant_data([self.seed, self.sample])
+		self._hash_ordered_data((self.seed, self.sample))
 		res.update({"self-bleu" : 1.0 * sum(bleu_irl) / len(bleu_irl),\
 					"self-bleu hashvalue": self._hashvalue()})
 		return res
@@ -297,7 +375,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 		references. Therefore ``hashvalue`` may vary with the size of hypothesis or references
 		if the size of them is smaller than ``sample``.
 
-	Here is an exmaple:
+	Here is an example:
 
 		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
 		>>> gen_key = 'gen'
@@ -321,25 +399,27 @@ class FwBwBleuCorpusMetric(MetricBase):
 
 	@hooks.hook_metric
 	def __init__(self, dataloader, \
-			reference_test_list, \
+			reference_test_list, ngram=4, *, \
+			tokenizer: Union[None, Tokenizer, str] = None, \
 			gen_key="gen", \
 			sample=1000, \
 			seed=1229, \
 			cpu_count=None):
 		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
+		self.tokenizer = tokenizer
 		self.reference_test_list = reference_test_list
 		self.gen_key = gen_key
 		self.sample = sample
 		self.seed = seed
+		self.ngram=ngram
 		if cpu_count is not None:
 			self.cpu_count = cpu_count
 		elif "CPU_COUNT" in os.environ and os.environ["CPU_COUNT"] is not None:
 			self.cpu_count = int(os.environ["CPU_COUNT"])
 		else:
 			self.cpu_count = multiprocessing.cpu_count()
-		self.refs = []
-		self.hyps = []
+		self.hyps: List[Any] = []
 
 	def forward(self, data):
 		'''Processing a batch of data.
@@ -363,7 +443,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 			raise TypeError("Unknown type for gen.")
 
 		for gen_sen in gen:
-			self.hyps.append(list(self.dataloader.trim(gen_sen)))
+			self.hyps.append(list(self.dataloader.trim_in_ids(gen_sen)))
 
 	@hooks.hook_metric_close
 	def close(self):
@@ -378,55 +458,81 @@ class FwBwBleuCorpusMetric(MetricBase):
 		res = super().close()
 		if not self.hyps:
 			raise RuntimeError("The metric has not been forwarded data correctly.")
+		if not self.reference_test_list:
+			raise RuntimeError("Reference cannot be empty")
 
-		for resp_sen in self.reference_test_list:
-			self.refs.append(list(self.dataloader.trim(resp_sen[1:])))
+		sample_hyps_num = self.sample if self.sample < len(self.hyps) else len(self.hyps)
+		sample_refs_num = self.sample if self.sample < len(self.reference_test_list) else len(self.reference_test_list)
 
-		sample_hyps = self.sample if self.sample < len(self.hyps) else len(self.hyps)
-		sample_refs = self.sample if self.sample < len(self.refs) else len(self.refs)
-
-		if sample_hyps <= 1:
+		if sample_hyps_num <= 1:
 			raise RuntimeError('`sample_hyps` should be more than 1, \
-				whose value is `{}`'.format(sample_hyps))
-		if sample_refs <= 1:
+				whose value is `{}`'.format(sample_hyps_num))
+		if sample_refs_num <= 1:
 			raise RuntimeError('`sample_refs` should be more than 1, \
-				whose value is `{}`'.format(sample_refs))
+				whose value is `{}`'.format(sample_refs_num))
+
+		sample_hyps = self.hyps[:sample_hyps_num]
+		sample_refs = self.reference_test_list[:sample_refs_num]
+
+		refs: List[Any]
+		hyps: List[Any]
+		if self.tokenizer:
+			tokenizer: Tokenizer
+			if isinstance(self.tokenizer, str):
+				tokenizer = SimpleTokenizer(self.tokenizer)
+			else:
+				tokenizer = tokenizer
+			if isinstance(sample_refs[0], List):
+				ref_sents = [self.dataloader.convert_ids_to_sentence(ids, remove_special=True, trim=True) for ids in sample_refs]
+			else:
+				ref_sents = sample_refs
+			refs = tokenizer.tokenize_sentences(ref_sents)
+
+			hyp_sents = [self.dataloader.convert_ids_to_sentence(ids, remove_special=True, trim=True) for ids in sample_hyps]
+			hyps = tokenizer.tokenize_sentences(hyp_sents)
+		else:
+			refs = [self.dataloader.convert_ids_to_tokens(ids, remove_special=True, trim=True) for ids in sample_refs]
+			hyps = [self.dataloader.convert_ids_to_tokens(ids, remove_special=True, trim=True) for ids in sample_hyps]
 
 		rng_state = random.getstate()
 		random.seed(self.seed)
-		random.shuffle(self.hyps)
-		random.shuffle(self.refs)
+		random.shuffle(hyps)
+		random.shuffle(refs)
 		random.setstate(rng_state)
 
-		self.hyps = _replace_unk(self.hyps, self.dataloader.unk_id)
+		if "unk" in self.dataloader.get_special_tokens_mapping():
+			refs = replace_unk(refs, self.dataloader.get_special_tokens_mapping()["unk"])
 
 
 		bleu_irl_fw, bleu_irl_bw = [], []
+		weights = np.ones(self.ngram) / self.ngram
 
-		tasks = ((self.refs, self.hyps[i]) for i in range(sample_hyps))
-		if sample_hyps >= 1000 and self.cpu_count > 1:
+		tasks = ((refs, hyps[i], weights) for i in range(sample_hyps_num))
+		pool: Optional[Any]
+		values: Iterable[Any]
+		if sample_hyps_num >= 1000 and self.cpu_count > 1:
 			pool = Pool(self.cpu_count)
 			values = pool.imap_unordered(_sentence_bleu, tasks, chunksize=20)
 		else:
 			pool = None
 			values = map(_sentence_bleu, tasks)
-		if sample_hyps >= 1000:
-			values = tqdm.tqdm(values, total=sample_hyps)
+		if sample_hyps_num >= 1000:
+			values = tqdm.tqdm(values, total=sample_hyps_num)
 		for ans in values:
 			bleu_irl_fw.append(ans)
 		if pool is not None:
 			pool.close()
 			pool.join()
 
-		tasks = ((self.hyps, self.refs[i]) for i in range(sample_refs))
-		if sample_refs >= 1000 and self.cpu_count > 1:
+		tasks = ((hyps, refs[i], weights) for i in range(sample_refs_num))
+		if sample_refs_num >= 1000 and self.cpu_count > 1:
 			pool = Pool(self.cpu_count)
 			values = pool.imap_unordered(_sentence_bleu, tasks, chunksize=20)
 		else:
 			pool = None
 			values = map(_sentence_bleu, tasks)
-		if sample_refs >= 1000:
-			values = tqdm.tqdm(values, total=sample_refs)
+		if sample_refs_num >= 1000:
+			values = tqdm.tqdm(values, total=sample_refs_num)
 		for ans in values:
 			bleu_irl_bw.append(ans)
 		if pool is not None:
@@ -445,7 +551,8 @@ class FwBwBleuCorpusMetric(MetricBase):
 			"fw-bw-bleu" : fw_bw_bleu \
 		})
 
-		self._hash_relevant_data(self.refs + [self.seed, sample_hyps, sample_refs])
+		self._hash_unordered_list(refs)
+		self._hash_ordered_data((self.ngram, self.seed, sample_hyps_num, sample_refs_num))
 		res.update({"fw-bw-bleu hashvalue" : self._hashvalue()})
 		return res
 
@@ -559,9 +666,9 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 		result = super().close()
 		if (not self.hyps) or (not self.refs):
 			raise RuntimeError("The metric has not been forwarded data correctly.")
-		self.hyps = _replace_unk(self.hyps, self.dataloader.unk_id)
+		self.hyps = replace_unk(self.hyps, self.dataloader.unk_id)
 
-		self._hash_relevant_data(self.refs)
+		self._hash_unordered_list(self.refs)
 
 		try:
 			result.update({"bleu": \

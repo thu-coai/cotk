@@ -1,23 +1,24 @@
 """Dataloader for language generation"""
 import numpy as np
+from typing import List, Any, Tuple, Optional, Dict
+from collections import OrderedDict
 
-# from .._utils.unordered_hash import UnorderedSha256
-from .._utils.file_utils import get_resource_file_path
-from .._utils import hooks
-from .dataloader import LanguageProcessingBase
+from ..hooks import hooks
+from .dataloader import LanguageProcessing
 from ..metric import MetricChain, PerplexityMetric, LanguageGenerationRecorder, \
 	FwBwBleuCorpusMetric, SelfBleuCorpusMetric
+from .context import FieldContext, VocabContext
+from .tokenizer import PretrainedTokenizer
+from .vocab import GeneralVocab, PretrainedVocab
 
 # pylint: disable=W0223
-class LanguageGeneration(LanguageProcessingBase):
-	r"""Base class for language modelling datasets. This is an abstract class.
+class LanguageGeneration(LanguageProcessing):
+	"""Bases: :class:`.dataloader.LanguageProcessing`
 
 	This class is supported for language modeling tasks or language generation tasks
 	without any inputs.
 
 	Arguments:{ARGUMENTS}
-
-	Attributes:{ATTRIBUTES}
 	"""
 
 	ARGUMENTS = r'''
@@ -42,33 +43,40 @@ class LanguageGeneration(LanguageProcessingBase):
 	TOKENIZER_DEFAULT = ''
 	REMAINS_CAPITAL_DEFAULT = ''
 
-	ATTRIBUTES = LanguageProcessingBase.ATTRIBUTES
-
 	_version = 1
 
 	@hooks.hook_dataloader
-	def __init__(self, file_id, min_vocab_times, \
-			max_sent_length, invalid_vocab_times, \
-			tokenizer, remains_capital, \
-			):
-		self._file_id = file_id
-		self._file_path = get_resource_file_path(file_id)
-		self._min_vocab_times = min_vocab_times
-		self._max_sent_length = max_sent_length
-		self._invalid_vocab_times = invalid_vocab_times
-		super().__init__(remains_capital=remains_capital, tokenizer=tokenizer)
+	def __init__(self, file_id, *, tokenizer=None, \
+			max_sent_length=None, \
+			convert_to_lower_letter=None, \
+			min_frequent_vocab_times=None, \
+			min_rare_vocab_times=None, \
+			pretrained=None):
 
-	def _load_data(self):
-		r'''Loading dataset, invoked during the initialization of :class:`LanguageProcessingBase`.
-		'''
-		return super()._general_load_data(self._file_path, [['sent', 'Sentence']], \
-			self._min_vocab_times, self._max_sent_length, None, self._invalid_vocab_times)
+		self._pretrained = pretrained
+		if pretrained is None:
+			with FieldContext.set_parameters(tokenizer=tokenizer,\
+					max_sent_length=max_sent_length,
+					convert_to_lower_letter=convert_to_lower_letter):
+				with VocabContext.set_parameters(min_frequent_vocab_times=min_frequent_vocab_times, \
+						min_rare_vocab_times=min_rare_vocab_times):
+					super().__init__(file_id, OrderedDict([("sent", "SentenceDefault")]))
+			self.set_default_field("train", "sent")
 
-	def get_batch(self, key, indexes):
-		'''{LanguageProcessingBase.GET_BATCH_DOC_WITHOUT_RETURNS}
+		elif pretrained == "gpt2":
+			if not isinstance(tokenizer, PretrainedTokenizer):
+				raise ValueError("tokenize should be loaded first if you want a gpt2 dataloader")
+			vocab = PretrainedVocab(tokenizer.tokenizer)
+			with FieldContext.set_parameters(tokenizer=tokenizer,\
+					vocab=vocab, \
+					max_sent_length=max_sent_length, \
+					convert_to_lower_letter=convert_to_lower_letter):
+				super().__init__(file_id, OrderedDict([("sent", "SentenceGPT2")]))
+			self.set_default_field("train", "sent")
+		else:
+			raise ValueError("No pretrained name %s" % pretrained)
 
-		Returns:
-			(dict): A dict at least contains:
+	_GET_BATCH_MORE_DOC = '''Returns a dict at least contains:
 
 			* **sent_length** (:class:`numpy.ndarray`): A 1-d array, the length of sentence in each batch.
 			  Size: ``[batch_size]``
@@ -77,8 +85,9 @@ class LanguageGeneration(LanguageProcessingBase):
 			  Size: ``[batch_size, max(sent_length)]``
 			* **sent_allvocabs** (:class:`numpy.ndarray`): A 2-d padding array containing id of words.
 			  Provide both valid and invalid words.
-			  Size: ``[batch_size, max(sent_length)]``
+			  Size: ``[batch_size, max(sent_length)]``'''
 
+	_GET_BATCH_EXAMPLE = '''
 		Examples:
 
 			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you",
@@ -98,25 +107,13 @@ class LanguageGeneration(LanguageProcessingBase):
 					[2, 7, 3, 0, 0, 0],   # second sentence:  <go> hello <eos> <pad> <pad> <pad>
 					[2, 7, 8, 9, 10, 3]   # third sentence: <go> hello i am fine <eos>
 				]),
-			}
-		'''
-		if key not in self.key_name:
-			raise ValueError("No set named %s." % key)
-		res = {}
-		batch_size = len(indexes)
-		res["sent_length"] = np.array( \
-			list(map(lambda i: len(self.data[key]['sent'][i]), indexes)), dtype=int)
-		res_sent = res["sent"] = np.zeros( \
-			(batch_size, np.max(res["sent_length"])), dtype=int)
-		for i, j in enumerate(indexes):
-			sentence = self.data[key]['sent'][j]
-			res["sent"][i, :len(sentence)] = sentence
+			}'''
 
-		res["sent_allvocabs"] = res_sent.copy()
-		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
-		return res
+	def get_batch(self, set_name: str, indexes: List[int] #pylint: disable=useless-super-delegation
+			) -> Dict[str, Any]:
+		return super().get_batch(set_name, indexes)
 
-	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob"):
+	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob") -> MetricChain:
 		'''Get metrics for teacher-forcing. In other words, this function
 		provides metrics for language modelling task.
 
@@ -127,9 +124,6 @@ class LanguageGeneration(LanguageProcessingBase):
 		Arguments:
 			gen_log_prob_key (str): The key of predicted log probability over words.
 				Refer to :class:`.metric.PerplexityMetric`. Default: ``gen_log_prob``.
-
-		Returns:
-			A :class:`.metric.MetricChain` object.
 		'''
 		metric = MetricChain()
 		metric.add_metric(PerplexityMetric(self, \
@@ -138,7 +132,7 @@ class LanguageGeneration(LanguageProcessingBase):
 					gen_log_prob_key=gen_log_prob_key))
 		return metric
 
-	def get_inference_metric(self, gen_key="gen", sample=1000, seed=1229, cpu_count=None):
+	def get_inference_metric(self, gen_key="gen", sample=1000, seed=1229, cpu_count=None) -> MetricChain:
 		'''Get metrics for inference. In other words, this function provides metrics for
 		language generation tasks.
 
@@ -159,8 +153,6 @@ class LanguageGeneration(LanguageProcessingBase):
 				Refer to :class:`.metric.SelfBleuCorpusMetric`. Default: ``1229``.
 			cpu_count (int): Number of used cpu for multiprocessing.
 				Refer to :class:`.metric.SelfBleuCorpusMetric`. Default: ``None``.
-		Returns:
-			A :class:`.metric.MetricChain` object.
 		'''
 		metric = MetricChain()
 		metric.add_metric(SelfBleuCorpusMetric(self, \
@@ -178,11 +170,12 @@ class LanguageGeneration(LanguageProcessingBase):
 		return metric
 
 class MSCOCO(LanguageGeneration):
-	'''A dataloader for preprocessed MSCOCO dataset.
+	'''Bases: :class:`.dataloader.LanguageGeneration`
+
+	A dataloader for preprocessed MSCOCO dataset.
+	Refer to :class:`.LanguageGeneration` and :class:`.LanguageProcessing` for attributes and methods.
 
 	Arguments:{ARGUMENTS}
-
-	Refer to :class:`.LanguageGeneration` for attributes and methods.
 
 	References:
 		[1] http://images.cocodataset.org/annotations/annotations_trainval2017.zip
@@ -199,9 +192,13 @@ class MSCOCO(LanguageGeneration):
 	TOKENIZER_DEFAULT = r'''Default: ``nltk``'''
 	REMAINS_CAPITAL_DEFAULT = r'''Default: ``True``'''
 
-	def __init__(self, file_id="resources://MSCOCO", min_vocab_times=10, \
-			max_sent_length=50, invalid_vocab_times=0, \
-			tokenizer="nltk", remains_capital=True, \
-			):
-		super().__init__(file_id, min_vocab_times, max_sent_length, invalid_vocab_times, \
-			tokenizer, remains_capital)
+	@hooks.hook_dataloader
+	def __init__(self, file_id, *, tokenizer="nltk", \
+			max_sent_length=50, \
+			convert_to_lower_letter=False, \
+			min_frequent_vocab_times=10, \
+			min_rare_vocab_times=0, \
+			pretrained=None):
+		super().__init__(file_id, tokenizer=tokenizer, max_sent_length=max_sent_length,\
+			convert_to_lower_letter=convert_to_lower_letter, min_frequent_vocab_times=min_frequent_vocab_times,\
+			min_rare_vocab_times=min_rare_vocab_times, pretrained=pretrained)

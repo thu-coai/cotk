@@ -5,7 +5,7 @@ import os.path
 import numpy as np
 
 from .wordvector import WordVector
-from .._utils.file_utils import get_resource_file_path
+from ..file_utils import get_resource_file_path
 
 class Glove(WordVector):
 	r'''GloVe is pre-trained word vector named `Global Vectors for Word Representation`.

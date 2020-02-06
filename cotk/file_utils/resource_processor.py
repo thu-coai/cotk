@@ -5,7 +5,7 @@ import zipfile
 import shutil
 import json
 from itertools import chain
-from .metaclass import LoadClassInterface
+from .._utils.metaclass import LoadClassInterface
 
 def unzip_file(src_path, dst_dir):
 	'''unzip the zip file in src_path to dst_dir

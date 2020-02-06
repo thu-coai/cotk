@@ -6,9 +6,9 @@ import re
 
 import numpy as np
 
-from cotk.dataloader import LanguageProcessingBase, MultiTurnDialog
+from cotk.dataloader import LanguageProcessing, MultiTurnDialog
 
-class FakeDataLoader(LanguageProcessingBase):
+class FakeDataLoader(LanguageProcessing):
 	def __init__(self):
 		self.all_vocab_list = ['<pad>', '<unk>', '<go>', '<eos>', \
 							   'what', 'how', 'here', 'do', 'as', 'can', 'to']
