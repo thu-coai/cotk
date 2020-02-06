@@ -7,6 +7,9 @@ from .._utils import hooks
 from .dataloader import LanguageProcessingBase
 from ..metric import MetricChain, PerplexityMetric, LanguageGenerationRecorder, \
 	FwBwBleuCorpusMetric, SelfBleuCorpusMetric
+from .context import FieldContext, VocabContext
+from .tokenizer import PretrainedTokenizer
+from .vocab import Vocab, PretrainedVocab
 
 # pylint: disable=W0223
 class LanguageGeneration(LanguageProcessingBase):
@@ -47,24 +50,37 @@ class LanguageGeneration(LanguageProcessingBase):
 	_version = 1
 
 	@hooks.hook_dataloader
-	def __init__(self, file_id, min_vocab_times, \
-			max_sent_length, invalid_vocab_times, \
-			tokenizer, remains_capital, \
-			):
-		self._file_id = file_id
-		self._file_path = get_resource_file_path(file_id)
-		self._min_vocab_times = min_vocab_times
-		self._max_sent_length = max_sent_length
-		self._invalid_vocab_times = invalid_vocab_times
-		super().__init__(remains_capital=remains_capital, tokenizer=tokenizer)
+	def __init__(self, file_id, *, tokenizer=None, \
+			max_sent_length=None, \
+			convert_to_lower_letter=None, \
+			min_valid_vocab_times=None, \
+			min_invalid_vocab_times=None, \
+			pretrained=None):
 
-	def _load_data(self):
-		r'''Loading dataset, invoked during the initialization of :class:`LanguageProcessingBase`.
-		'''
-		return super()._general_load_data(self._file_path, [['sent', 'Sentence']], \
-			self._min_vocab_times, self._max_sent_length, None, self._invalid_vocab_times)
+		self._pretrained = pretrained
+		if pretrained is None:
+			with FieldContext.set_parameters(tokenizer=tokenizer,\
+					max_sent_length=max_sent_length,
+					convert_to_lower_letter=convert_to_lower_letter):
+				with VocabContext.set_parameters(min_valid_vocab_times=min_valid_vocab_times, \
+						min_invalid_vocab_times=min_invalid_vocab_times):
+					super().__init__(file_id, [("sent", "sentence")])
+			self.set_default_field("train", "sent")
 
-	def get_batch(self, key, indexes):
+		elif pretrained == "gpt2":
+			if not isinstance(tokenizer, PretrainedTokenizer):
+				raise ValueError("tokenize should be loaded first if you want a gpt2 dataloader")
+			vocab = PretrainedVocab(tokenizer)
+			with FieldContext.set_parameters(tokenizer=tokenizer,\
+					vocab=vocab, \
+					max_sent_length=max_sent_length, \
+					convert_to_lower_letter=convert_to_lower_letter):
+				super().__init__(file_id, [("sent", "sentence_gpt2")])
+			self.set_default_field("train", "sent")
+		else:
+			raise ValueError("No pretrained name %s" % pretrained)
+
+	def get_batch(self, set_name, indexes):
 		'''{LanguageProcessingBase.GET_BATCH_DOC_WITHOUT_RETURNS}
 
 		Returns:
@@ -100,21 +116,7 @@ class LanguageGeneration(LanguageProcessingBase):
 				]),
 			}
 		'''
-		if key not in self.key_name:
-			raise ValueError("No set named %s." % key)
-		res = {}
-		batch_size = len(indexes)
-		res["sent_length"] = np.array( \
-			list(map(lambda i: len(self.data[key]['sent'][i]), indexes)), dtype=int)
-		res_sent = res["sent"] = np.zeros( \
-			(batch_size, np.max(res["sent_length"])), dtype=int)
-		for i, j in enumerate(indexes):
-			sentence = self.data[key]['sent'][j]
-			res["sent"][i, :len(sentence)] = sentence
-
-		res["sent_allvocabs"] = res_sent.copy()
-		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
-		return res
+		return super().get_batch(set_name, indexes)
 
 	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob"):
 		'''Get metrics for teacher-forcing. In other words, this function
@@ -199,9 +201,13 @@ class MSCOCO(LanguageGeneration):
 	TOKENIZER_DEFAULT = r'''Default: ``nltk``'''
 	REMAINS_CAPITAL_DEFAULT = r'''Default: ``True``'''
 
-	def __init__(self, file_id="resources://MSCOCO", min_vocab_times=10, \
-			max_sent_length=50, invalid_vocab_times=0, \
-			tokenizer="nltk", remains_capital=True, \
-			):
-		super().__init__(file_id, min_vocab_times, max_sent_length, invalid_vocab_times, \
-			tokenizer, remains_capital)
+	@hooks.hook_dataloader
+	def __init__(self, file_id, *, tokenizer="nltk", \
+			max_sent_length=50, \
+			convert_to_lower_letter=False, \
+			min_valid_vocab_times=10, \
+			min_invalid_vocab_times=0, \
+			pretrained=None):
+		super().__init__(file_id, tokenizer=tokenizer, max_sent_length=max_sent_length,\
+			convert_to_lower_letter=convert_to_lower_letter, min_valid_vocab_times=min_valid_vocab_times,\
+			min_invalid_vocab_times=min_invalid_vocab_times, pretrained=pretrained)

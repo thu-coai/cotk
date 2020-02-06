@@ -3,10 +3,6 @@ r"""
 not find api here.
 """
 
-from .file_utils import get_resource_file_path, import_local_resources
-from .resource_processor import ResourceProcessor, DefaultResourceProcessor
-from ._utils import trim_before_target
-from .hooks import start_recorder, close_recorder
+from .utils import trim_before_target, chain_sessions, restore_sessions
 
-__all__ = ['ResourceProcessor', 'DefaultResourceProcessor', 'get_resource_file_path', \
-        'import_local_resources']
+__all__ = ['trim_before_target', 'chain_sessions', 'restore_sessions']

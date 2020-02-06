@@ -1,5 +1,8 @@
 r'''Containing NgramFwBwPerplexityMetric'''
+from typing import Optional, List, Any, Union
+import logging
 
+from ..dataloader import BaseTokenizer, SimpleTokenizer
 from .metric import MetricBase
 from ..models.ngram_language_model import KneserNeyInterpolated
 from .._utils import hooks
@@ -14,7 +17,7 @@ class NgramFwBwPerplexityMetric(MetricBase):
 			are passed to :func:`forward` by ``dataloader.get_all_batch("test")["sent"]``.
 		{MetricBase.GEN_KEY_ARGUMENTS}
 
-	Here is an exmaple:
+	Here is an example:
 
 		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
 		>>> gen_key = "gen"
@@ -35,15 +38,19 @@ class NgramFwBwPerplexityMetric(MetricBase):
 	_version = 1
 
 	@hooks.hook_metric
-	def __init__(self, dataloader, ngram, reference_test_list, gen_key="gen", cpu_count=None):
+	def __init__(self, dataloader, reference_test_list, ngram=4, *, \
+			tokenizer: Union[None, BaseTokenizer, str] = None, gen_key="gen", \
+			sample=10000, seed=1229, cpu_count=None):
 		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
 		self.ngram = ngram
 		self.reference_test_list = reference_test_list
+		self.tokenizer = tokenizer
 		self.gen_key = gen_key
-		self.hyps = []
-		self.refs = []
+		self.hyps: List[Any] = []
 		self.cpu_count = cpu_count
+		self.sample = sample
+		self.seed = seed
 
 	def forward(self, data):
 		'''Processing a batch of data.
@@ -57,8 +64,7 @@ class NgramFwBwPerplexityMetric(MetricBase):
 					Size: `[batch_size, gen_sentence_length]`.
 		'''
 		gen = data[self.gen_key]
-		for gen_sent in gen:
-			self.hyps.append(list(self.dataloader.convert_ids_to_tokens(gen_sent, trim=True)))
+		self.hyps.extend(gen)
 
 	@hooks.hook_metric_close
 	def close(self):
@@ -69,34 +75,60 @@ class NgramFwBwPerplexityMetric(MetricBase):
 			* **fw-bw-ppl**: Harmonic mean of fw and bw ppl value.
 			* **fw-bw-ppl hashvalue**: hash value of reference data.
 		'''
+		res = super().close()
 
-		for resp_sent in self.reference_test_list:
-			self.refs.append(list(self.dataloader.convert_ids_to_tokens(resp_sent[1:], trim=True)))
+		sample_num = self.sample
+		if sample_num > len(self.reference_test_list):
+			sample_num = len(self.reference_test_list)
+		if sample_num > len(self.hyps):
+			sample_num = len(self.hyps)
 
-		model = KneserNeyInterpolated(self.ngram, \
-					self.dataloader.vocab_list[2], self.dataloader.vocab_list[3], \
-					self.dataloader.vocab_list[1], cpu_count=self.cpu_count)
-		print("training forward")
-		model.fit(self.refs)
-		print("scoring forward")
-		fwppl = model.perplexity(self.hyps)
+		origin_refs = self.reference_test_list[:sample_num]
+		origin_hyps = self.hyps[:sample_num]
 
-		model = KneserNeyInterpolated(self.ngram, \
-					self.dataloader.vocab_list[2], self.dataloader.vocab_list[3], \
-					self.dataloader.vocab_list[1], cpu_count=self.cpu_count)
-		print("training backward")
-		model.fit(self.hyps)
-		print("scoring backward")
-		bwppl = model.perplexity(self.refs)
+		refs: List[Any]
+		hyps: List[Any]
+		if self.tokenizer:
+			tokenizer: BaseTokenizer
+			if isinstance(self.tokenizer, str):
+				tokenizer = SimpleTokenizer(self.tokenizer)
+			else:
+				tokenizer = tokenizer
+			if isinstance(origin_refs[0], List):
+				ref_sents = [self.dataloader.recover_sentence(ids, remove_special=True, trim=True) for ids in origin_refs]
+			else:
+				ref_sents = origin_refs
+			refs = tokenizer.tokenize_sentences(ref_sents)
 
-		result = {}
-		result["fwppl"] = fwppl
-		result["bwppl"] = bwppl
-		if fwppl + bwppl > 0:
-			result["fw-bw-ppl"] = 2.0 * fwppl * bwppl / (fwppl + bwppl)
+			hyp_sents = [self.dataloader.recover_sentence(ids, remove_special=True, trim=True) for ids in origin_hyps]
+			hyps = tokenizer.tokenize_sentences(hyp_sents)
 		else:
-			result["fw-bw-ppl"] = 0
+			refs = [self.dataloader.convert_ids_to_tokens(ids, remove_special=True, trim=True) for ids in origin_refs]
+			hyps = [self.dataloader.convert_ids_to_tokens(ids, remove_special=True, trim=True) for ids in origin_hyps]
 
-		self._hash_relevant_data(self.refs + [self.ngram])
-		result["fw-bw-ppl hashvalue"] = self._hashvalue()
-		return result
+		left_pad, right_pad, unk = None, None, None
+		if "unk" in self.dataloader.get_special_tokens():
+			unk = self.dataloader.vocab_list[self.dataloader.unk_id]
+
+		model = KneserNeyInterpolated(self.ngram, \
+					left_pad, right_pad, \
+					unk, cpu_count=self.cpu_count)
+		logging.info("training forward")
+		model.fit(refs)
+		logging.info("scoring forward")
+		fwppl = model.perplexity(hyps)
+
+		model = KneserNeyInterpolated(self.ngram, \
+					left_pad, right_pad, \
+					unk, cpu_count=self.cpu_count)
+		logging.info("training backward")
+		model.fit(hyps)
+		logging.info("scoring backward")
+		bwppl = model.perplexity(refs)
+
+		res.update({"fwppl": fwppl, "bwppl": bwppl})
+
+		self._hash_unordered_list(refs)
+		self._hash_ordered_data((self.ngram,))
+		res["fwppl hashvalue"] = res["bwppl hashvalue"] = self._hashvalue()
+		return res

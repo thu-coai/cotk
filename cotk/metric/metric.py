@@ -2,7 +2,10 @@ r"""
 ``cotk.metrics`` provides classes and functions evaluating results of models.
 It provides a fair metric for every model.
 """
-from .._utils.unordered_hash import UnorderedSha256
+from typing import Any, List
+import hashlib
+
+from .._utils.unordered_hash import UnorderedSha256, dumps
 from .._utils.metaclass import LoadClassInterface, DocStringInheritor
 
 class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
@@ -117,25 +120,28 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 
 	def __init__(self, name, version):
 		self.unordered_hash = UnorderedSha256()
+		self.ordered_hash = hashlib.sha256()
 		self.name = name
 		self.version = version
-		self.unordered_hash.update_data(str(name).encode())
-		self.unordered_hash.update_data(str(version).encode())
+		self._hash_ordered_data((name, version))
 		self.closed = False
 
-	def _hash_relevant_data(self, data_list):
+	def _hash_unordered_list(self, data_list: List[Any]):
 		'''Invoked by :meth:`.forward` or :meth:`.close` to hash relevant data when computing a metric.
 
 		Arguments:
 			data_list (list): relevant data organized as list.
 		'''
 		for item in data_list:
-			self.unordered_hash.update_data(repr(item).encode())
+			self.unordered_hash.update_data(dumps(item))
+
+	def _hash_ordered_data(self, data: Any):
+		self.ordered_hash.update(dumps(data))
 
 	def _hashvalue(self):
 		'''Invoked by :meth:`.close` to return the recorded hash value.
 		'''
-		return self.unordered_hash.digest()
+		return hashlib.sha256(dumps((self.ordered_hash.hexdigest(), self.unordered_hash.hexdigest()))).hexdigest()
 
 	def forward(self, data):
 		'''Processing a batch of data.

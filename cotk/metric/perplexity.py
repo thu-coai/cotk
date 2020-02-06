@@ -76,6 +76,8 @@ class PerplexityMetric(MetricBase):
 		self.gen_valid_log_prob = []
 		self.gen_unk_log_prob = []
 
+		self.have_unk = "unk" in self.dataloader.get_special_tokens()
+
 	def forward(self, data):
 		'''Processing a batch of data. Smoothing will be performed for :ref:`invalid vocabs <vocab_ref>`.
 		:ref:`Unknowns vocabs <vocab_ref>` will be ignored.
@@ -191,13 +193,14 @@ class PerplexityMetric(MetricBase):
 			#self.resp_length.append(resp_len)
 
 			resp_known = resp.copy()
-			if not self.invalid_vocab:
+			if not self.invalid_vocab and self.have_unk:
 				resp_known[resp_known >= self.dataloader.vocab_size] = self.dataloader.unk_id
 
 			self.gen_valid_log_prob.append(gen_now[list(range(resp_len-1)), resp_known])
-			self.gen_unk_log_prob.append(gen_now[:resp_len-1, self.dataloader.unk_id])
+			if self.have_unk:
+				self.gen_unk_log_prob.append(gen_now[:resp_len-1, self.dataloader.unk_id])
 
-		self._hash_relevant_data(relevant_data)
+		self._hash_unordered_list(relevant_data)
 
 	def _pytorch_forward(self, resp_allvocabs, resp_length, gen_log_prob):
 		if len(resp_allvocabs) != len(resp_length) or len(resp_allvocabs) != len(gen_log_prob):
@@ -214,7 +217,7 @@ class PerplexityMetric(MetricBase):
 
 			resp_now = resp_allvocabs[i, 1:resp_len]
 			gen_now = gen_log_prob[i, :resp_len - 1]
-			relevant_data.append(resp_now.tolist())
+			relevant_data.append(self.dataloader.convert_ids_to_tokens(resp_now.tolist()))
 
 			# perform full check to assert the probability is valid
 			expsum = gen_now.exp().sum(-1)
@@ -233,36 +236,40 @@ class PerplexityMetric(MetricBase):
 						but %d != %d" % (gen_now.shape[1], self.dataloader.all_vocab_size))
 
 			resp_known = resp_now.clone()
-			if not self.invalid_vocab:
+			if not self.invalid_vocab and self.have_unk:
 				resp_known[resp_known >= self.dataloader.vocab_size] = self.dataloader.unk_id
 
-			unk_id = self.dataloader.unk_id
+			unk_id = self.dataloader.unk_id if self.have_unk else None
 			vocab_size = self.dataloader.vocab_size
 			invalid_vocab_size = self.dataloader.all_vocab_size - vocab_size
 
 			# calc normal vocab
-			normal_mask = ((resp_now != unk_id) & (resp_now < vocab_size)).float()
+			if self.have_unk:
+				normal_mask = ((resp_now != unk_id) & (resp_now < vocab_size)).float()
+			else:
+				normal_mask = (resp_now < vocab_size).float()
 			word_loss = -(gen_now.gather(-1, resp_known.unsqueeze(1))[:, 0] * normal_mask).sum()
 			length_sum = normal_mask.sum()
 			# calc invalid vocab
 			# smoothing from unk
-			invalid_mask = (resp_now >= vocab_size).float()
-			invalid_log_prob = (gen_now[:, unk_id] - \
-						(torch.ones_like(gen_now[:, unk_id]) * invalid_vocab_size).log()) * invalid_mask
+			if self.have_unk:
+				invalid_mask = (resp_now >= vocab_size).float()
+				invalid_log_prob = (gen_now[:, unk_id] - \
+							(torch.ones_like(gen_now[:, unk_id]) * invalid_vocab_size).log()) * invalid_mask
 
-			if self.invalid_vocab:
-				extra_invalid_log_prob = gen_now.gather(-1, resp_now.unsqueeze(1))[:, 0] * invalid_mask
-				word_loss -= ((invalid_log_prob.exp() + extra_invalid_log_prob.exp()).log() \
-						* invalid_mask).sum()
-			else:
-				word_loss -= invalid_log_prob.sum()
+				if self.invalid_vocab:
+					extra_invalid_log_prob = gen_now.gather(-1, resp_now.unsqueeze(1))[:, 0] * invalid_mask
+					word_loss -= ((invalid_log_prob.exp() + extra_invalid_log_prob.exp()).log() \
+							* invalid_mask).sum()
+				else:
+					word_loss -= invalid_log_prob.sum()
 
-			length_sum += invalid_mask.sum()
+				length_sum += invalid_mask.sum()
 
 			self.word_loss += word_loss.tolist()
 			self.length_sum += length_sum.tolist()
 
-		self._hash_relevant_data(relevant_data)
+		self._hash_unordered_list(relevant_data)
 
 	@classmethod
 	def _run_f(cls, ele):
@@ -276,22 +283,26 @@ class PerplexityMetric(MetricBase):
 				invalid_vocab, vocab_size, all_vocab_size, unk_id = ele
 
 		# calc normal vocab
-		normal_idx = np.where(np.logical_and(resp_now != unk_id, \
-								resp_now < vocab_size))
+		if unk_id is not None:
+			normal_idx = np.where(np.logical_and(resp_now != unk_id, \
+									resp_now < vocab_size))
+		else:
+			normal_idx = np.where(resp_now < vocab_size)
 		word_loss = -np.sum(valid_log_prob[normal_idx])
 		length_sum = np.array(normal_idx).shape[1]
 		# calc invalid vocab
 		# smoothing from unk
-		invalid_idx = np.where(resp_now >= vocab_size)
-		invalid_log_prob = unk_log_prob[invalid_idx] - np.log(all_vocab_size - vocab_size)
-		if invalid_vocab:
-			extra_invalid_log_prob = valid_log_prob[invalid_idx]
-			word_loss -= np.sum(np.log( \
-					np.exp(invalid_log_prob) + np.exp(extra_invalid_log_prob) \
-				))
-		else:
-			word_loss -= np.sum(invalid_log_prob)
-		length_sum += np.array(invalid_idx).shape[1]
+		if unk_id is not None:
+			invalid_idx = np.where(resp_now >= vocab_size)
+			invalid_log_prob = unk_log_prob[invalid_idx] - np.log(all_vocab_size - vocab_size)
+			if invalid_vocab:
+				extra_invalid_log_prob = valid_log_prob[invalid_idx]
+				word_loss -= np.sum(np.log( \
+						np.exp(invalid_log_prob) + np.exp(extra_invalid_log_prob) \
+					))
+			else:
+				word_loss -= np.sum(invalid_log_prob)
+			length_sum += np.array(invalid_idx).shape[1]
 
 		return word_loss, length_sum
 
@@ -316,8 +327,9 @@ class PerplexityMetric(MetricBase):
 				raise RuntimeError("The metric has not been forwarded data correctly.")
 
 			loader = self.dataloader
+			unk_id = loader.unk_id if self.have_unk else None
 			tasks = ((self.gen_valid_log_prob[i], self.gen_unk_log_prob[i], self.resp[i], \
-							self.invalid_vocab, loader.vocab_size, loader.all_vocab_size, loader.unk_id) \
+							self.invalid_vocab, loader.vocab_size, loader.all_vocab_size, unk_id) \
 							for i, _ in enumerate(self.gen_valid_log_prob))
 
 			# Multiprocessing seems can't boost the speed

@@ -226,7 +226,7 @@ class KneserNeyInterpolated:
 		if len(corpus) > 100 and self.cpu_count > 0:
 			pool = Pool(self.cpu_count, initializer=self._set_language_model, initargs=(self,))
 			for lp in tqdm.tqdm(pool.imap_unordered(self._compute_sent_log_prob, corpus, chunksize=40), \
-								totoal=len(corpus)):
+								total=len(corpus)):
 				log_probs.append(lp)
 			pool.close()
 			pool.join()

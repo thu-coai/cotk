@@ -1,136 +1,145 @@
 """A module for Tokenizer"""
-import typing
+from typing import Any, List, Callable
+import hashlib
+import tempfile
+
 from nltk.tokenize import WordPunctTokenizer
-from .._utils.metaclass import DocStringInheritor
-from .._utils.imports import LazyObject
+from checksumdir import dirhash
 
-PreTrainedTokenizer = LazyObject('transformers.PreTrainedTokenizer')
-
+from .._utils import dumps, DocStringInheritor, chain_sessions, restore_sessions
 
 class BaseTokenizer(metaclass=DocStringInheritor):
 	"""Base class of Tokenizer"""
 
-	def tokenize(self, sentence: str, **kwargs) -> typing.List[str]:
-		raise NotImplementedError
+	def tokenize(self, sentence: str) -> List[str]:
+		'''Tokenize a sentence to a list of tokens.
 
-	@classmethod
-	def _check_callable_tokenizer(cls, tokenizer: typing.Callable):
-		if not callable(tokenizer):
-			raise TypeError('Expected a callable object, but get %s' % type(tokenizer))
-
-		sentence = 'Foo'
-		rv = tokenizer(sentence)
-		if not isinstance(rv, list):
-			raise ValueError('`tokenizer(sentence)` should return a list of str.')
-
-
-class TokenizerAdapter(BaseTokenizer):
-	"""Convert a callable object to a tokenizer"""
-	def __init__(self, tokenizer: typing.Callable):
-		try:
-			if callable(tokenizer):
-				self._check_callable_tokenizer(tokenizer)
-				self._callable_tokenizer = tokenizer
-			else:
-				raise TypeError
-		except:
-			msg = '`tokenizer` should be a callable object, which accepts a string and returns a list of strings.'
-			raise TypeError(msg) from None
-
-	def tokenize(self, sentence: str, **kwargs) -> typing.List[str]:
-		return self._callable_tokenizer(sentence, **kwargs)
-
-
-class Tokenizer(BaseTokenizer):
-	"""A general Tokenizer.
-
-	Notes:
-		This class overrides method `__getattribute__`. Thus, except some attributes `Tokenizer` owns(see attribute `own_attrs`),
-		all `self.ATTRIBUTE` statements will obtain the attribute of `self.tokenizer`, including magic attributes and magic methods.
-
-	Arguments:{ARGUMENTS}
-
-	Attributes:{ATTRIBUTES}
-	"""
-
-	ARGUMENTS = """
-			tokenizer(object): It's assigned to the attribute `self.tokenizer` and it'll be used to tokenize a sentence.
-				If it's a string, `Tokenizer.from_string` is invoked and it's converted to a `BaseTokenizer` instance.
-				Otherwise, it must be callable or have a method `tokenize`. The callable object(`tokenizer` itself) or the method
-			 	`tokenize` accepts a string and returns a list of strings.
-	"""
-
-	ATTRIBUTES = """
-			tokenizer(object): It has a method `tokenize`, which converts a sentence(string) to a list of tokens(a list of strings).
-	"""
-	def __init__(self, tokenizer: typing.Union[BaseTokenizer, typing.Callable, str, typing.Any]):
-		"""
-		Args:{ARGUMENTS}
-		"""
-		try:
-			if isinstance(tokenizer, BaseTokenizer) or hasattr(tokenizer, 'tokenize'):
-				self._check_callable_tokenizer(getattr(tokenizer, 'tokenize'))
-				self.tokenizer = tokenizer
-			elif callable(tokenizer):
-				self.tokenizer = TokenizerAdapter(tokenizer)
-			elif isinstance(tokenizer, str):
-				self.tokenizer = self.from_string(tokenizer)
-			else:
-				raise TypeError
-		except:
-			msg = r"""If `tokenizer` is a string, it must be a valid value :meth:`Tokenizer.from_string` specifies.
-			 Otherwise, it must be callable or have method `tokenize`. The callable object(`tokenizer` itself) or the method
-			 `tokenize` accepts a string and returns a list of strings.
-			"""
-			raise TypeError(msg) from None
-
-		# shorten the length of ref-chain
-		if isinstance(self.tokenizer, __class__):
-			self.tokenizer = self.tokenizer.tokenizer
-
-	def tokenize(self, sentence: str, **kwargs) -> typing.List[str]:
-		return self.tokenizer.tokenize(sentence, **kwargs)
-
-	def is_tokenizer_pretrained(self):
-		try:
-			return PreTrainedTokenizer.__instancecheck__(self.tokenizer)
-		except:
-			return False
-
-	own_attrs = {
-		'_check_callable_tokenizer',
-		'tokenizer',
-		'tokenize',
-		'from_string',
-		'is_tokenizer_pretrained',
-		'__getattribute__'
-	}
-
-	def __getattribute__(self, item):
-		if item in __class__.own_attrs:
-			return super().__getattribute__(item)
-		try:
-			return getattr(super().__getattribute__('tokenizer'), item)
-		except AttributeError:
-			return super().__getattribute__(item)
-
-
-	@staticmethod
-	def from_string(tokenizer: str) -> BaseTokenizer:
-		"""
-
-		Args:
-			tokenizer: How to tokenize sentence. ``nltk.tokenize.WordPunctTokenizer`` is used if ``nltk`` is specified,
-				python built-in ``str.split`` is used if ``space`` is specified.
+		Arguments:
+			sentence (str): a sentence to tokenize.
 
 		Returns:
-			An instance of `BaseTokenizer`
-		"""
-		if not isinstance(tokenizer, str):
-			raise TypeError('`tokenizer` must be a str, but get a %s' % type(tokenizer))
-		if tokenizer == 'nltk':
-			return __class__(WordPunctTokenizer())
-		elif tokenizer == 'space':
-			return TokenizerAdapter(str.split)
+			List[str]: tokenized sentence.
+		'''
+		raise NotImplementedError
+
+	def tokenize_sentences(self, sentences: List[str]) -> List[List[str]]:
+		'''Tokenize a list of sentences to a list of lists of tokens.
+
+		Arguments:
+			sentences (List[str]): sentences to tokenize.
+
+		Returns:
+			List[List[str]]: tokenized sentences.
+		'''
+		return [self.tokenize(sentence) for sentence in sentences]
+
+	def tokenize_sessions(self, sessions: List[List[str]]) -> List[List[List[str]]]:
+		'''Tokenize sessions to a 3-d list of tokens.
+
+		Arguments:
+			sessions (List[List[str]]): sessions to tokenize.
+
+		Returns:
+			List[List[List[str]]]: tokenized sessions.
+		'''
+		sentences, session_lengths = chain_sessions(sessions)
+		tokenized_sentences = self.tokenize_sentences(sentences)
+		return restore_sessions(tokenized_sentences, session_lengths)
+
+	def convert_tokens_to_sentence(self, tokens: List[str]) -> str:
+		'''Convert tokens to sentence.
+		It usually works like the reverse operation of :meth:`tokenize`, but it is not gauranteed.
+		It may like ``" ".join(tokens)``, but some special condition and tokens will be took care.
+
+		Arguments:
+			tokens(List[str]): tokenized sentence
+
+		Returns:
+			str: the sentence concatenated.
+		'''
+		raise NotImplementedError
+
+	def get_setting_hash(self) -> str:
+		'''Return the setting hash of this tokenizer instance.
+		See :ref:`here <dataloader_hash>` for the explaination of ``setting hash``.
+
+		Returns:
+			str: the setting hash.
+		'''
+		raise NotImplementedError
+
+class SimpleTokenizer(BaseTokenizer):
+	'''Init a simple tokenizer, either ``nltk`` or ``space``.
+	If ``nltk``, use WordPunctTokenizer from nltk.tokenize.
+	If ``space``, use ``str.split(" ")``.
+
+	Arguments:
+		method (str): the tokenization method, ``nltk`` or ``space``.
+		special_tokens (List[str]): special tokens not to tokenize, such as ``<go>``.
+	'''
+	def __init__(self, method: str, special_tokens: List[str] = None):
+		self.method = method
+		self.special_tokens = special_tokens
+
+		if method == "nltk":
+			self._callable_tokenizer = WordPunctTokenizer().tokenize
+		elif method == "space":
+			self._callable_tokenizer = str.split
 		else:
-			raise ValueError('Invalid value {}. `tokenizer` should be "nltk" or "space" '.format(tokenizer))
+			raise ValueError('`method` is invalid value {}, should be "nltk" or "space" '.format(method))
+		self._setting_hash = hashlib.sha256(dumps(["adapter", method, special_tokens])).hexdigest()
+
+	def tokenize(self, sentence: str) -> List[str]:
+		#TODO: don't tokenize special tokens
+		return self._callable_tokenizer(sentence)
+
+	def convert_tokens_to_sentence(self, tokens: List[str]) -> str:
+		if self.method == "nltk":
+			sent = " ".join(tokens)
+			out_string = sent.replace(' .', '.').replace(' ?', '?'). \
+				replace(' !', '!').replace(' ,', ',').replace(" ' ", "'"). \
+				replace(" n't", "n't").replace(" 'm", "'m"). \
+				replace(" 's", "'s"). \
+				replace(" 've", "'ve").replace(" 're", "'re")
+			return out_string
+		elif self.method == "space":
+			return " ".join(tokens)
+		else:
+			raise RuntimeError("No such tokenizer %s" % self.method)
+
+	def get_setting_hash(self) -> str:
+		return self._setting_hash
+
+class PretrainedTokenizer(BaseTokenizer):
+	'''A wrapper for ``Pretrainedtokenizer`` from the transformers package.
+	If you don't want to do tokenization on some special tokens, see
+	``transformers.Pretrainedtokenizer.add_special_tokens``.
+
+	Arguments:
+		tokenizer (transformers.Pretrainedtokenizer): An
+			instance of ``transformers.Pretrainedtokenizer``.
+	'''
+	def __init__(self, tokenizer):
+		self.tokenizer = tokenizer
+		self._tokenizer_class_name = tokenizer.__class__.__name__
+		with tempfile.TemporaryDirectory() as tmp_dir:
+			tokenizer.save_pretrained(str(tmp_dir))
+			tokenizer_hash = dirhash(str(tmp_dir), "sha256")
+		self._setting_hash = hashlib.sha256(dumps(["pretrained", tokenizer_hash])).hexdigest()
+
+	def tokenize(self, sentence: str) -> List[str]:
+		return self.tokenizer.tokenize(sentence)
+
+	def convert_tokens_to_sentence(self, tokens: List[str]) -> str:
+		return self.tokenizer.convert_tokens_to_string(tokens)
+
+	def get_setting_hash(self) -> str:
+		return self._setting_hash
+
+	def get_tokenizer_class(self) -> str:
+		'''Get the class name of pretrained tokenizer.
+
+		Returns:
+			str: the class name of pretrained tokenizer.
+		'''
+		return self._tokenizer_class_name

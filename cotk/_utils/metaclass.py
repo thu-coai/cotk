@@ -121,7 +121,7 @@ class LoadClassInterface:
 
 	@classmethod
 	def load_class(cls, class_name):
-		'''Return a subclass of ``class_name``.
+		'''Return a subclass of ``class_name``, case insensitively.
 
 		Arguments:
 			class_name (str): target class name.
@@ -131,7 +131,7 @@ class LoadClassInterface:
 		'''
 		result = None
 		for subclass in cls.get_all_subclasses():
-			if subclass.__name__ == class_name:
+			if subclass.__name__.lower() == class_name.lower():
 				if result is None:
 					result = subclass
 				else:
