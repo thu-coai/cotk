@@ -6,7 +6,7 @@ from unittest import mock
 import pytest
 
 import cotk
-from cotk.dataloader.dataloader import LanguageProcessingBase, Label, Sentence, Session, DataField
+from cotk.dataloader.dataloader import LanguageProcessing, Label, SentenceDefault, Session, DataField
 
 
 @pytest.fixture
@@ -59,7 +59,7 @@ def get_fake_dataset():
 	return all_vocabs, word2index, key_name, fields, fake_dataset
 
 
-class FakeDataloader(LanguageProcessingBase):
+class FakeDataloader(LanguageProcessing):
 	"""
 	A fake dataloader for testing class `DataloaderHash`.
 	"""
@@ -126,7 +126,7 @@ class TestHash:
 			for data_key, field in data_fields[key]:
 				data = dataset2[key][data_key]
 				field = DataField.get_field(field)
-				if isinstance(field, Sentence):
+				if isinstance(field, SentenceDefault):
 					data = [tokens + sentence + tokens * 2 for sentence in data]
 				elif isinstance(field, Session):
 					data = [[tokens + sentence + tokens * 3 for sentence in session] for session in data]

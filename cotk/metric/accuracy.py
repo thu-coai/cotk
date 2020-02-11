@@ -2,7 +2,7 @@ r"""
 Containing some classes and functions about accuracy evaluating results of models.
 """
 import numpy as np
-from .._utils import hooks
+from ..hooks import hooks
 from .metric import MetricBase
 
 class AccuracyMetric(MetricBase):

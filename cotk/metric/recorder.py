@@ -1,4 +1,4 @@
-r"""
+"""
 Containing some recorders.
 """
 import numpy as np
@@ -31,7 +31,7 @@ class SingleTurnDialogRecorder(MetricBase):
 		...     # post_allvocabs_key: [["<go>", "I", "like", "python", "<eos>"], ["<go>", "I", "use", "python", "<eos>"]],
 		...
 		...	    resp_allvocabs_key: [[2, 10, 1214, 479, 3], [2, 851, 17, 2451, 3]],
-		...	    # resp_allvocabs_key: [["<go>", "I", "prefer", "java", "<eos>"], ["<go>", "python", "is", "excellent", "<eos>"]],
+		...	    # resp_allvocabs_key: [["<go>", "I", "prefe", "java", "<eos>"], ["<go>", "python", "is", "excellent", "<eos>"]],
 		...
 		...     gen_key: [[10, 64, 2019, 3], [851, 17, 4124, 3]],
 		...     # gen_key: [["I", "like", "PHP", "<eos>"], ["python", "is", "powerful", "<eos>"]]

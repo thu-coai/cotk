@@ -6,10 +6,10 @@ import random
 import numpy as np
 from .metric import MetricBase
 from .._utils.imports import LazyObject, LazyModule
-from .._utils import hooks
+from ..hooks import hooks
 
 torch = LazyModule("torch", globals())
-torch.Tensor = LazyObject("torch.Tensor")
+torch.Tensor = LazyObject("torch.Tensor") #type: ignore
 
 class PerplexityMetric(MetricBase):
 	'''Metric for calculating perplexity.

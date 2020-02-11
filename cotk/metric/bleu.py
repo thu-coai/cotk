@@ -11,12 +11,12 @@ import tqdm
 from nltk.translate.bleu_score import corpus_bleu, sentence_bleu, SmoothingFunction
 
 from .metric import MetricBase
-from .._utils import hooks
-from ..dataloader.tokenizer import BaseTokenizer, SimpleTokenizer
-from ._utils import _replace_unk
+from ..hooks import hooks
+from ..dataloader.tokenizer import Tokenizer, SimpleTokenizer
+from .._utils import replace_unk
 
 if False: # for type check
-	from ..dataloader.dataloader import LanguageProcessingBase
+	from ..dataloader.dataloader import LanguageProcessing
 
 def _sentence_bleu(ele):
 	'''Auxiliary function for computing sentence bleu:
@@ -67,7 +67,7 @@ class BleuCorpusMetric(MetricBase):
 	_version = 1
 
 	@hooks.hook_metric
-	def __init__(self, dataloader: "LanguageProcessingBase", ngram=4, *, tokenizer: Union[None, BaseTokenizer, str] = None, \
+	def __init__(self, dataloader: "LanguageProcessingBase", ngram=4, *, tokenizer: Union[None, Tokenizer, str] = None, \
 			reference_num=1, ignore_smoothing_error=False,\
 			reference_allvocabs_key="ref_allvocabs", gen_key="gen", \
 			reference_str_key="ref_str"):
@@ -183,7 +183,7 @@ class BleuCorpusMetric(MetricBase):
 			self._do_tokenize()
 
 		if "unk" in self.dataloader.get_special_tokens():
-			self.hyps = _replace_unk(self.hyps, self.dataloader.vocab_list[self.dataloader.unk_id])
+			self.hyps = replace_unk(self.hyps, self.dataloader.vocab_list[self.dataloader.unk_id])
 		try:
 			weights = np.ones(self.ngram) / self.ngram
 			result.update({"bleu": \
@@ -199,10 +199,10 @@ class BleuCorpusMetric(MetricBase):
 		return result
 
 	def _do_tokenize(self):
-		tokenizer: BaseTokenizer
+		tokenizer: Tokenizer
 		if isinstance(self.tokenizer, str):
 			tokenizer = SimpleTokenizer(self.tokenizer)
-		elif isinstance(self.tokenizer, BaseTokenizer):
+		elif isinstance(self.tokenizer, Tokenizer):
 			tokenizer = self.tokenizer
 		else:
 			raise TypeError("Unknown type of tokenizer")
@@ -245,7 +245,7 @@ class SelfBleuCorpusMetric(MetricBase):
 
 	@hooks.hook_metric
 	def __init__(self, dataloader: "LanguageProcessingBase", ngram=4, *, \
-		tokenizer: Union[None, BaseTokenizer, str] = None, \
+		tokenizer: Union[None, Tokenizer, str] = None, \
 		gen_key="gen", \
 		sample=1000, \
 		seed=1229, \
@@ -317,7 +317,7 @@ class SelfBleuCorpusMetric(MetricBase):
 		ref = self.hyps[:self.sample]
 
 		if self.tokenizer:
-			tokenizer: BaseTokenizer
+			tokenizer: Tokenizer
 			if isinstance(self.tokenizer, str):
 				tokenizer = SimpleTokenizer(self.tokenizer)
 			else:
@@ -328,7 +328,7 @@ class SelfBleuCorpusMetric(MetricBase):
 			ref = [self.dataloader.convert_ids_to_tokens(ids, remove_special=True, trim=True) for ids in ref]
 
 		if "unk" in self.dataloader.get_special_tokens():
-			_ref = _replace_unk(ref, self.dataloader.vocab_list[self.dataloader.unk_id])
+			_ref = replace_unk(ref, self.dataloader.vocab_list[self.dataloader.unk_id])
 		else:
 			_ref = ref
 
@@ -400,7 +400,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 	@hooks.hook_metric
 	def __init__(self, dataloader, \
 			reference_test_list, ngram=4, *, \
-			tokenizer: Union[None, BaseTokenizer, str] = None, \
+			tokenizer: Union[None, Tokenizer, str] = None, \
 			gen_key="gen", \
 			sample=1000, \
 			seed=1229, \
@@ -477,7 +477,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 		refs: List[Any]
 		hyps: List[Any]
 		if self.tokenizer:
-			tokenizer: BaseTokenizer
+			tokenizer: Tokenizer
 			if isinstance(self.tokenizer, str):
 				tokenizer = SimpleTokenizer(self.tokenizer)
 			else:
@@ -501,7 +501,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 		random.setstate(rng_state)
 
 		if "unk" in self.dataloader.get_special_tokens():
-			refs = _replace_unk(refs, self.dataloader.vocab_list[self.dataloader.unk_id])
+			refs = replace_unk(refs, self.dataloader.vocab_list[self.dataloader.unk_id])
 
 
 		bleu_irl_fw, bleu_irl_bw = [], []
@@ -666,7 +666,7 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 		result = super().close()
 		if (not self.hyps) or (not self.refs):
 			raise RuntimeError("The metric has not been forwarded data correctly.")
-		self.hyps = _replace_unk(self.hyps, self.dataloader.unk_id)
+		self.hyps = replace_unk(self.hyps, self.dataloader.unk_id)
 
 		self._hash_relevant_data(self.refs)
 

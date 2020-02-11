@@ -1,6 +1,5 @@
 
 from typing import List, Any, Dict, Union, Optional
-from collections import OrderedDict
 
 from .._utils.metaclass import DocStringInheritor
 from .._utils.typehint import OrderedDictType
@@ -8,14 +7,15 @@ from .._utils.typehint import OrderedDictType
 # For type checking
 if False: #pylint: disable=using-constant-test
 	#pylint: disable=unused-import
-	from .vocab import BaseVocab
-	from .tokenizer import BaseTokenizer
+	from .vocab import Vocab
+	from .tokenizer import Tokenizer
 
 class Context(metaclass=DocStringInheritor):
-	'''A base class for Context objects. This class is designed to set parameters
-	for Field or Vocab, without directly passing to __init__ of the object.
+	'''A base class for Context. This class is used for setting parameters
+	for :class:`Field` or :class:`Vocab`, without directly
+	passing parameters to ``__init__`` of the object.
 
-	When init, the object write the list of parameters stored in the class.
+	When initialized, the object write the list of parameters stored in the class.
 	The old parameters are restored when :meth:`.close` or :meth:`.__exit__` is called.
 
 	TODO: add an example for context manager, use ``with``.
@@ -52,9 +52,6 @@ class Context(metaclass=DocStringInheritor):
 			key (str): name of the parameter
 			default (Any, optional): Default value if ``key`` is not set. Defaults: None.
 			no_default (bool, optional): When ``True``, Raise KeyError if ``key`` is not set. Defaults: False.
-
-		Returns:
-			Any: Return the value of ``key`` stored in this class.
 		'''
 		if cls.context_dict[key]:
 			return cls.context_dict[key]
@@ -68,15 +65,13 @@ class Context(metaclass=DocStringInheritor):
 	def set(cls, key: str, value: Any, weak=False) -> Any:
 		'''Set the parameter named ``key`` to ``value``, stored in this class.
 		If weak is ``True``, do not overwrite if ``key`` is already set.
+		Return the old value.
 
 		Arguments:
 			key (str): The name of the changed parameter.
 			value (Any): The new value of changed parameter. If None, do nothing.
 				If want to set the value to None, use ``"force_none"``.
 			weak (bool, optional): Whether overwrite it if the parameter existing. Defaults: False.
-
-		Returns:
-			Any: Return the old value of ``key`` stored in this class.
 		'''
 		old = cls.context_dict[key]
 		if weak:
@@ -90,6 +85,7 @@ class Context(metaclass=DocStringInheritor):
 		return old
 
 	def __enter__(self):
+		'''Enter a context'''
 		return self
 
 	@classmethod
@@ -98,6 +94,7 @@ class Context(metaclass=DocStringInheritor):
 			cls.context_dict[name] = param
 
 	def __exit__(self, exc_type, exc_val, exc_tb):
+		'''Exit the context and restore the old parameter.'''
 		self.close()
 
 	def close(self):
@@ -105,33 +102,38 @@ class Context(metaclass=DocStringInheritor):
 		self._restore(self._parameter_keys, self._old_parameters)
 
 class FieldContext(Context):
+	'''Bases: :class:`.dataloader.Context`
+
+	A context class for setting parameters for :class:`.Field`.
+	'''
 
 	PARAMETER_LIST = ["tokenizer", "vocab", "vocab_from", "max_sent_length", "max_turn_length", "convert_to_lower_letter"]
 	context_dict = {key: None for key in PARAMETER_LIST}
 
 	# pylint: disable=unused-argument
 	@classmethod
-	def set_parameters(cls, *, \
-			tokenizer: Union[None, "BaseTokenizer", str] = None, \
-			vocab: Optional["BaseVocab"] = None, \
-			vocab_from: Optional[Dict[str, str]] = None, \
-			max_sent_length: Optional[int] = None, \
-			max_turn_length: Optional[int] = None, \
-			convert_to_lower_letter: Optional[bool] = None, \
+	def set_parameters(cls, *,
+			tokenizer: Union[None, "Tokenizer", str] = None,
+			vocab: Optional["Vocab"] = None,
+			vocab_from: Optional[Dict[str, str]] = None,
+			max_sent_length: Optional[int] = None,
+			max_turn_length: Optional[int] = None,
+			convert_to_lower_letter: Optional[bool] = None,
 			weak=False) -> "FieldContext":
 		'''Set a Context for initialization of :class:`Field`.
 		See the example at TODO: write an example for how to use field context.
 
 		Arguments:
 			TODO: fill the parameters from Field classes.
-
-		Returns:
-			FieldContext: A Context object.
 		'''
 		parameter_dict = cls._prune_parameter(cls.PARAMETER_LIST, locals())
 		return FieldContext(parameter_dict, weak=weak)
 
 class VocabContext(Context):
+	'''Bases: :class:`.dataloader.Context`
+
+	A context class for setting parameters for :class:`.Vocab`.
+	'''
 
 	PARAMETER_LIST = ["min_frequent_vocab_times", "min_rare_vocab_times", "special_tokens", "special_appeared_in_data"]
 	context_dict = {key: None for key in PARAMETER_LIST}
@@ -144,14 +146,11 @@ class VocabContext(Context):
 			special_tokens_mapping: Optional[OrderedDictType[str, str]] = None, \
 			special_appeared_in_data: Optional[bool] = None, \
 			weak=False) -> "VocabContext":
-		'''Set a Context for initialization of :class:`BaseVocab`.
+		'''Set a Context for initialization of :class:`Vocab`.
 		See the example at TODO: write an example for how to use field context.
 
 		Arguments:
 			TODO: fill the parameters from Vocab classes.
-
-		Returns:
-			VocabContext: A Context object.
 		'''
 		parameter_dict = cls._prune_parameter(cls.PARAMETER_LIST, locals())
 		return VocabContext(parameter_dict, weak=weak)

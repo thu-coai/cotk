@@ -3,6 +3,6 @@ r"""
 not find api here.
 """
 
-from .utils import trim_before_target, chain_sessions, restore_sessions
+from .utils import trim_before_target, chain_sessions, restore_sessions, replace_unk
 
-__all__ = ['trim_before_target', 'chain_sessions', 'restore_sessions']
+__all__ = ['trim_before_target', 'chain_sessions', 'restore_sessions', 'replace_unk']

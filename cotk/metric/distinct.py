@@ -5,9 +5,9 @@ import numpy as np
 from nltk import ngrams
 
 from .metric import MetricBase
-from .._utils import hooks
-from ..dataloader.tokenizer import BaseTokenizer, SimpleTokenizer
-from ._utils import _replace_unk
+from ..hooks import hooks
+from ..dataloader.tokenizer import Tokenizer, SimpleTokenizer
+from .._utils import replace_unk
 
 class DistinctNgramsCorpus(MetricBase):
 	'''Metric for calculating BLEU.
@@ -26,7 +26,7 @@ class DistinctNgramsCorpus(MetricBase):
 
 	@hooks.hook_metric
 	def __init__(self, dataloader: "LanguageProcessingBase", ngram=3, *, \
-			tokenizer: Union[None, BaseTokenizer, str] = None, \
+			tokenizer: Union[None, Tokenizer, str] = None, \
 			sample=10000, \
 			seed=1234, \
 			gen_key="gen"):
@@ -114,7 +114,7 @@ class DistinctNgramsCorpus(MetricBase):
 			self._do_tokenize()
 
 		if "unk" in self.dataloader.get_special_tokens():
-			self.hyps = _replace_unk(self.hyps, self.dataloader.vocab_list[self.dataloader.unk_id])
+			self.hyps = replace_unk(self.hyps, self.dataloader.vocab_list[self.dataloader.unk_id])
 
 		ngram_list = list(chain(*[ngrams(sentence, self.ngram, pad_left=True, pad_right=True) for sentence in self.hyps]))
 		ngram_set = set(ngram_list)
@@ -124,10 +124,10 @@ class DistinctNgramsCorpus(MetricBase):
 		return result
 
 	def _do_tokenize(self):
-		tokenizer: BaseTokenizer
+		tokenizer: Tokenizer
 		if isinstance(self.tokenizer, str):
 			tokenizer = SimpleTokenizer(self.tokenizer)
-		elif isinstance(self.tokenizer, BaseTokenizer):
+		elif isinstance(self.tokenizer, Tokenizer):
 			tokenizer = self.tokenizer
 		else:
 			raise TypeError("Unknown type of tokenizer")

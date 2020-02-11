@@ -1,19 +1,19 @@
-r'''Containing NgramFwBwPerplexityMetric'''
+'''Containing NgramFwBwPerplexityMetric'''
 from typing import Optional, List, Any, Union
 import logging
 
-from ..dataloader import BaseTokenizer, SimpleTokenizer
+from ..dataloader import Tokenizer, SimpleTokenizer
 from .metric import MetricBase
 from ..models.ngram_language_model import KneserNeyInterpolated
-from .._utils import hooks
+from ..hooks import hooks
 
 class NgramFwBwPerplexityMetric(MetricBase):
-	r'''Metric for calculating n gram forward perplexity and backward perplexity.
+	'''Metric for calculating n gram forward perplexity and backward perplexity.
 
 	Arguments:
 	    {MetricBase.DATALOADER_ARGUMENTS}
 	    ngram (int): order of ngram language model
-	    reference_test_list (list): Reference sentences with all vocabs in test data
+	    reference_test_list (list): Reference sentences with all vocabs in test data \
 			are passed to :func:`forward` by ``dataloader.get_all_batch("test")["sent"]``.
 		{MetricBase.GEN_KEY_ARGUMENTS}
 
@@ -39,7 +39,7 @@ class NgramFwBwPerplexityMetric(MetricBase):
 
 	@hooks.hook_metric
 	def __init__(self, dataloader, reference_test_list, ngram=4, *, \
-			tokenizer: Union[None, BaseTokenizer, str] = None, gen_key="gen", \
+			tokenizer: Union[None, Tokenizer, str] = None, gen_key="gen", \
 			sample=10000, seed=1229, cpu_count=None):
 		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
@@ -89,7 +89,7 @@ class NgramFwBwPerplexityMetric(MetricBase):
 		refs: List[Any]
 		hyps: List[Any]
 		if self.tokenizer:
-			tokenizer: BaseTokenizer
+			tokenizer: Tokenizer
 			if isinstance(self.tokenizer, str):
 				tokenizer = SimpleTokenizer(self.tokenizer)
 			else:

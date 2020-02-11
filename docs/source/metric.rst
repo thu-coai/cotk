@@ -17,9 +17,11 @@ value returned, can compare with each other.
 Basic Classes
 --------------------------------
 .. autoclass:: MetricBase
-    :members:
-    
-    .. automethod:: _hash_relevant_data
+
+    .. automethod:: forward
+    .. automethod:: close
+    .. automethod:: _hash_unordered_list
+    .. automethod:: _hash_ordered_data
     .. automethod:: _hashvalue
 
 Metric class

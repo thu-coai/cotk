@@ -1,26 +1,23 @@
 """Dataloader for language generation"""
 import numpy as np
+from typing import List, Any, Tuple, Optional, Dict
 
-# from .._utils.unordered_hash import UnorderedSha256
-from .._utils.file_utils import get_resource_file_path
-from .._utils import hooks
-from .dataloader import LanguageProcessingBase
+from ..hooks import hooks
+from .dataloader import LanguageProcessing
 from ..metric import MetricChain, PerplexityMetric, LanguageGenerationRecorder, \
 	FwBwBleuCorpusMetric, SelfBleuCorpusMetric
 from .context import FieldContext, VocabContext
 from .tokenizer import PretrainedTokenizer
-from .vocab import Vocab, PretrainedVocab
+from .vocab import GeneralVocab, PretrainedVocab
 
 # pylint: disable=W0223
-class LanguageGeneration(LanguageProcessingBase):
+class LanguageGeneration(LanguageProcessing):
 	r"""Base class for language modelling datasets. This is an abstract class.
 
 	This class is supported for language modeling tasks or language generation tasks
 	without any inputs.
 
 	Arguments:{ARGUMENTS}
-
-	Attributes:{ATTRIBUTES}
 	"""
 
 	ARGUMENTS = r'''
@@ -45,16 +42,14 @@ class LanguageGeneration(LanguageProcessingBase):
 	TOKENIZER_DEFAULT = ''
 	REMAINS_CAPITAL_DEFAULT = ''
 
-	ATTRIBUTES = LanguageProcessingBase.ATTRIBUTES
-
 	_version = 1
 
 	@hooks.hook_dataloader
 	def __init__(self, file_id, *, tokenizer=None, \
 			max_sent_length=None, \
 			convert_to_lower_letter=None, \
-			min_valid_vocab_times=None, \
-			min_invalid_vocab_times=None, \
+			min_frequent_vocab_times=None, \
+			min_rare_vocab_times=None, \
 			pretrained=None):
 
 		self._pretrained = pretrained
@@ -62,8 +57,8 @@ class LanguageGeneration(LanguageProcessingBase):
 			with FieldContext.set_parameters(tokenizer=tokenizer,\
 					max_sent_length=max_sent_length,
 					convert_to_lower_letter=convert_to_lower_letter):
-				with VocabContext.set_parameters(min_valid_vocab_times=min_valid_vocab_times, \
-						min_invalid_vocab_times=min_invalid_vocab_times):
+				with VocabContext.set_parameters(min_frequent_vocab_times=min_frequent_vocab_times, \
+						min_rare_vocab_times=min_rare_vocab_times):
 					super().__init__(file_id, [("sent", "sentence")])
 			self.set_default_field("train", "sent")
 
@@ -80,11 +75,7 @@ class LanguageGeneration(LanguageProcessingBase):
 		else:
 			raise ValueError("No pretrained name %s" % pretrained)
 
-	def get_batch(self, set_name, indexes):
-		'''{LanguageProcessingBase.GET_BATCH_DOC_WITHOUT_RETURNS}
-
-		Returns:
-			(dict): A dict at least contains:
+	_GET_BATCH_MORE_DOC = '''Returns a dict at least contains:
 
 			* **sent_length** (:class:`numpy.ndarray`): A 1-d array, the length of sentence in each batch.
 			  Size: ``[batch_size]``
@@ -93,8 +84,9 @@ class LanguageGeneration(LanguageProcessingBase):
 			  Size: ``[batch_size, max(sent_length)]``
 			* **sent_allvocabs** (:class:`numpy.ndarray`): A 2-d padding array containing id of words.
 			  Provide both valid and invalid words.
-			  Size: ``[batch_size, max(sent_length)]``
+			  Size: ``[batch_size, max(sent_length)]``'''
 
+	_GET_BATCH_EXAMPLE = '''
 		Examples:
 
 			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you",
@@ -114,11 +106,13 @@ class LanguageGeneration(LanguageProcessingBase):
 					[2, 7, 3, 0, 0, 0],   # second sentence:  <go> hello <eos> <pad> <pad> <pad>
 					[2, 7, 8, 9, 10, 3]   # third sentence: <go> hello i am fine <eos>
 				]),
-			}
-		'''
+			}'''
+
+	def get_batch(self, set_name: str, indexes: List[int] #pylint: disable=useless-super-delegation
+			) -> Dict[str, Any]:
 		return super().get_batch(set_name, indexes)
 
-	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob"):
+	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob") -> MetricChain:
 		'''Get metrics for teacher-forcing. In other words, this function
 		provides metrics for language modelling task.
 
@@ -129,9 +123,6 @@ class LanguageGeneration(LanguageProcessingBase):
 		Arguments:
 			gen_log_prob_key (str): The key of predicted log probability over words.
 				Refer to :class:`.metric.PerplexityMetric`. Default: ``gen_log_prob``.
-
-		Returns:
-			A :class:`.metric.MetricChain` object.
 		'''
 		metric = MetricChain()
 		metric.add_metric(PerplexityMetric(self, \
@@ -140,7 +131,7 @@ class LanguageGeneration(LanguageProcessingBase):
 					gen_log_prob_key=gen_log_prob_key))
 		return metric
 
-	def get_inference_metric(self, gen_key="gen", sample=1000, seed=1229, cpu_count=None):
+	def get_inference_metric(self, gen_key="gen", sample=1000, seed=1229, cpu_count=None) -> MetricChain:
 		'''Get metrics for inference. In other words, this function provides metrics for
 		language generation tasks.
 
@@ -161,8 +152,6 @@ class LanguageGeneration(LanguageProcessingBase):
 				Refer to :class:`.metric.SelfBleuCorpusMetric`. Default: ``1229``.
 			cpu_count (int): Number of used cpu for multiprocessing.
 				Refer to :class:`.metric.SelfBleuCorpusMetric`. Default: ``None``.
-		Returns:
-			A :class:`.metric.MetricChain` object.
 		'''
 		metric = MetricChain()
 		metric.add_metric(SelfBleuCorpusMetric(self, \

@@ -32,3 +32,16 @@ def restore_sessions(chained_sessions: List[Any], session_lengths: List[int]) ->
 		sessions.append(chained_sessions[last: last + session_length])
 		last += session_length
 	return sessions
+
+def replace_unk(sentences: List[Any], unk_token, target_token: Any = -1):
+	r'''Auxiliary function for replacing the unknown words to another words
+
+	Arguments:
+		input (list[List[Any]]): the sentences
+		unk_tokens (Any): id for unknown words.
+		target: the target word index used to replace the unknown words.
+
+	Returns:
+		* list: processed result.
+	'''
+	return [[target_token if token == unk_token else token for token in sentence] for sentence in sentences]

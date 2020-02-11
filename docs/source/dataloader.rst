@@ -200,12 +200,12 @@ TODO: fill the documentation
 Context
 ------------------------------------
 
-Context
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: Context
 
     .. automethod:: get
     .. automethod:: set
+    .. automethod:: __enter__
+    .. automethod:: __exit__
     .. automethod:: close
 
 FieldContext
@@ -223,335 +223,174 @@ VocabContext
 Tokenizer
 -------------------------------------
 
-BaseTokenizer
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: BaseTokenizer
+.. autoclass:: Tokenizer
 
+    .. automethod:: tokenize
+    .. automethod:: tokenize_sentences
+    .. automethod:: tokenize_sessions
+    .. automethod:: convert_tokens_to_sentence
+
+    .. automethod:: get_setting_hash
+
+SimpleTokenizer
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: SimpleTokenizer
 
-    .. automethod:: tokenize
-    .. automethod:: tokenize_sentences
-    .. automethod:: tokenize_sessions
-    .. automethod:: convert_tokens_to_sentence
-    .. automethod:: get_setting_hash
 
+Pretrainedtokenizer
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: PretrainedTokenizer
 
-    .. automethod:: tokenize
-    .. automethod:: tokenize_sentences
-    .. automethod:: tokenize_sessions
-    .. automethod:: convert_tokens_to_sentence
-    .. automethod:: get_setting_hash
     .. automethod:: get_tokenizer_class
 
 Vocab
 -------------------------------------
 
-BaseVocab
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: BaseVocab
+.. autoclass:: Vocab
 
     .. automethod:: get_all_subclasses
     .. automethod:: load_class
     .. automethod:: add_tokens
     .. automethod:: build_vocab
+
     .. automethod:: convert_tokens_to_ids
     .. automethod:: convert_ids_to_tokens
-    .. automethod:: frequent_vocab_size
-    .. automethod:: all_vocab_size
-    .. automethod:: frequent_vocab_list
-    .. automethod:: all_vocab_list
+    .. autoattribute:: frequent_vocab_size
+    .. autoattribute:: all_vocab_size
+    .. autoattribute:: frequent_vocab_list
+    .. autoattribute:: all_vocab_list
     .. automethod:: get_special_tokens_mapping
     .. automethod:: get_special_tokens_id
-    .. automethod:: pad_id
-    .. automethod:: unk_id
-    .. automethod:: go_id
-    .. automethod:: eos_id
+    .. autoattribute:: pad_id
+    .. autoattribute:: unk_id
+    .. autoattribute:: go_id
+    .. autoattribute:: eos_id
+
     .. automethod:: get_setting_hash
     .. automethod:: get_vocab_hash
 
-Vocab
---------------------------------------------
-.. autoclass:: Vocab
+GeneralVocab
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autoclass:: GeneralVocab
 
     .. automethod:: from_predefined
     .. automethod:: from_predefined_vocab
     .. automethod:: from_frequent_word
     .. automethod:: from_frequent_word_of_vocab
-    .. automethod:: frequent_vocab_list
-    .. automethod:: all_vocab_list
+    .. autoattribute:: frequent_vocab_list
+    .. autoattribute:: all_vocab_list
 
 PretrainedVocab
------------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: PretrainedVocab
 
-    .. automethod:: frequent_vocab_list
-    .. automethod:: all_vocab_list
+    .. autoattribute:: frequent_vocab_list
+    .. autoattribute:: all_vocab_list
 
 Field
 -------------------------------------
 
-Field
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: Field
 
     .. automethod:: get_all_subclasses
     .. automethod:: load_class
     .. automethod:: get_vocab
     .. automethod:: get_tokenizer
+    .. automethod:: get_batch
     .. autoattribute:: DEFAULT_VOCAB_FROM
 
-SentenceBase
+Sentence
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: SentenceBase
+.. autoclass:: Sentence
 
+    .. automethod:: tokenize
     .. automethod:: tokenize_sentences
     .. automethod:: convert_tokens_to_ids
     .. automethod:: convert_ids_to_tokens
     .. automethod:: convert_ids_to_sentence
+    .. automethod:: convert_sentence_to_ids
     .. automethod:: add_special_to_ids
     .. automethod:: remove_special_in_ids
     .. automethod:: process_sentences
-    .. automethod:: recover_sentence
     .. automethod:: trim_in_ids
 
-Sentence
+    .. autoattribute:: frequent_vocab_size
+    .. autoattribute:: all_vocab_size
+    .. autoattribute:: frequent_vocab_list
+    .. autoattribute:: all_vocab_list
+    .. automethod:: get_special_tokens_mapping
+    .. automethod:: get_special_tokens_id
+    .. autoattribute:: pad_id
+    .. autoattribute:: unk_id
+    .. autoattribute:: go_id
+    .. autoattribute:: eos_id
+
+SentenceDefault
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: Sentence
+.. autoclass:: SentenceDefault
+
+    .. automethod:: get_batch
 
 SentenceGPT2
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: SentenceGPT2
 
+    .. automethod:: get_batch
+
 Session
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: Session
 
-    .. automethod:: get_next
-    .. automethod:: convert_to_tokens
-    .. automethod:: iter_sentence
-    .. automethod:: convert_to_ids
-    .. automethod:: cut
-
-DataloaderHash
--------------------------------------
-
-DataloaderHash
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: DataloaderHash
-
-    .. automethod:: convert_ids_to_tokens
-    .. automethod:: _hash_dataset
-    .. automethod:: hash_dataset
-    .. automethod:: hash_datasets
-
-Tokenizer
--------------------------------------
-
-BaseTokenizer
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: BaseTokenizer
-
-    .. automethod:: tokenize
-    .. automethod:: _check_callable_tokenizer
-
-TokenizerAdapter
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: TokenizerAdapter
-
-    .. automethod:: tokenize
-
-Tokenizer
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: Tokenizer
-
-    .. automethod:: tokenize
-    .. automethod:: from_string
-
-
-
-Basic Classes
-------------------------------------
 
 Dataloader
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------------------
 .. autoclass:: Dataloader
 
     .. automethod:: get_all_subclasses
     .. automethod:: load_class
 
-LanguageProcessingBase
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: LanguageProcessingBase
+LanguageProcessing
+------------------------------------
+.. autoclass:: LanguageProcessing
 
-    .. autoattribute:: vocab_list
-    .. autoattribute:: vocab_size
-    .. autoattribute:: all_vocab_size
-    .. automethod:: _load_data
-    .. automethod:: _general_load_data
-    .. automethod:: _valid_word2id
+    .. automethod:: simple_create
+
+    .. automethod:: get_default_tokenizer
+    .. automethod:: get_default_vocab
+    .. automethod:: get_default_field
+    .. automethod:: set_default_field
+    .. automethod:: get_field
+
     .. automethod:: restart
     .. automethod:: get_batch
     .. automethod:: get_next_batch
     .. automethod:: get_batches
-    .. automethod:: trim
-    .. automethod:: convert_tokens_to_ids
-    .. automethod:: convert_ids_to_tokens
+    .. automethod:: get_all_batch
 
-BERTLanguageProcessingBase
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: BERTLanguageProcessingBase
-
-    .. autoattribute:: vocab_list
-    .. autoattribute:: vocab_size
-    .. autoattribute:: all_vocab_size
-    .. automethod:: _load_data
     .. automethod:: tokenize
-    .. automethod:: restart
-    .. automethod:: get_batch
-    .. automethod:: get_next_batch
-    .. automethod:: get_batches
-    .. automethod:: trim
-    .. automethod:: convert_tokens_to_bert_ids
-    .. automethod:: convert_bert_ids_to_ids
+    .. automethod:: tokenize_sentences
     .. automethod:: convert_tokens_to_ids
-    .. automethod:: convert_ids_to_bert_ids
-    .. automethod:: convert_bert_ids_to_tokens
     .. automethod:: convert_ids_to_tokens
+    .. automethod:: convert_ids_to_sentence
+    .. automethod:: convert_sentence_to_ids
+    .. automethod:: add_special_to_ids
+    .. automethod:: remove_special_in_ids
+    .. automethod:: process_sentences
+    .. automethod:: trim_in_ids
 
-LanguageGeneration
------------------------------------
-.. autoclass:: LanguageGeneration
-
-    .. autoattribute:: vocab_list
-    .. autoattribute:: vocab_size
+    .. autoattribute:: frequent_vocab_size
     .. autoattribute:: all_vocab_size
-    .. automethod:: _load_data
-    .. automethod:: _valid_word2id
-    .. automethod:: restart
-    .. automethod:: get_batch
-    .. automethod:: get_next_batch
-    .. automethod:: get_batches
-    .. automethod:: trim
-    .. automethod:: convert_tokens_to_ids
-    .. automethod:: convert_ids_to_tokens
-    .. automethod:: get_teacher_forcing_metric
-    .. automethod:: get_inference_metric
+    .. autoattribute:: frequent_vocab_list
+    .. autoattribute:: all_vocab_list
+    .. automethod:: get_special_tokens_mapping
+    .. automethod:: get_special_tokens_id
+    .. autoattribute:: pad_id
+    .. autoattribute:: unk_id
+    .. autoattribute:: go_id
+    .. autoattribute:: eos_id
 
-MSCOCO
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: MSCOCO
-    :members:
-
-SingleTurnDialog
------------------------------------
-.. autoclass:: SingleTurnDialog
-
-    .. autoattribute:: vocab_list
-    .. autoattribute:: vocab_size
-    .. autoattribute:: all_vocab_size
-    .. automethod:: _load_data
-    .. automethod:: _valid_word2id
-    .. automethod:: restart
-    .. automethod:: get_batch
-    .. automethod:: get_next_batch
-    .. automethod:: get_batches
-    .. automethod:: trim
-    .. automethod:: convert_tokens_to_ids
-    .. automethod:: convert_ids_to_tokens
-    .. automethod:: get_teacher_forcing_metric
-    .. automethod:: get_inference_metric
-
-OpenSubtitles
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: OpenSubtitles
-    :members:
-
-BERTSingleTurnDialog
--------------------------------------
-
-.. autoclass:: BERTSingleTurnDialog
-
-    .. autoattribute:: vocab_list
-    .. autoattribute:: vocab_size
-    .. autoattribute:: all_vocab_size
-    .. automethod:: _load_data
-    .. automethod:: tokenize
-    .. automethod:: restart
-    .. automethod:: get_batch
-    .. automethod:: get_next_batch
-    .. automethod:: get_batches
-    .. automethod:: trim
-    .. automethod:: convert_tokens_to_bert_ids
-    .. automethod:: convert_bert_ids_to_ids
-    .. automethod:: convert_tokens_to_ids
-    .. automethod:: convert_ids_to_bert_ids
-    .. automethod:: convert_bert_ids_to_tokens
-    .. automethod:: convert_ids_to_tokens
-    .. automethod:: get_teacher_forcing_metric
-    .. automethod:: get_inference_metric
-
-BERTOpenSubtitles
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: BERTOpenSubtitles
-    :members:
-
-MultiTurnDialog
------------------------------------
-.. autoclass:: MultiTurnDialog
-
-    .. autoattribute:: vocab_list
-    .. autoattribute:: vocab_size
-    .. autoattribute:: all_vocab_size
-    .. automethod:: _load_data
-    .. automethod:: _valid_word2id
-    .. automethod:: restart
-    .. automethod:: get_batch
-    .. automethod:: get_next_batch
-    .. automethod:: get_batches
-    .. automethod:: trim
-    .. automethod:: multi_turn_trim
-    .. automethod:: convert_tokens_to_ids
-    .. automethod:: convert_multi_turn_tokens_to_ids
-    .. automethod:: convert_ids_to_tokens
-    .. automethod:: convert_multi_turn_ids_to_tokens
-    .. automethod:: get_teacher_forcing_metric
-    .. automethod:: get_inference_metric
-
-UbuntuCorpus
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: UbuntuCorpus
-    :members:
-
-SwitchBoardCorpus
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: SwitchboardCorpus
-    :members:
-
-    .. automethod:: _load_data
-    .. automethod:: get_multi_ref_metric
-
-
-SentenceClassification
------------------------------------
-
-.. autoclass:: SentenceClassification
-
-    .. autoattribute:: vocab_list
-    .. autoattribute:: vocab_size
-    .. autoattribute:: all_vocab_size
-    .. automethod:: _load_data
-    .. automethod:: tokenize
-    .. automethod:: restart
-    .. automethod:: get_batch
-    .. automethod:: get_next_batch
-    .. automethod:: get_batches
-    .. automethod:: trim
-    .. automethod:: convert_tokens_to_ids
-    .. automethod:: convert_ids_to_tokens
-    .. automethod:: get_metric
-
-SST
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. autoclass:: SST
+    .. automethod:: get_general_hash
+    .. automethod:: get_raw_data_hash
+    .. automethod:: get_data_hash
+    .. automethod:: get_vocab_hash
+    .. automethod:: get_setting_hash

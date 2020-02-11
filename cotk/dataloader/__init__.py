@@ -5,19 +5,19 @@ data and provide a fair dataset for every model. It also helps you adapt
 your model from one dataset to other datasets.
 """
 
-from .tokenizer import BaseTokenizer, SimpleTokenizer, PretrainedTokenizer
-from .vocab import BaseVocab, Vocab
-from .field import Field, Sentence, Session
-from .context import FieldContext, VocabContext
-from .dataloader import Dataloader, LanguageProcessingBase
+from .tokenizer import Tokenizer, SimpleTokenizer, PretrainedTokenizer
+from .vocab import Vocab, GeneralVocab, PretrainedVocab
+from .field import Field, Sentence, SentenceDefault, SentenceGPT2, Session
+from .context import Context, FieldContext, VocabContext
+from .dataloader import Dataloader, LanguageProcessing
 from .language_generation import LanguageGeneration, MSCOCO
 from .single_turn_dialog import SingleTurnDialog, OpenSubtitles
 
 __all__ = [ \
-	'BaseTokenizer', 'SimpleTokenizer', 'PretrainedTokenizer', \
-	'BaseVocab', 'Vocab', \
-	'Field', 'Sentence', 'Session', \
-	'FieldContext', 'VocabContext', \
+	'Tokenizer', 'SimpleTokenizer', 'PretrainedTokenizer', \
+	'Vocab', 'GeneralVocab', 'PretrainedVocab', \
+	'Field', 'Sentence', 'SentenceDefault', 'SentenceGPT2','Session', \
+	'Context', 'FieldContext', 'VocabContext', \
 	'Dataloader', 'LanguageProcessingBase', \
 	'LanguageGeneration', 'MSCOCO', \
 	'SingleTurnDialog', 'OpenSubtitles', \

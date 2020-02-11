@@ -7,7 +7,7 @@ from pytest_mock import mocker
 from cotk.dataloader import LanguageGeneration, MSCOCO
 from cotk.metric import MetricBase
 from cotk.dataloader import Dataloader
-from cotk.dataloader import LanguageProcessingBase
+from cotk.dataloader import LanguageProcessing
 
 from version_test_base import base_test_version
 
@@ -57,15 +57,15 @@ class TestLanguageGeneration():
 		Dataloader().load_class('None')
 
 		with pytest.raises(TypeError):
-			_ = LanguageProcessingBase()
+			_ = LanguageProcessing()
 
 		with pytest.raises(NotImplementedError):
-			basic = LanguageProcessingBase(tokenizer='space')
+			basic = LanguageProcessing(tokenizer='space')
 
 
 
 		with pytest.raises(NotImplementedError):
-			class MyLanguageGeneration(LanguageProcessingBase):
+			class MyLanguageGeneration(LanguageProcessing):
 				def __init__(self):
 					super().__init__(tokenizer='space')
 			MyLanguageGeneration().get_batch(None, None)

@@ -6,10 +6,12 @@ import tempfile
 from nltk.tokenize import WordPunctTokenizer
 from checksumdir import dirhash
 
-from .._utils import dumps, DocStringInheritor, chain_sessions, restore_sessions
+from .._utils.unordered_hash import dumps
+from .._utils.metaclass import DocStringInheritor
+from .._utils import chain_sessions, restore_sessions
 
-class BaseTokenizer(metaclass=DocStringInheritor):
-	"""Base class of Tokenizer"""
+class Tokenizer(metaclass=DocStringInheritor):
+	"""Tokenizer is used for spliting sentence to tokens."""
 
 	def tokenize(self, sentence: str) -> List[str]:
 		'''Tokenize a sentence to a list of tokens.
@@ -68,8 +70,8 @@ class BaseTokenizer(metaclass=DocStringInheritor):
 		'''
 		raise NotImplementedError
 
-class SimpleTokenizer(BaseTokenizer):
-	'''Init a simple tokenizer, either ``nltk`` or ``space``.
+class SimpleTokenizer(Tokenizer):
+	'''A simple tokenizer. Method can either be ``nltk`` or ``space``.
 	If ``nltk``, use WordPunctTokenizer from nltk.tokenize.
 	If ``space``, use ``str.split(" ")``.
 
@@ -110,7 +112,7 @@ class SimpleTokenizer(BaseTokenizer):
 	def get_setting_hash(self) -> str:
 		return self._setting_hash
 
-class PretrainedTokenizer(BaseTokenizer):
+class PretrainedTokenizer(Tokenizer):
 	'''A wrapper for ``Pretrainedtokenizer`` from the transformers package.
 	If you don't want to do tokenization on some special tokens, see
 	``transformers.Pretrainedtokenizer.add_special_tokens``.

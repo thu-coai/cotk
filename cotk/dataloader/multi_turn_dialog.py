@@ -7,14 +7,14 @@ import numpy as np
 
 from .._utils.file_utils import get_resource_file_path
 from .._utils import hooks
-from .dataloader import LanguageProcessingBase, Session
+from .dataloader import LanguageProcessing, Session
 from ..metric import MetricChain, MultiTurnPerplexityMetric, MultiTurnBleuCorpusMetric, \
 	MultiTurnDialogRecorder
 from ..metric import BleuPrecisionRecallMetric, EmbSimilarityPrecisionRecallMetric
 from ..wordvector import Glove
 
 # pylint: disable=W0223
-class MultiTurnDialog(LanguageProcessingBase):
+class MultiTurnDialog(LanguageProcessing):
 	r"""Base class for multi-turn dialog datasets. This is an abstract class.
 
 	Arguments:{ARGUMENTS}
@@ -24,8 +24,7 @@ class MultiTurnDialog(LanguageProcessingBase):
 
 	_version = 1
 
-	ARGUMENTS = LanguageProcessingBase.ARGUMENTS
-	ATTRIBUTES = LanguageProcessingBase.ATTRIBUTES
+	ARGUMENTS = LanguageProcessing.ARGUMENTS
 	GET_BATCH_RETURNS_DICT = r'''
 			* turn_length(:class:`numpy.ndarray`): A 1-d list, the number of turns in sessions.
 			  Size: ``[batch_size]``

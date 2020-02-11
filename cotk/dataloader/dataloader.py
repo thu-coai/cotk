@@ -1,7 +1,7 @@
 '''A module for dataloader'''
 import random
 from typing import Optional, Any, Union, Sequence, Dict, Tuple, Iterable, List
-from collections import Counter
+from collections import Counter, OrderedDict
 from itertools import chain
 import logging
 from hashlib import sha256
@@ -10,109 +10,54 @@ import numpy as np
 
 from .._utils import trim_before_target
 from .._utils.unordered_hash import UnorderedSha256, dumps
-from .._utils.file_utils import get_resource_file_path
-from .._utils.metaclass import DocStringInheritor, LoadClassInterface
-from .tokenizer import BaseTokenizer
-from .field import Field, Sentence, _FieldContent, _SentenceContent, _SessionContent, field_from_string
-from .vocab import BaseVocab, Vocab
+from .._utils.metaclass import DocStringInheritor, LoadClassInterface, copy_func, copy_property
+from .._utils.typehint import OrderedDictType
+from ..file_utils import get_resource_file_path
+from .tokenizer import Tokenizer
+from .field import Field, SentenceDefault, _FieldContent, Sentence
+from .vocab import Vocab, GeneralVocab
 from .context import FieldContext, VocabContext
 
 class Dataloader(LoadClassInterface, metaclass=DocStringInheritor):
 	'''Base class of Dataloader.
 	'''
-	pass
 
-class LanguageProcessingBase(Dataloader):
-	r"""Base class for all language processing tasks. This is an abstract class.
+class LanguageProcessing(Dataloader):
+	r"""Bases: :class:'.dataloader.Dataloader'
+
+	Base class for all language processing tasks. This is an abstract class.
+	During the initialization of the dataloader, :class:`Vocab` or :class:`Field` may be created.
+	To specifiy the parameters of these created object, please use :class:`VocabContext`
+	and :class:`FieldContext`, or just use :meth:`.simple_create`.
+	See the examples for how to create a dataloader. #TODO: write the example
 
 	Arguments:{ARGUMENTS}
-
-	Attributes:{ATTRIBUTES}
 	"""
 
 	ARGUMENTS = r"""
-			ext_vocab (list): special tokens. Default: ``["<pad>", "<unk>", "<go>", "<eos>"]``
-			key_name (list): name of subsets of the data. Default: ``["train", "dev", "test"]``"""
-	ATTRIBUTES = r"""
-			ext_vocab (list): special tokens, placed at beginning of ``vocab_list``.
-					For example: ``["<pad>", "<unk>", "<go>", "<eos>"]``.
-			pad_id (int): token for padding, always equal to ``0``.
-			unk_id (int): token for unknown words, always equal to ``1``.
-			go_id (int): token at the beginning of sentences, always equal to ``2``.
-			eos_id (int): token at the end of sentences, always equal to ``3``.
-			key_name (list): name of subsets of the data. For example: ``["train", "dev", "test"]``.
-			all_vocab_list (list): vocabulary list of the datasets,
-					including valid vocabs and invalid vocabs.
-			word2id (dict): a dict mapping tokens to its id. You don't need to use it 
-					at most times, see :meth:`convert_tokens_to_ids` instead.
-			tokenizer(Tokenizer): converts a sentence to a list of tokens.
-			"""
-
-	@staticmethod
-	def simple_create(file_id: str, \
-				fields: Union[Sequence[Tuple[str, Union[str, Field]]],\
-					 		   Dict[str, Sequence[Tuple[str, Union[str, Field]]]]], \
-				*,\
-				set_names: Optional[Iterable[str]] = None, \
-				tokenizer: Union[BaseTokenizer, str] = None, \
-				vocab: Optional[BaseVocab] = None, \
-				max_sent_length: Optional[int] = None, \
-				max_turn_length: Optional[int] = None, \
-				convert_to_lower_letter: bool = False, \
-				min_valid_vocab_times: Optional[int] = None, \
-				min_invalid_vocab_times: Optional[int] = None, \
-				special_appeared_in_data: Optional[bool] = None) -> "LanguageProcessingBase":
-
-		with VocabContext.set_parameters(\
-				min_valid_vocab_times=min_valid_vocab_times,\
-				min_invalid_vocab_times=min_invalid_vocab_times, \
-				special_appeared_in_data=special_appeared_in_data):
-			with FieldContext.set_parameters(\
-					tokenizer=tokenizer, \
-					vocab=vocab, \
-					max_sent_length=max_sent_length, \
-					max_turn_length=max_turn_length, \
-					convert_to_lower_letter=convert_to_lower_letter):
-				with FieldContext.set_parameters(tokenizer="space", weak=True):
-					return LanguageProcessingBase(file_id, fields, set_names=set_names)
+			file_id (str): A string indicating the dataset. It can be local path ("./data"), a resource name
+				(resources://dataset), or an url (http://test.com/dataset.zip).
+			fields (OrderedDict[str, Union[str, Field]], Dict[str, OrderedDict[str, Union[str, Field]]]):
+				If ``OrderDict``, it describes the data format of the "train", "dev", "test" set.
+				If ``Dict``, ``fields[key]`` describes the data format of the set named ``key``.
+				The data format is an ordered dictionary, where ``key`` is the name of a field,
+				``value`` is either a string indicating a Field or a :class:`Field` object.
+				See the examples for how to specify the data format. #TODO: write the example"""
 
 	def __init__(self, file_id: str, \
-				 fields: Union[Sequence[Tuple[str, Union[str, Field]]],\
-					 		   Dict[str, Sequence[Tuple[str, Union[str, Field]]]]], \
-				 *,\
-				 set_names: Optional[Iterable[str]] = None, \
+				 fields: Union[OrderedDictType[str, Union[str, Field]],\
+					 		   Dict[str, OrderedDictType[str, Union[str, Field]]]], \
 				 ):
-
-		# init should initialize the following variables:
-		# # self.file_id = file_id
-		# # self.file_path = get_resource_file_path(file_id)
-		# # self.fields: Dict[str, Sequence[Tuple[str, Field]]] = {}
-		# # self.index: Dict[str, List[int]] = {}
-		# # self.batch_id: Dict[str, int] = {}
-		# # self.batch_size: Dict[str, Optional[int]] = {}
-		# # self.vocabs: List[BaseVocab] = []
-		# # self.tokenizers: List[BaseVocab] = []
-		# # self.data: Dict[str, Dict[str, Any]] = {}
-		# # self._raw_data_hash = sha256()
-		# # self._data_hash = sha256()
-		# # self._vocab_hash = sha256()
-
 		self.file_id = file_id
 		self.file_path = get_resource_file_path(file_id)
 
-		field_context = None
-		if FieldContext.get("vocab") is None:
-			field_context = FieldContext.set_parameters(vocab=Vocab())
-		if set_names is None:
-			set_names = ["train", "dev", "test"]
+		field_context = FieldContext.set_parameters(vocab=GeneralVocab(), weak=True)
 
-		fieldcontents: Dict[str, Sequence[Tuple[str, _FieldContent]]] = {}
-		self.fields: Dict[str, Sequence[Tuple[str, Field]]] = {}
-		if isinstance(fields, (list, tuple)):
-			# for each set_name
-			fields = {set_name: fields for set_name in set_names}
+		fieldcontents: Dict[str, OrderedDictType[str, _FieldContent]] = {}
+		self.fields: Dict[str, OrderedDictType[str, Field]] = {}
+		if isinstance(fields, OrderedDict):
+			fields = {set_name: fields for set_name in ["train", "dev", "test"]}
 		if isinstance(fields, dict):
-			# already have set_name
 			for set_name, fields_in_one_set in fields.items():
 				one_fields, one_fieldcontents = self._fill_field_and_create_content(set_name, fields_in_one_set)
 				self.fields[set_name] = one_fields
@@ -123,11 +68,11 @@ class LanguageProcessingBase(Dataloader):
 		self._load_data(fieldcontents)
 
 		self.vocabs = self._collect_vocabs_from_fields(self.fields)
-		self.default_vocab_id = 0 if len(self.vocabs) == 1 else None
+		# self.default_vocab_id = 0 if len(self.vocabs) == 1 else None
 		self.tokenizers = self._collect_tokenizers_from_fields(self.fields)
-		self.default_tokenizer_id = 0 if len(self.tokenizers) == 1 else None
+		# self.default_tokenizer_id = 0 if len(self.tokenizers) == 1 else None
 		self.default_field_set_name: Optional[str] = None
-		self.default_field_id: Optional[int] = None
+		self.default_field_name: Optional[str] = None
 		self._build_vocabs()
 
 		self._setting_hash = self._create_setting_hash()
@@ -136,17 +81,57 @@ class LanguageProcessingBase(Dataloader):
 		self._raw_data_hash, self._data_hash = self._create_data_hash(fieldcontents)
 		self.index, self.batch_id, self.batch_size = self._init_batch(fieldcontents)
 
-		if field_context:
-			field_context.close()
+		field_context.close()
 
-	def _load_data(self, fieldcontents: Dict[str, Sequence[Tuple[str, _FieldContent]]]):
+	@staticmethod
+	def simple_create(file_id: str, \
+				fields: Union[OrderedDictType[str, Union[str, Field]],\
+					 		   Dict[str, OrderedDictType[str, Union[str, Field]]]], \
+				*,\
+				tokenizer: Union[Tokenizer, str, None] = None, \
+				vocab: Optional[Vocab] = None, \
+				vocab_from: Optional[Dict[str, str]] = None, \
+				max_sent_length: Optional[int] = None, \
+				max_turn_length: Optional[int] = None, \
+				convert_to_lower_letter: Optional[bool] = None, \
+				min_frequent_vocab_times: Optional[int] = None, \
+				min_rare_vocab_times: Optional[int] = None, \
+				special_tokens_mapping: Optional[OrderedDictType[str, str]] = None, \
+				special_appeared_in_data: Optional[bool] = None) -> "LanguageProcessing":
+		'''A simple way to create a dataloader. Instead of using :class:`VocabContext`
+		and :class:`FieldContext`, specifying all the possible parameters here.
+
+		Arguments:{ARGUMENTS}
+		TODO: more arguments from VocabContext, FieldContext
+		'''
+		with VocabContext.set_parameters(\
+				min_frequent_vocab_times=min_frequent_vocab_times,\
+				min_rare_vocab_times=min_rare_vocab_times, \
+				special_tokens_mapping=special_tokens_mapping, \
+				special_appeared_in_data=special_appeared_in_data):
+			with FieldContext.set_parameters(\
+					tokenizer=tokenizer, \
+					vocab=vocab, \
+					vocab_from=vocab_from, \
+					max_sent_length=max_sent_length, \
+					max_turn_length=max_turn_length, \
+					convert_to_lower_letter=convert_to_lower_letter):
+				with FieldContext.set_parameters(tokenizer="space", weak=True):
+					return LanguageProcessing(file_id, fields)
+
+	def _load_data(self, fieldcontents: Dict[str, OrderedDictType[str, _FieldContent]]):
+		'''Load data from file.
+
+		Arguments:
+			fieldcontents (Dict[str, OrderedDictType[str, _FieldContent]]): fieldcontents for each set
+		'''
 		for set_name, fieldcontents_in_one_set in fieldcontents.items():
 			with open("%s/%s.txt" % (self.file_path, set_name), encoding='utf-8') as f_file:
 				line_cnt = 0
 				file_iterator = iter(f_file)
 				while True:
 					try:
-						for _, fieldcontent in fieldcontents_in_one_set:
+						for _, fieldcontent in fieldcontents_in_one_set.items():
 							line_add = fieldcontent.read_next(file_iterator)
 							if line_add == 0:
 								while True:
@@ -161,49 +146,75 @@ class LanguageProcessingBase(Dataloader):
 				raise RuntimeError("the file %s corrupted at end of the file")
 
 		for _, fieldcontents_in_one_set in fieldcontents.items():
-			for _, fieldcontent in fieldcontents_in_one_set:
+			for _, fieldcontent in fieldcontents_in_one_set.items():
 				fieldcontent.process_before_vocab()
 
-	def _init_batch(self, fieldcontents: Dict[str, Sequence[Tuple[str, _FieldContent]]]) -> \
+	def _init_batch(self, fieldcontents: Dict[str, OrderedDictType[str, _FieldContent]]) -> \
 			Tuple[Dict[str, List[int]], Dict[str, int], Dict[str, Optional[int]]]:
+		'''Initialize the batches. Return a tuple contains
+		``index``, ``batch_id``, ``batch_size`` for each set.
+
+		Arguments:
+			fieldcontents (Dict[str, OrderedDictType[str, _FieldContent]]): fieldcontents for each set.
+		'''
 		index: Dict[str, List[int]] = {}
 		batch_id: Dict[str, int] = {}
 		batch_size: Dict[str, Optional[int]] = {}
 
 		for set_name, fieldcontents_in_one_set in fieldcontents.items():
-			sample_nums = [fieldcontent.get_data_number() for _, fieldcontent in fieldcontents_in_one_set]
+			sample_nums = [fieldcontent.get_data_number() \
+					for _, fieldcontent in fieldcontents_in_one_set.items()]
 			batch_id[set_name] = 0
 			batch_size[set_name] = None
 			index[set_name] = list(range(sample_nums[0]))
 
 		return index, batch_id, batch_size
 
-	def _get_data(self, fieldcontents) -> Dict[str, Dict[str, Any]]:
+	def _get_data(self, fieldcontents: Dict[str, OrderedDictType[str, _FieldContent]]) -> \
+			Dict[str, Dict[str, Any]]:
+		'''Get the data from fieldcontents.
+
+		Arguments:
+			fieldcontents (Dict[str, OrderedDict[str, _FieldContent]]): fieldcontents for each set.
+		'''
 		data: Dict[str, Dict[str, Any]] = {}
 		for set_name, fieldcontents_in_one_set in sorted(fieldcontents.items()):
 			data[set_name] = {}
-			for field_name, fieldcontent in fieldcontents_in_one_set:
+			for field_name, fieldcontent in fieldcontents_in_one_set.items():
 				data[set_name][field_name] = fieldcontent.get_data()
 		return data
 
 	def _build_vocabs(self):
+		'''Invoke build vocab for each vocabulary'''
 		for vocab in self.vocabs:
 			vocab.build_vocab()
 
-	def _collect_vocabs_from_fields(self, fields) -> List[BaseVocab]:
-		vocabs: List[BaseVocab] = []
+	def _collect_vocabs_from_fields(self, fields: Dict[str, OrderedDictType[str, Field]])\
+			-> List[Vocab]:
+		'''Collect all vocabulary instances (deduplicated).
+
+		Arguments:
+			fieldcontents (Dict[str, OrderedDict[str, Field]]): field for each set.
+		'''
+		vocabs: List[Vocab] = []
 		for _, fields_in_one_set in sorted(fields.items()): # sort to keep order
-			for _, fields in fields_in_one_set:
+			for _, fields in fields_in_one_set.items():
 				vocab = fields.get_vocab()
 				if vocab is not None and vocab not in vocabs:
 					vocabs.append(vocab)
 		return vocabs
 
-	def _collect_tokenizers_from_fields(self, fields) -> List[BaseTokenizer]:
-		tokenizers: List[BaseTokenizer] = []
+	def _collect_tokenizers_from_fields(self, fields: Dict[str, OrderedDictType[str, Field]])\
+			-> List[Tokenizer]:
+		'''Collect all tokenizer instances (deduplicated).
+
+		Arguments:
+			fieldcontents (Dict[str, OrderedDict[str, Field]]): field for each set.
+		'''
+		tokenizers: List[Tokenizer] = []
 		tokenizers_setting_hash: List[str] = []
 		for _, fields_in_one_set in sorted(fields.items()): # sort to keep order
-			for _, field in fields_in_one_set:
+			for _, field in fields_in_one_set.items():
 				tokenizer = field.get_tokenizer()
 				if tokenizer is not None and tokenizer.get_setting_hash() not in tokenizers_setting_hash:
 					tokenizers.append(tokenizer)
@@ -211,28 +222,34 @@ class LanguageProcessingBase(Dataloader):
 		return tokenizers
 
 	def _fill_field_and_create_content(self, set_name: str, fields: \
-				Sequence[Tuple[str, Union[str, Field]]], \
+				OrderedDictType[str, Union[str, Field]], \
 				) -> \
-					Tuple[List[Tuple[str, Field]], List[Tuple[str, _FieldContent]]]:
+					Tuple[OrderedDictType[str, Field], OrderedDictType[str, _FieldContent]]:
+		'''Create and return fields and field contexts.
 
-		fieldcontents: List[Tuple[str, _FieldContent]] = []
-		new_fields: List[Tuple[str, Field]] = []
+		Arguments:
+			set_name(str): name of the set
+			field (OrderedDictType[str, Union[str, Field]]): fields for the set.
+		'''
+
+		fieldcontents: OrderedDictType[str, _FieldContent] = OrderedDict()
+		new_fields: OrderedDictType[str, Field] = OrderedDict()
 
 		for name, field_name in fields:
 			if isinstance(field_name, str):
-				field = field_from_string(field_name)
+				field = Field.load_class(field_name)()
 			elif isinstance(field_name, Field):
 				field = field_name
-			fieldcontent = field._create(set_name)
-			fieldcontents.append((name, fieldcontent))
-			new_fields.append((name, field))
+			fieldcontent = field._create(set_name) #pylint: disable=protected-access
+			fieldcontents[name] = fieldcontent
+			new_fields[name] = field
 		return new_fields, fieldcontents
 
 	def _create_data_hash(self, fieldcontents):
 		raw_data_hash = sha256()
 		data_hash = sha256()
-		for set_name, fieldcontents_in_one_set in sorted(fieldcontents.items()):
-			for _, fieldcontent in fieldcontents_in_one_set:
+		for _, fieldcontents_in_one_set in sorted(fieldcontents.items()):
+			for _, fieldcontent in fieldcontents_in_one_set.items():
 				raw_data_hash.update(dumps(fieldcontent.get_raw_data_hash()))
 				data_hash.update(dumps(fieldcontent.get_data_hash()))
 		return raw_data_hash.hexdigest(), data_hash.hexdigest()
@@ -240,8 +257,8 @@ class LanguageProcessingBase(Dataloader):
 	def _create_setting_hash(self):
 		setting_hash = sha256()
 		for _, fields_in_one_set in self.fields.items():
-			for _, field in fields_in_one_set:
-				setting_hash.update(dumps(field._get_setting_hash(self.tokenizers, self.vocabs)))
+			for _, field in fields_in_one_set.items():
+				setting_hash.update(dumps(field._get_setting_hash(self.tokenizers, self.vocabs))) #pylint: disable=protected-access
 		for vocab in self.vocabs:
 			setting_hash.update(dumps(vocab.get_setting_hash()))
 		for tokenizer in self.tokenizers:
@@ -254,51 +271,105 @@ class LanguageProcessingBase(Dataloader):
 			vocab_hash.update(dumps(vocab.get_vocab_hash()))
 		return vocab_hash.hexdigest()
 
-	def _get_default_vocab(self) -> BaseVocab:
-		if self.default_vocab_id is None:
-			raise RuntimeError("The dataloader has multiple vocabs. Use vocab object, \
-				or specify the default vocab by set_default_vocab.")
-		return self.vocabs[self.default_vocab_id]
+	def get_default_vocab(self) -> Vocab:
+		'''Get the default :class:`Vocab` in this dataloader.
+		TODO:
+		# If there is only one vocabulary in the dataloader,
+		# return it; otherwise, it can be set by :meth:`set_default_vocab` or
+		# :meth:`.set_default_field`.
+		'''
+		vocab = self.get_default_field().get_vocab()
+		if vocab is None:
+			raise ValueError("This field do not have vocab")
+		return vocab
 
-	def set_default_vocab(self, obj):
-		return self.vocabs.index(obj)
+	# def set_default_vocab(self, obj: Vocab):
+	# 	'''Set the default vocabulary for this dataloader.
+	# 	TODO: find the related function.
 
-	def _get_default_tokenizer(self):
-		if self.default_tokenizer_id is None:
-			raise RuntimeError("The dataloader has multiple tokenizers. Use tokenizer object, \
-				or specify the default tokenizers by set_default_tokenizer.")
-		return self.tokenizers[self.default_tokenizer_id]
+	# 	Arguments:
+	# 		obj (:class:`Vocab`): the default vocabulary instance.
+	# 	'''
+	# 	try:
+	# 		self.default_vocab_id = self.vocabs.index(obj)
+	# 	except ValueError:
+	# 		raise ValueError("obj must be one of the vocabulary instance in this dataloader.")
 
-	def set_default_tokenizer(self, obj):
-		return self.tokenizers.index(obj)
+	def get_default_tokenizer(self) -> Tokenizer:
+		'''Get the default :class:`Tokenizer` in this dataloader.
+		TODO:
+		# If there is only one tokenizer in the dataloader,
+		# return it; otherwise, it can be set by :meth:`set_default_tokenizer` or
+		# :meth:`.set_default_field`.
+		'''
+		tokenizer = self.get_default_field().get_tokenizer()
+		if tokenizer is None:
+			raise ValueError("This field do not have tokenizer")
+		return tokenizer
+		# if self.default_tokenizer_id is None:
+		# 	raise RuntimeError("The dataloader has multiple tokenizers. \
+		# 		Specify the default tokenizers by set_default_tokenizer.")
+		# return self.tokenizers[self.default_tokenizer_id]
 
-	def _get_default_field(self):
-		if self.default_field_id is None or self.default_field_set_name is None:
-			raise RuntimeError("The dataloader has multiple fields. Use field object, \
-				or specify the default field by set_default_field.")
-		return self.fields[self.default_field_set_name][self.default_field_id][1]
+	# def set_default_tokenizer(self, obj: BaseTokenizer):
+	# 	'''Set the default tokenizer instance for this dataloader.
+	# 	TODO: find the related function.
 
-	def set_default_field(self, set_name, field_name):
-		_ = self.get_field(set_name, field_name)
+	# 	Arguments:
+	# 		obj (:class:`BaseTokenizer`): the default vocabulary instance.
+	# 	'''
+	# 	self.default_tokenizer_id = self.tokenizers.index(obj)
+
+	def get_default_field(self) -> Field:
+		'''Get the default :class:`Field` in this dataloader.
+		It can be set by :meth:`.set_default_field`.
+		'''
+		if self.default_field_name is None or self.default_field_set_name is None:
+			raise RuntimeError("No default field. \
+				Specify the default field by set_default_field.")
+		return self.fields[self.default_field_set_name][self.default_field_name]
+
+	SET_NAME_DESCRIPTION = '''set_name (str): The name of set. For example: "train", "dev", "test".'''
+	FIELD_NAME_DESCRIPTION = '''field_name (str): The name of field.'''
+
+	def set_default_field(self, set_name: str, field_name: str):
+		'''Set the default :class:`Field` in this dataloader. In the meanwhile,
+		the default :class:`Vocab` and :class:`BaseTokenizer` is also set according
+		to the field (if the field have vocab and tokenizer).
+		TODO: find the related function.
+
+		Arguments:
+			{SET_NAME_DESCRIPTION}
+			{FIELD_NAME_DESCRIPTION}
+		'''
+		if set_name not in self.fields:
+			raise KeyError("No such set named %s" % set_name)
+		elif field_name not in self.fields[set_name]:
+			raise KeyError("No such field named %s" % field_name)
 		self.default_field_set_name = set_name
-		for i, (f_name, _) in enumerate(self.fields[set_name]):
-			if f_name == field_name:
-				self.default_field_id = i
-				break
+		self.default_field_name = field_name
 
-	def get_field(self, set_name, field_name):
-		for f_name, f_obj in self.fields[set_name]:
-			if f_name == field_name:
-				return f_obj
-		raise ValueError("No such field named %s" % field_name)
+		# tokenizer = self.fields[set_name][field_name].get_tokenizer()
+		# if tokenizer:
+		# 	self.set_default_tokenizer(tokenizer)
+		# vocab = self.fields[set_name][field_name].get_vocab()
+		# if vocab:
+		# 	self.set_default_vocab(vocab)
 
-	def get_tokenizer(self, set_name, field_name):
-		return self.get_field(set_name, field_name).get_tokenizer()
+	def get_field(self, set_name: str, field_name: str) -> Field:
+		'''Get :class:`Field` according to name of set and field.
 
-	def get_vocab(self, set_name, field_name):
-		return self.get_vocab(set_name, field_name).get_vocab()
+		Arguments:
+			{SET_NAME_DESCRIPTION}
+			{FIELD_NAME_DESCRIPTION}
+		'''
+		return self.fields[set_name][field_name]
 
 	def get_general_hash(self) -> str:
+		'''General hash, identifying all details
+		including raw data before processed, tokenized data, vocabulary, and settings.
+		#TODO: write explaination of hash
+		'''
 		general_hash = sha256()
 		general_hash.update(dumps(self._raw_data_hash))
 		general_hash.update(dumps(self._data_hash))
@@ -307,225 +378,138 @@ class LanguageProcessingBase(Dataloader):
 		return general_hash.hexdigest()
 
 	def get_raw_data_hash(self) -> str:
+		'''Raw data hash, identifying raw data before processed.
+		#TODO: see explaination of hash
+		'''
 		return self._raw_data_hash
 
 	def get_data_hash(self) -> str:
+		'''Data hash, identifying data after processed (tokenized).
+		#TODO: see explaination of hash
+		'''
 		return self._data_hash
 
 	def get_vocab_hash(self) -> str:
+		'''Vocab hash, identifying vocabulary.
+		#TODO: see explaination of hash
+		'''
 		return self._vocab_hash
 
 	def get_setting_hash(self) -> str:
+		'''Setting hash, identifying settings to create the data loader.
+		#TODO: see explaination of hash
+		'''
 		return self._setting_hash
 
-	def tokenize(self, sentence):
-		r'''Convert sentence(str) to a list of tokens(str)
-
-		Arguments:
-			sentence (str): a string to be tokenized
-			remains_capital(bool): Whether remaining capital letter in data or converting them to lower case.
-			tokenizer (str): How to tokenize sentence. ``nltk.tokenize.WordPunctTokenizer`` is used if ``nltk`` is specified,
-				python built-in ``str.split`` is used if ``space`` is specified.
-
-		Returns:
-			list: a list of tokens(str)
-		'''
-		return self._get_default_tokenizer().tokenize(sentence)
-
-	def recover_sentence(self, ids: List[int], remove_special=None, trim=True) -> str:
-		return self._get_default_field().recover_sentence(ids, remove_special=remove_special, trim=trim)
-
-	def remove_special_in_ids(self, ids: List[int], remove_special=None, trim=True) -> List[int]:
-		return self._get_default_field().remove_special_in_ids(ids, remove_special=remove_special, trim=trim)
-
-	def process_sentences(self, sentences, add_special=True, cut=True, allvocabs=True):
-		return self._get_default_field().process_sentences(sentences, \
-			add_special=add_special, cut=cut, allvocabs=allvocabs)
-
-	@property
-	def vocab_size(self):
-		'''int: equals to ``valid_vocab_len``.
-		'''
-		vocab = self._get_default_vocab()
-		try:
-			return vocab.valid_vocab_len # type: ignore
-		except AttributeError:
-			raise AttributeError("default vocab do not have vocab_size") from None
-
-	@property
-	def all_vocab_size(self):
-		'''int: equals to ``len(self.all_vocab_list)``.
-		'''
-		vocab = self._get_default_vocab()
-		try:
-			return vocab.all_vocab_size # type: ignore
-		except AttributeError:
-			raise AttributeError("default vocab do not have all_vocab_size") from None
-
-	@property
-	def vocab_list(self):
-		r'''list: valid vocab list, equals to ``all_vocab_list[：valid_vocab_len]``.
-		'''
-		# using utf-8 ：instead of : for avoiding bug in sphinx
-		vocab = self._get_default_vocab()
-		try:
-			return vocab.vocab_list # type: ignore
-		except AttributeError:
-			raise AttributeError("default vocab do not have vocab_list") from None
-
-	@property
-	def go_id(self):
-		vocab = self._get_default_vocab()
-		try:
-			return vocab.go_id # type: ignore
-		except AttributeError:
-			raise AttributeError("default vocab do not have go_id") from None
-
-	@property
-	def unk_id(self):
-		vocab = self._get_default_vocab()
-		try:
-			return vocab.unk_id # type: ignore
-		except AttributeError:
-			raise AttributeError("default vocab do not have unk_id") from None
-
-	@property
-	def eos_id(self):
-		vocab = self._get_default_vocab()
-		try:
-			return vocab.eos_id # type: ignore
-		except AttributeError:
-			raise AttributeError("default vocab do not have eos_id") from None
-
-	@property
-	def pad_id(self):
-		vocab = self._get_default_vocab()
-		try:
-			return vocab.pad_id # type: ignore
-		except AttributeError:
-			raise AttributeError("default vocab do not have pad_size") from None
-
-	def get_special_tokens(self):
-		return self._get_default_vocab().get_special_tokens()
-
-	def restart(self, key, batch_size=None, shuffle=True):
-		r'''Initialize batches. This function be called before :func:`get_next_batch`
+	def restart(self, set_name, batch_size=None, shuffle=True):
+		'''Initialize batches. This function be called before :func:`get_next_batch`
 		or an epoch is end.
 
 		Arguments:
-				key (str): key name of dataset, must be contained in ``self.key_name``.
-				batch_size (int): the number of sample in a batch.
-					default: if ``None``, last ``batch_size`` is used.
-				shuffle (bool): whether to shuffle the data. Default: ``True``.
-		'''
-		if key not in self.fields:
-			raise ValueError("No set named %s." % key)
-		if batch_size is None and self.batch_size[key] is None:
-			raise ValueError("You need batch_size to initialize.")
-		if shuffle:
-			# rng_state = random.getstate()
-			random.shuffle(self.index[key])
-			# random.setstate(rng_state)
-
-		self.batch_id[key] = 0
-		if batch_size is not None:
-			self.batch_size[key] = batch_size
-		batch_size_div = self.batch_size[key]
-		assert batch_size_div is not None
-		print("%s set restart, %d batches and %d left" % (key, \
-						len(self.index[key]) // batch_size_div, \
-						len(self.index[key]) % batch_size_div))
-
-	GET_BATCH_DOC_WITHOUT_RETURNS = r'''
-		Get a batch of specified `indexes`.
-
-		Arguments:
-				key (str): key name of dataset, must be contained in ``self.key_name``.
-				indexes (list): a list of specified indexes of batched data.
-	'''
-
-	def get_batch(self, set_name: str, indexes: List[int]) -> Dict[str, Any]:
-		r'''{GET_BATCH_DOC_WITHOUT_RETURNS}
-
-		Returns:
-				A dict. See examples in subclasses.
+			{SET_NAME_DESCRIPTION}
+			batch_size (int): the number of sample in a batch.
+				default: if ``None``, last ``batch_size`` is used.
+			shuffle (bool): whether to shuffle the data. Default: ``True``.
 		'''
 		if set_name not in self.fields:
 			raise ValueError("No set named %s." % set_name)
-		res = {}
-		for field_name, field_obj in self.fields[set_name]:
-			res.update(field_obj._get_batch(field_name, self.data[set_name][field_name], indexes))
-		return res
+		if batch_size is None and self.batch_size[set_name] is None:
+			raise ValueError("You need batch_size to initialize.")
+		if shuffle:
+			# rng_state = random.getstate()
+			random.shuffle(self.index[set_name])
+			# random.setstate(rng_state)
 
-	def get_next_batch(self, key, ignore_left_samples=False):
-		'''Get next batch. It can be called only after Initializing batches (:func:`restart`).
+		self.batch_id[set_name] = 0
+		if batch_size is not None:
+			self.batch_size[set_name] = batch_size
+		batch_size_div = self.batch_size[set_name]
+		assert batch_size_div is not None
+		print("%s set restart, %d batches and %d left" % (set_name, \
+						len(self.index[set_name]) // batch_size_div, \
+						len(self.index[set_name]) % batch_size_div))
+
+	_GET_BATCH_MORE_DOC = "Return a dict containing all the data from each field."
+	_GET_BATCH_EXAMPLE = ""
+	def get_batch(self, set_name: str, indexes: List[int]) -> Dict[str, Any]:
+		'''Get a batch of data with specified `indexes`.
+		{_GET_BATCH_MORE_DOC}
 
 		Arguments:
-			key (str): key name of dataset, must be contained in ``self.key_name``.
+			{SET_NAME_DESCRIPTION}
+			indexes (list): a list of specified indexes of batched data.
+		{_GET_BATCH_EXAMPLE}
+		'''
+		if set_name not in self.fields:
+			raise ValueError("No set named %s." % set_name)
+		res: Dict[str, Any] = {}
+		for field_name, field_obj in self.fields[set_name]:
+			res.update(field_obj._get_batch(field_name, self.data[set_name][field_name], indexes)) #pylint: disable=protected-access
+		return res
+
+	def get_next_batch(self, set_name, ignore_left_samples=False) -> Optional[Dict[str, Any]]:
+		'''Get next batch. It can be called only after Initializing batches (:func:`restart`).
+		Return a dict like :func:`get_batch`, or None if the epoch is end.
+
+		Arguments:
+			{SET_NAME_DESCRIPTION}
 			ignore_left_samples (bool): If the number of left samples is not equal to
 				``batch_size``, ignore them. This make sure all batches have same number of samples.
 				Default: ``False``
-
-		Returns:
-			A dict like :func:`get_batch`, or None if the epoch is end.
 		'''
-		if key not in self.fields:
-			raise ValueError("No set named %s." % key)
-		batch_size = self.batch_size[key]
+		if set_name not in self.fields:
+			raise ValueError("No set named %s." % set_name)
+		batch_size = self.batch_size[set_name]
 		if batch_size is None:
 			raise RuntimeError( \
 				"Please run restart before calling this function.")
-		batch_id = self.batch_id[key]
+		batch_id = self.batch_id[set_name]
 
 		start, end = batch_id * \
 					 	batch_size, (batch_id + 1) * batch_size
-		if start >= len(self.index[key]):
+		if start >= len(self.index[set_name]):
 			return None
-		if ignore_left_samples and end > len(self.index[key]):
+		if ignore_left_samples and end > len(self.index[set_name]):
 			return None
-		index = self.index[key][start:end]
-		res = self.get_batch(key, index)
-		self.batch_id[key] += 1
+		index = self.index[set_name][start:end]
+		res = self.get_batch(set_name, index)
+		self.batch_id[set_name] += 1
 		return res
 
-	def get_batches(self, key, batch_size=None, shuffle=True, ignore_left_samples=False):
-		'''An iterator over batches. It first call :func:`restart`, and then :func:`get_next_batches`\
-			until no more data is available.
+	def get_batches(self, set_name, batch_size=None, shuffle=True,
+			ignore_left_samples=False) -> Iterable[Dict[str, Any]]:
+		'''An iterator over batches. It first call :func:`restart`, and then :func:`get_next_batches`
+			until no more data is available. Returns an iterator where each element is like :func:`get_batch`.
 
 		Arguments:
-			key (str): key name of dataset, must be contained in ``self.key_name``.
+			{SET_NAME_DESCRIPTION}
 			batch_size (int, optional): default: ``None``.  Use ``batch_size`` by default.
 			shuffle (bool): whether to shuffle the data. Default: ``True``.
 			ignore_left_samples (bool): If the number of left samples is not equal to
 				``batch_size``, ignore them. This make sure all batches have same number of samples.
 				Default: ``False``.
-
-		Returns:
-			An iterator where each element is like :func:`get_batch`.
 		'''
-		self.restart(key, batch_size, shuffle)
+		self.restart(set_name, batch_size, shuffle)
 		while True:
-			res = self.get_next_batch(key, ignore_left_samples)
+			res = self.get_next_batch(set_name, ignore_left_samples)
 			if res is None:
 				break
 			yield res
 
-	def get_all_batch(self, key):
+	def get_all_batch(self, set_name):
 		r'''Concatenate all batches to a single dict, where padding will not be applied.
+		Returns a dict like :func:`get_batch`, but all the values are not padded
+		and their type will be converted to list.
+
 		Exactly, this function called :func:`.get_batch` where ``len(indexes)==1`` multiple times
 		and concatenate all the values in the returned dicts.
 
-
-        Arguments:
-            key (str): key name of dataset, must be contained in ``self.key_name``.
-
-        Returns:
-            A dict like :func:`get_batch`, but all the values are not padded
-            and their type will be converted to list.
-        '''
+		Arguments:
+			{SET_NAME_DESCRIPTION}
+		'''
 		res: Dict[str, List[Any]] = {}
-		for idx in self.index[key]:
-			batch = self.get_batch(key, [idx])
+		for idx in self.index[set_name]:
+			batch = self.get_batch(set_name, [idx])
 			for attr, val in batch.items():
 				if attr not in res:
 					res[attr] = []
@@ -534,77 +518,29 @@ class LanguageProcessingBase(Dataloader):
 				res[attr].extend(val)
 		return res
 
-	def convert_tokens_to_ids(self, tokens, add_special=False, allvocabs=True):
-		r'''Convert a sentence from string to ids representation.
+	# copy some functions from vocab
+	_VOCAB_MORE_DOCSTRING = '''It calls the method with the identical name of the :class:`Vocab` instance,\
+		from ``self.get_default_vocab()``.'''
+	frequent_vocab_size = copy_property(get_default_vocab, Vocab, "frequent_vocab_size")
+	all_vocab_size = copy_property(get_default_vocab, Vocab, "all_vocab_size")
+	frequent_vocab_list = copy_property(get_default_vocab, Vocab, "frequent_vocab_list")
+	all_vocab_list = copy_property(get_default_vocab, Vocab, "all_vocab_list")
+	get_special_tokens_mapping = copy_func(get_default_vocab, Vocab, "get_special_tokens_mapping")
+	get_special_tokens_id = copy_func(get_default_vocab, Vocab, "get_special_tokens_id")
+	pad_id = copy_property(get_default_vocab, Vocab, "pad_id")
+	unk_id = copy_property(get_default_vocab, Vocab, "unk_id")
+	go_id = copy_property(get_default_vocab, Vocab, "go_id")
+	eos_id = copy_property(get_default_vocab, Vocab, "eos_id")
 
-		Arguments:
-			sent (list): a list of string, representing each token of the sentences.
-			invalid_vocab (bool): whether to provide invalid vocabs.
-					If ``False``, invalid vocabs will be replaced by ``unk_id``.
-					If ``True``, invalid vocabs will using their own id.
-					Default: ``False``
-
-		Returns:
-			(list): a list of ids
-
-		Examples:
-			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
-			>>> #	"been", "to", "China"]
-			>>> # vocab_size = 7
-			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have", "been"]
-			>>> dataloader.convert_tokens_to_ids(
-			...	["<go>", "I", "have", "been", "to", "China", "<eos>"], invalid_vocab=False)
-			>>> [2, 4, 5, 6, 1, 1, 3]
-			>>> dataloader.convert_tokens_to_ids(
-			...	["<go>", "I", "have", "been", "to", "China", "<eos>"], invalid_vocab=True)
-			>>> [2, 4, 5, 6, 7, 8, 3]
-		'''
-		return self._get_default_field().convert_tokens_to_ids(tokens, add_special=add_special, allvocabs=allvocabs)
-
-	def trim_in_ids(self, ids):
-		r'''Trim a sentence represented by ids. There will be two steps:
-
-			* If there is an end token (``<eos>``) in the sentence,
-			  find first end token and abandon words after it (included the end token).
-			* ignore ``<pad>`` s at the end of the sentence.
-
-		Arguments:
-			ids (list or :class:`numpy.ndarray`): a list of int
-
-		Returns:
-			(list): a list of trimmed ids
-
-		Examples:
-
-			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
-			>>> #	"been", "to", "China"]
-			>>> dataloader.trim(
-			...	[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0])
-			... # <go> I have been to China <pad> <pad> <eos> I <eos> <pad>
-			>>> [2, 4, 5, 6, 7, 8] # <go> I have been to China
-		'''
-
-		return self._get_default_field().trim_in_ids(ids)
-
-	def convert_ids_to_tokens(self, ids, remove_special=True, trim=True):
-		'''Convert a sentence from ids to string representation.
-
-		Arguments:
-				ids (list): a list of int.
-				trim (bool): if True, call :func:`trim` before convertion.
-
-		Returns:
-			(list): a list of tokens
-
-		Examples:
-			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
-			>>> #	"been", "to", "China"]
-			>>> dataloader.convert_ids_to_tokens(
-			...		[2, 4, 5, 6, 7, 8, 3, 0, 0], trim=True)
-			>>> ["<go>", "I", "have", "been", "to", "China"]
-			>>> dataloader.convert_ids_to_tokens(
-			...		[2, 4, 5, 6, 7, 8, 3, 0, 0], trim=False)
-			>>> ["<go>", "I", "have", "been", "to", "China", "<eos>", "<pad>", "<pad>"]
-
-		'''
-		return self._get_default_field().convert_ids_to_tokens(ids, remove_special=remove_special, trim=trim)
+	_SENTENCE_MORE_DOCSTRING = '''It calls the method with the identical name of the :class:`Sentence` instance,\
+		from ``self.get_default_field()``.'''
+	tokenize = copy_func(get_default_field, Sentence, "tokenize")
+	tokenize_sentences = copy_func(get_default_field, Sentence, "tokenize_sentences")
+	convert_tokens_to_ids = copy_func(get_default_field, Sentence, "convert_tokens_to_ids")
+	convert_ids_to_tokens = copy_func(get_default_field, Sentence, "convert_ids_to_tokens")
+	convert_ids_to_sentence = copy_func(get_default_field, Sentence, "convert_ids_to_sentence")
+	convert_sentence_to_ids = copy_func(get_default_field, Sentence, "convert_sentence_to_ids")
+	add_special_to_ids = copy_func(get_default_field, Sentence, "add_special_to_ids")
+	remove_special_in_ids = copy_func(get_default_field, Sentence, "remove_special_in_ids")
+	process_sentences = copy_func(get_default_field, Sentence, "process_sentences")
+	trim_in_ids = copy_func(get_default_field, Sentence, "trim_in_ids")

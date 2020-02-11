@@ -15,6 +15,7 @@
 import os
 import sys
 import shutil
+sys.path.insert(0, os.path.abspath('../../'))
 sys.path.insert(0, os.path.abspath('../'))
 
 
@@ -40,7 +41,8 @@ release = ''
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
+    'autodoc',
+    'napoleon',
     'sphinx.ext.doctest',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
@@ -49,7 +51,6 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
 	'sphinx.ext.intersphinx',
-    'sphinx.ext.napoleon',
 	'm2r'
 ]
 
@@ -195,10 +196,25 @@ autodoc_member_order = 'bysource'
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
+autodoc_typehints = 'none'
 
+# import sys
+# import inspect
+# from sphinx.util.typing import stringify as stringify_annotation
+# def autodoc_process_signature(app, what, name, obj, options, signature,
+#                            return_annotation):
+#     if what in ["function", "method"]:
+#         return_annotation = inspect.signature(obj).return_annotation
+#         if return_annotation == inspect.signature(obj).empty:
+#             return_annotation = None
+#         else:
+#             return_annotation = stringify_annotation(return_annotation)
+#     return signature, return_annotation
 
-# mycss
 def setup(app):
+    # app.connect('autodoc-before-process-signature', autodoc_before_process_signature)
+    # app.connect('autodoc-process-signature', autodoc_process_signature)
+    # mycss
     app.add_stylesheet('cotk_theme.css')
 
 # download readme and images
@@ -217,8 +233,8 @@ models = {"LanguageGeneration": {
 }
 
 
-from cotk._utils.file_utils import _http_get
-from cotk._utils.resource_processor import unzip_file
+from cotk.file_utils.file_utils import _http_get
+from cotk.file_utils.resource_processor import unzip_file
 
 def copy_readme_from_github(model_name, target_path):
     print("downloading %s from github..." % model_name)
@@ -232,7 +248,7 @@ def copy_readme_from_github(model_name, target_path):
     else:
         _http_get(online_path, open(local_path, "wb"))
     unzip_file(local_path, build_dir)
-    shutil.copy(os.path.join(local_dir, "Readme.md"), 
+    shutil.copy(os.path.join(local_dir, "Readme.md"),
             os.path.join(target_path, "Readme.md"))
     shutil.copytree(os.path.join(local_dir, "images"),
             os.path.join(target_path, "images"))

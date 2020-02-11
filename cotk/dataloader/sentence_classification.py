@@ -9,12 +9,12 @@ import numpy as np
 # from .._utils.unordered_hash import UnorderedSha256
 from .._utils.file_utils import get_resource_file_path
 from .._utils import hooks
-from .dataloader import LanguageProcessingBase
+from .dataloader import LanguageProcessing
 from ..metric import MetricChain, AccuracyMetric
 
 
 # pylint: disable=W0223
-class SentenceClassification(LanguageProcessingBase):
+class SentenceClassification(LanguageProcessing):
 	r"""Base class for sentence classification datasets. This is an abstract class.
 
 	Arguments:{ARGUMENTS}
@@ -24,8 +24,8 @@ class SentenceClassification(LanguageProcessingBase):
 
 	_version = 1
 
-	ARGUMENTS = LanguageProcessingBase.ARGUMENTS
-	ATTRIBUTES = LanguageProcessingBase.ATTRIBUTES
+	ARGUMENTS = LanguageProcessing.ARGUMENTS
+	ATTRIBUTES = LanguageProcessing.ATTRIBUTES
 
 	def get_batch(self, key, indexes):
 		'''Get a batch of specified `indexes`.

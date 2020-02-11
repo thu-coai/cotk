@@ -1,14 +1,14 @@
-r"""
+"""
 Containing some classes and functions about precision and recall evaluating results of models.
 """
 from itertools import chain
 import numpy as np
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from .metric import MetricBase
-from .._utils import hooks
+from ..hooks import hooks
 
 class _PrecisionRecallMetric(MetricBase):
-	r"""Base class for precision recall metrics. This is an abstract class.
+	"""Base class for precision recall metrics. This is an abstract class.
 
 	Arguments:
 		{ARGUMENTS}
@@ -17,7 +17,7 @@ class _PrecisionRecallMetric(MetricBase):
 					in the result dict of `close`.
 	"""
 
-	ARGUMENTS = r"""
+	ARGUMENTS = """
 		{MetricBase.DATALOADER_ARGUMENTS}
 		generated_num_per_context (int): The number of sentences generated per context.
 		candidate_allvocabs_key (str): The key of reference sentences. Default: ``candidate_allvocabs``.
@@ -40,7 +40,7 @@ class _PrecisionRecallMetric(MetricBase):
 		self.res_prefix = ""
 
 	def _score(self, gen, reference):
-		r'''This function is called by :func:`forward`.
+		'''This function is called by :func:`forward`.
 
 		Arguments:
 			gen (list): list of generated word ids.
@@ -134,7 +134,7 @@ class _PrecisionRecallMetric(MetricBase):
 		return res
 
 class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
-	r'''Metric for calculating sentence BLEU precision and recall.
+	'''Metric for calculating sentence BLEU precision and recall.
 
 	References:
 		[1] Zhao, T., Zhao, R., & Eskenazi, M. (2017). Learning discourse-level diversity
@@ -176,8 +176,6 @@ class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
 		super().__init__(self._name, self._version, \
 				dataloader, generated_num_per_context, candidates_allvocabs_key, \
 				multiple_gen_key)
-		if ngram not in range(1, 5):
-			raise ValueError("ngram should belong to [1, 4]")
 		self.ngram = ngram
 		self.weights = [1 / ngram] * ngram
 		self.res_prefix = 'BLEU-{}'.format(ngram)
@@ -200,7 +198,7 @@ class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
 		return output
 
 	def _score(self, gen, reference):
-		r'''Score function of BLEU-ngram precision and recall.
+		'''Score function of BLEU-ngram precision and recall.
 
 		Arguments:
 			gen (list): list of generated word ids.
@@ -220,7 +218,7 @@ class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
 		return sentence_bleu([reference], gen, self.weights, SmoothingFunction().method1)
 
 class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
-	r'''Metric for calculating cosine similarity precision and recall.
+	'''Metric for calculating cosine similarity precision and recall.
 
 	References:
 		[1] Zhao, T., Zhao, R., & Eskenazi, M. (2017). Learning discourse-level diversity
@@ -230,7 +228,7 @@ class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
 	Arguments:
 		{_PrecisionRecallMetric.ARGUMENTS}
 		word2vec (dict): Maps a word (str) to its pretrained embedding (:class:`numpy.ndarray` or list)
-		mode (str): Specifies the operation that computes the bag-of-word representation.
+		mode (str): Specifies the operation that computes the bag-of-word representation. \
 			Must be ``avg`` or ``extrema``:
 
 			* ``avg`` : element-wise average word embeddings.
@@ -284,7 +282,7 @@ class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
 				[(word, list(emb)) for word, emb in self.word2vec.items()])
 
 	def _score(self, gen, reference):
-		r'''Score function of cosine similarity precision and recall.
+		'''Score function of cosine similarity precision and recall.
 
 		Arguments:
 			gen (list): list of generated word ids.

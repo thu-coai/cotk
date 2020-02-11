@@ -12,11 +12,11 @@ from .context import VocabContext
 from .tokenizer import PretrainedTokenizer
 
 
-class BaseVocab(LoadClassInterface, metaclass=DocStringInheritor):
-	'''A base class for Vocabulary classes.'''
+class Vocab(LoadClassInterface, metaclass=DocStringInheritor):
+	'''A class for storing vocabulary.
+	TODO: see explanation'''
 	def __init__(self):
 		self._setting_hash: Optional[str] = None
-
 
 	def add_tokens(self, tokens: List[str], vocab_from: str) -> None:
 		'''Add tokens for this vocabulary instance, the tokens will be used for building
@@ -25,9 +25,9 @@ class BaseVocab(LoadClassInterface, metaclass=DocStringInheritor):
 
 		Arguments:
 			tokens (List[str]): A list of tokens to add to the vocabulary.
-			vocab_from (str): One of ``train``, ``test``, ``extra`` or ``default``.
-				If ``train``, the tokens are from the training data.
-				If ``test``, the tokens are from the validation data or test data.
+			vocab_from (str): One of ``train``, ``test``, ``extra`` or ``default``. \
+				If ``train``, the tokens are from the training data. \
+				If ``test``, the tokens are from the validation data or test data. \
 				If ``ignore`` or ``default``, the tokens are from extra data.
 		'''
 		raise NotImplementedError
@@ -38,8 +38,9 @@ class BaseVocab(LoadClassInterface, metaclass=DocStringInheritor):
 		'''
 		raise NotImplementedError
 
+	_VOCAB_MORE_DOCSTRING = ""
 	def convert_tokens_to_ids(self, tokens: List[str], only_frequent_word=False) -> List[int]:
-		'''Convert list of tokens to list of ids.
+		'''Convert list of tokens to list of ids. {_VOCAB_MORE_DOCSTRING}
 
 		Arguments:
 			tokens (List[str]): List of tokens.
@@ -51,7 +52,7 @@ class BaseVocab(LoadClassInterface, metaclass=DocStringInheritor):
 		raise NotImplementedError
 
 	def convert_ids_to_tokens(self, ids: List[int]) -> List[str]:
-		'''Convert list of ids to list of tokens.
+		'''Convert list of ids to list of tokens. {_VOCAB_MORE_DOCSTRING}
 
 		Arguments:
 			ids (List[int]): List of ids.
@@ -63,73 +64,67 @@ class BaseVocab(LoadClassInterface, metaclass=DocStringInheritor):
 
 	@property
 	def frequent_vocab_size(self):
-		'''int: The number of **frequent** words.
+		'''int: The number of **frequent** words. {_VOCAB_MORE_DOCSTRING}
 		'''
 		raise NotImplementedError
 
 	@property
 	def all_vocab_size(self):
-		'''int: The number of frequent words and rare words.
+		'''int: The number of frequent words and rare words. {_VOCAB_MORE_DOCSTRING}
 		'''
 		raise NotImplementedError
 
 	@property
 	def frequent_vocab_list(self):
-		'''list: The list of frequent words.
+		'''list: The list of frequent words. {_VOCAB_MORE_DOCSTRING}
 		'''
 		raise NotImplementedError
 
 	@property
 	def all_vocab_list(self):
-		'''list: The list of frequent words and rare words.
+		'''list: The list of frequent words and rare words. {_VOCAB_MORE_DOCSTRING}
 		'''
 		raise NotImplementedError
 
-	SPECIAL_TOKEN_DOCS = '''Special tokens mapping is an ordered dict
-		mapping the general name of special tokens to its string.
-		The key must be one of the following:
-		``pad``, ``unk``, ``go``, ``eos``, ``sep``, ``cls``, ``mask``.
+	SPECIAL_TOKEN_DOCS = '''Special tokens mapping is an ordered dict \
+		mapping the general name of special tokens to its string. \
+		The key must be one of the following: \
+		``pad``, ``unk``, ``go``, ``eos``, ``sep``, ``cls``, ``mask``. \
 		The value can be arbitrary string, e.g., ``"<pad>"``, ``"<unk>"``.'''
 
 	def get_special_tokens_mapping(self) -> OrderedDictType[str, str]:
-		'''Get special tokens mapping. {BaseVocab.SPECIAL_TOKEN_DOCS}
-
-		Returns:
-			OrderedDict[str, str]: the mapping dict.
+		'''Get special tokens mapping. {SPECIAL_TOKEN_DOCS} {_VOCAB_MORE_DOCSTRING}
 		'''
 		raise NotImplementedError
 
 	def get_special_tokens_id(self, name: str) -> int:
 		'''Get id of special token specifying the general name.
-		Raise KeyError if no such token in this instance.
+		Raise KeyError if no such token in this instance. {_VOCAB_MORE_DOCSTRING}
 
 		Arguments:
 			name (str): the general name, must be one of the following,
 				``pad``, ``unk``, ``go``, ``eos``, ``sep``, ``cls``, ``mask``.
-
-		Returns:
-			int: The id of specified special tokens.
 		'''
 		raise NotImplementedError
 
 	@property
 	def pad_id(self) -> int:
-		'''int: The id of pad token. Raise KeyError if no pad token in this instance.
+		'''int: The id of pad token. Raise KeyError if no pad token in this instance. {_VOCAB_MORE_DOCSTRING}
 		'''
 		return self.get_special_tokens_id("pad")
 	@property
 	def unk_id(self) -> int:
-		'''int: The id of unk token. Raise KeyError if no unk token in this instance.
+		'''int: The id of unk token. Raise KeyError if no unk token in this instance. {_VOCAB_MORE_DOCSTRING}
 		'''
 		return self.get_special_tokens_id("unk")
 	@property
 	def go_id(self) -> int:
-		'''int: The id of go token. Raise KeyError if no go token in this instance.
+		'''int: The id of go token. Raise KeyError if no go token in this instance. {_VOCAB_MORE_DOCSTRING}
 		'''
 		return self.get_special_tokens_id("go")
 	@property
 	def eos_id(self) -> int:
-		'''int: The id of eos token. Raise KeyError if no eos token in this instance.
+		'''int: The id of eos token. Raise KeyError if no eos token in this instance. {_VOCAB_MORE_DOCSTRING}
 		'''
 		return self.get_special_tokens_id("eos")
 
@@ -152,25 +147,25 @@ class BaseVocab(LoadClassInterface, metaclass=DocStringInheritor):
 		'''
 		raise NotImplementedError
 
-class Vocab(BaseVocab):
-	'''A default vocabulary class for general use. If any argument is not specified,
+class GeneralVocab(Vocab):
+	'''A vocabulary class for general use.	If any argument is not specified,
 	the value will be first retrieved from :class:`VocabContext`. If still ``None``, default
 	value will be used.
 
 	Arguments:
-		min_frequent_vocab_times (int, optional): Tokens from training data appeared
-			more than ``min_frequent_vocab_times`` will be regarded as frequent words.
+		min_frequent_vocab_times (int, optional): Tokens from training data appeared \
+			more than ``min_frequent_vocab_times`` will be regarded as frequent words. \
 			If None, it will be ``0``.
-		min_rare_vocab_times (int, optional): Tokens from training data or test data
-			appeared more than ``min_rare_vocab_times`` will be regarded as rare words
+		min_rare_vocab_times (int, optional): Tokens from training data or test data \
+			appeared more than ``min_rare_vocab_times`` will be regarded as rare words \
 			(frequent word excluded). If None, it will be ``0``.
 		special_tokens_mapping (OrderedDict, optional): {SPECIAL_TOKEN_DOCS_WITH_DEFAULT}
-		special_appeared_in_data (bool, optional): If the string of special tokens will
+		special_appeared_in_data (bool, optional): If the string of special tokens will \
 			appear in the data. If None, it will be ``False``.
 	'''
 
-	SPECIAL_TOKEN_DOCS_WITH_DEFAULT = BaseVocab.SPECIAL_TOKEN_DOCS + '''
-			If None, it will be ``OrderedDict([("pad", "<pad>"), ("unk", "<unk>"),
+	SPECIAL_TOKEN_DOCS_WITH_DEFAULT = Vocab.SPECIAL_TOKEN_DOCS + ''' \
+			If None, it will be ``OrderedDict([("pad", "<pad>"), ("unk", "<unk>"),\
 			("go", "<go>"), ("eos", "<eos>")])``.'''
 
 	def __init__(self, min_frequent_vocab_times: Optional[int] = None, \
@@ -213,21 +208,21 @@ class Vocab(BaseVocab):
 	@staticmethod
 	def from_predefined(vocab_list: List[str], \
 		frequent_vocab_size: int, \
-		special_tokens_mapping: Optional[OrderedDictType[str, str]] = None) -> "Vocab":
+		special_tokens_mapping: Optional[OrderedDictType[str, str]] = None) -> "GeneralVocab":
 		'''Initialize the vocabulary from a predefined list. See :meth:`.from_predefined_vocab` if
-		you want to use the vocabulary from an existing :class:`Vocab` instance.
+		you want to use the vocabulary from an existing :class:`GeneralVocab` instance.
 
 		Arguments:
 			vocab_list (List[str]): A list of all vocabulary.
-			frequent_vocab_size (int): the length of the frequent words.
+			frequent_vocab_size (int): the length of the frequent words. \
 				The frequent word must be in the front of the ``vocab_list``.
-			special_tokens_mapping (OrderedDict, optional): {SPECIAL_TOKEN_DOCS_WITH_DEFAULT}
-				Notice special tokens should be in the front of the ``vocab_list`` (included in frequent words,
+			special_tokens_mapping (OrderedDict, optional): {SPECIAL_TOKEN_DOCS_WITH_DEFAULT} \
+				Notice special tokens should be in the front of the ``vocab_list`` (included in frequent words, \
 				ordered sensitive).
 		Returns:
-			:class:`Vocab`: A Vocab instance with specified vocabulary.
+			:class:`GeneralVocab`: A GeneralVocab instance with specified vocabulary.
 		'''
-		vocab = Vocab(special_tokens_mapping=special_tokens_mapping)
+		vocab = GeneralVocab(special_tokens_mapping=special_tokens_mapping)
 		special_values = list(vocab.get_special_tokens_mapping().values())
 		if vocab_list[:len(special_values)] != special_values:
 			raise ValueError("special tokens should be in the front of the vocab_list, where special tokens are %s, but \
@@ -257,40 +252,40 @@ class Vocab(BaseVocab):
 		return vocab
 
 	@staticmethod
-	def from_predefined_vocab(vocab: "Vocab") -> "Vocab":
-		'''Init a new :class:`Vocab` instance from ``vocab``. The new instance have the same
+	def from_predefined_vocab(vocab: "GeneralVocab") -> "GeneralVocab":
+		'''Init a new :class:`GeneralVocab` instance from ``vocab``. The new instance have the same
 		vocabulary list as the old one.
 
 		Arguments:
-			vocab(:class:`Vocab`): The old instance.
+			vocab(:class:`GeneralVocab`): The old instance.
 
 		Returns:
-			:class:`Vocab`: The new instance that have the same vocabulary with the old one.
+			:class:`GeneralVocab`: The new instance that have the same vocabulary with the old one.
 		'''
-		if not isinstance(vocab, Vocab):
-			raise TypeError("vocab must be an instance of Vocab class.")
+		if not isinstance(vocab, GeneralVocab):
+			raise TypeError("vocab must be an instance of GeneralVocab class.")
 		vocab_list = vocab.all_vocab_list
 		frequent_vocab_size = vocab._frequent_vocab_size
 		special_token_mappings = vocab.get_special_tokens_mapping()
-		return Vocab.from_predefined(vocab_list, frequent_vocab_size, special_token_mappings)
+		return GeneralVocab.from_predefined(vocab_list, frequent_vocab_size, special_token_mappings)
 
 
 	@staticmethod
 	def from_frequent_word(frequent_vocab_list: List[str], \
-			special_tokens_mapping: Optional[OrderedDictType[str, str]] = None) -> "Vocab":
+			special_tokens_mapping: Optional[OrderedDictType[str, str]] = None) -> "GeneralVocab":
 		'''Initialize the vocabulary from a predefined frequent list, and the rare word list can be built later.
 		See :meth:`.from_frequent_word_of_vocab`
-		if you want to use the frequent vocabulary from an existing :class:`Vocab` instance.
+		if you want to use the frequent vocabulary from an existing :class:`GeneralVocab` instance.
 
 		Arguments:
 			frequent_vocab_list (List[str]): A list of frequent vocabulary.
-			special_tokens_mapping (OrderedDict, optional): {SPECIAL_TOKEN_DOCS_WITH_DEFAULT}
+			special_tokens_mapping (OrderedDict, optional): {SPECIAL_TOKEN_DOCS_WITH_DEFAULT} \
 				Notice special tokens should be in the front of the ``frequent_vocab_list`` (ordered sensitive).
 		Returns:
-			:class:`Vocab`: A Vocab instance with specified vocabulary.
+			:class:`GeneralVocab`: A GeneralVocab instance with specified vocabulary.
 		'''
 
-		vocab = Vocab(special_tokens_mapping=special_tokens_mapping)
+		vocab = GeneralVocab(special_tokens_mapping=special_tokens_mapping)
 		special_values = list(vocab.get_special_tokens_mapping().values())
 		if frequent_vocab_list[:len(special_values)] != special_values:
 			raise ValueError("special tokens should be in the front of the vocab_list, where special tokens are %s, but \
@@ -311,22 +306,22 @@ class Vocab(BaseVocab):
 		return vocab
 
 	@staticmethod
-	def from_frequent_word_of_vocab(vocab: "Vocab") -> "Vocab":
+	def from_frequent_word_of_vocab(vocab: "GeneralVocab") -> "GeneralVocab":
 		'''Init a new :class:`Vocab` instance from the frequent words of ``vocab``. The new instance have the same
 		frequent vocabulary list as the old one. The rare word list can be built later.
 
 		Arguments:
-			vocab(:class:`Vocab`): The old instance to provide frequent words.
+			vocab(:class:`GeneralVocab`): The old instance to provide frequent words.
 
 		Returns:
-			:class:`Vocab`: The new instance that have the same frequent vocabulary with the old one.
+			:class:`GeneralVocab`: The new instance that have the same frequent vocabulary with the old one.
 		'''
-		if not isinstance(vocab, Vocab):
-			raise TypeError("vocab must be an instance of Vocab class.")
+		if not isinstance(vocab, GeneralVocab):
+			raise TypeError("vocab must be an instance of GeneralVocab class.")
 		vocab_list = vocab.all_vocab_list
 		frequent_vocab_size = vocab.frequent_vocab_size
 		special_token_mappings = vocab.get_special_tokens_mapping()
-		return Vocab.from_predefined(vocab_list[:frequent_vocab_size], special_token_mappings)
+		return GeneralVocab.from_predefined(vocab_list[:frequent_vocab_size], special_token_mappings)
 
 	def add_tokens(self, tokens: List[str], vocab_from: str) -> None:
 		if self.train_tokens is None or self.test_tokens is None:
@@ -383,6 +378,7 @@ class Vocab(BaseVocab):
 		self.test_tokens = None
 		self.mode = "finish"
 
+	_VOCAB_MORE_DOCSTRING = ""
 	def get_special_tokens_id(self, name) -> int:
 		try:
 			return self.word2id[self.special_tokens_mapping[name]] # type: ignore
@@ -432,7 +428,7 @@ class Vocab(BaseVocab):
 	def get_special_tokens_mapping(self):
 		return self.special_tokens_mapping
 
-class PretrainedVocab(BaseVocab):
+class PretrainedVocab(Vocab):
 	'''Use the vocabulary from a pretrained tokenizer in transformers package.
 	This class is usually used for pretrained models, and it do not have rare words.
 
@@ -492,6 +488,7 @@ class PretrainedVocab(BaseVocab):
 				res[new_key[idx]] = value
 		return res
 
+	_VOCAB_MORE_DOCSTRING = ""
 	def get_special_tokens_id(self, name):
 		try:
 			return self.convert_tokens_to_ids([self.get_special_tokens_mapping()[name]])[0]
@@ -500,5 +497,5 @@ class PretrainedVocab(BaseVocab):
 
 #TODO: add a class for sparse label. It convert sparse tokens to id, but it do not use special tokens,
 # frequent tokens or more.
-class SimpleVocab(BaseVocab):
+class SimpleVocab(Vocab):
 	pass

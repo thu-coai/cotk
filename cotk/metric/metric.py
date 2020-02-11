@@ -1,4 +1,4 @@
-r"""
+"""
 ``cotk.metrics`` provides classes and functions evaluating results of models.
 It provides a fair metric for every model.
 """
@@ -13,16 +13,16 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 	'''
 
 	DATALOADER_ARGUMENTS = \
-		r"""dataloader (:class:`.dataloader.LanguageProcessingBase`): A language generation dataloader."""
+		"""dataloader (:class:`.dataloader.LanguageProcessingBase`): A language generation dataloader."""
 	REFERENCE_ALLVOCABS_KEY_ARGUMENTS = \
-		r"""reference_allvocabs_key (str):
+		"""reference_allvocabs_key (str): \
 			The key of reference sentences. Default: ``ref_allvocabs``."""
 	FORWARD_REFERENCE_ALLVOCABS_ARGUMENTS = \
-				r"""* **data[reference_allvocabs_key]** (list or :class:`numpy.ndarray`):
-				  A 2-d jagged or padded array of int. Reference sentences with
-				  :ref:`allvocabs <vocab_ref>` in index form.
-				  Contains start token (eg: ``<go>``) and end token (eg: ``<eos>``).
-				  Size: ``[batch_size, ~ref_sentence_length]``,
+				"""* **data[reference_allvocabs_key]** (list or :class:`numpy.ndarray`): \
+				  A 2-d jagged or padded array of int. Reference sentences with \
+				  :ref:`allvocabs <vocab_ref>` in index form. \
+				  Contains start token (eg: ``<go>``) and end token (eg: ``<eos>``). \
+				  Size: ``[batch_size, ~ref_sentence_length]``, \
 				  where "~" means different sizes in this dimension is allowed."""
 	FORWARD_REFERENCE_ALLVOCABS_ARGUMENTS_WITH_TORCH = \
 		FORWARD_REFERENCE_ALLVOCABS_ARGUMENTS.replace("list or :class:`numpy.ndarray`", \
@@ -35,87 +35,87 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 			"resp_allvocabs_key")
 
 	LABEL_KEY_ARGUMENTS = \
-		r"""label_key (str):
+		"""label_key (str): \
 			The key of reference sentence labels. Default: ``label``."""
-	LABEL_ARGUMENTS = r"""* **data[label_key]** (list or :class:`numpy.ndarray`):
-				  A 1-d array of int.
-				  Size: ``[batch_size]``,
+	LABEL_ARGUMENTS = """* **data[label_key]** (list or :class:`numpy.ndarray`): \
+				  A 1-d array of int. \
+				  Size: ``[batch_size]``, \
 				  each element refers to label of one sample"""
 
 	PREDICTION_KEY_ARGUMENTS = \
-		r"""prediction_key (str):
+		"""prediction_key (str): \
 			The key of reference sentence predictions. Default: ``prediction``."""
-	PREDICTION_ARGUMENTS = r"""* **data[prediction_key]** (list or :class:`numpy.ndarray`):
-				  A 1-d array of int.
-				  Size: ``[batch_size]``,
+	PREDICTION_ARGUMENTS = """* **data[prediction_key]** (list or :class:`numpy.ndarray`): \
+				  A 1-d array of int. \
+				  Size: ``[batch_size]``, \
 				  each element refers to prediction for one sample"""
 
 	MULTI_TURN_REFERENCE_ALLVOCABS_KEY_ARGUMENTS = \
-		r"""multi_turn_reference_allvocabs_key (str):
+		"""multi_turn_reference_allvocabs_key (str): \
 			The key of reference sentences. Default: ``multi_turn_ref_allvocabs``."""
 	FORWARD_MULTI_TURN_REFERENCE_ALLVOCABS_ARGUMENTS = \
-				r"""* **data[multi_turn_reference_allvocabs_key]** (list or :class:`numpy.ndarray`):
-				  A 3-d jagged or padded array of int. Multi-turn reference sentences with
-				  :ref:`all vocabs <vocab_ref>`. Contains start token (eg: ``<go>``) and
-				  end token (eg: ``<eos>``). Size: ``[batch_size, ~turn_length, ~sentence_length]``,
+				"""* **data[multi_turn_reference_allvocabs_key]** (list or :class:`numpy.ndarray`): \
+				  A 3-d jagged or padded array of int. Multi-turn reference sentences with \
+				  :ref:`all vocabs <vocab_ref>`. Contains start token (eg: ``<go>``) and \
+				  end token (eg: ``<eos>``). Size: ``[batch_size, ~turn_length, ~sentence_length]``, \
 				  where "~" means different sizes in this dimension is allowed."""
 	FORWARD_MULTI_TURN_REFERENCE_ALLVOCABS_ARGUMENTS_WITH_TORCH = \
 		FORWARD_MULTI_TURN_REFERENCE_ALLVOCABS_ARGUMENTS.replace("list or :class:`numpy.ndarray`", \
 			"list or :class:`numpy.ndarray` or :class:`torch.Tensor`")
 
 	REFERENCE_LEN_KEY_ARGUMENTS = \
-		r"""reference_len_key (str):
-			The key of lengths of reference sentences.
+		"""reference_len_key (str): \
+			The key of lengths of reference sentences. \
 			Default: ``ref_length``."""
 	FORWARD_REFERENCE_LEN_ARGUMENTS = \
-				r"""* **data[reference_len_key]** (list or :class:`numpy.ndarray`):
-				  Length of reference sentences. Contains start token (eg:``<go>``)
+				"""* **data[reference_len_key]** (list or :class:`numpy.ndarray`): \
+				  Length of reference sentences. Contains start token (eg:``<go>``) \
 				  and end token (eg:``<eos>``). Size: ``[batch_size]``."""
 
 	MULTI_TURN_REFERENCE_LEN_KEY_ARGUMENTS = \
-		r"""multi_turn_reference_len_key (str):
-			The key of lengths of reference sentences.
+		"""multi_turn_reference_len_key (str): \
+			The key of lengths of reference sentences. \
 			Default: ``multi_turn_ref_length``."""
 	FORWARD_MULTI_TURN_REFERENCE_LEN_ARGUMENTS = \
-				r"""* **data[multi_turn_reference_len_key]** (list or :class:`numpy.ndarray`):
-				  A 2-d jagged or padded array of int. **If padded, redundant position must be set to** ``0``.
-				  Length of multi-turn reference sentences. Contains start token (eg:``<go>``)
-				  and end token (eg:``<eos>``). Size: ``[batch_size, ~turn_length]``,
+				"""* **data[multi_turn_reference_len_key]** (list or :class:`numpy.ndarray`): \
+				  A 2-d jagged or padded array of int. **If padded, redundant position must be set to** ``0``. \
+				  Length of multi-turn reference sentences. Contains start token (eg:``<go>``) \
+				  and end token (eg:``<eos>``). Size: ``[batch_size, ~turn_length]``, \
 				  where "~" means different sizes in this dimension is allowed."""
 
 	GEN_KEY_ARGUMENTS = \
-		r"""gen_key (str):
+		"""gen_key (str): \
 			The key of generated sentences. Default: ``gen``."""
 	FORWARD_GEN_ARGUMENTS = \
-				r"""* **data[gen_key]** (list or :class:`numpy.ndarray`):
-				  A 2-d jagged or padded array of int.
-				  Sentences generated by model. Contains end token (eg: ``<eos>``),
-				  but without start token (eg: ``<go>``).
-				  Size: ``[batch_size, ~gen_sentence_length]``,
+				"""* **data[gen_key]** (list or :class:`numpy.ndarray`): \
+				  A 2-d jagged or padded array of int. \
+				  Sentences generated by model. Contains end token (eg: ``<eos>``), \
+				  but without start token (eg: ``<go>``). \
+				  Size: ``[batch_size, ~gen_sentence_length]``, \
 				  where "~" means different sizes in this dimension is allowed."""
 
 	MULTI_TURN_GEN_KEY_ARGUMENTS = \
-		r"""multi_turn_gen_key (str):
+		"""multi_turn_gen_key (str): \
 			The key of generated sentences. Default: ``multi_turn_gen``."""
 	FORWARD_MULTI_TURN_GEN_ARGUMENTS = \
-				r"""* **data[gen_key]** (list or :class:`numpy.ndarray`):
-				  A 3-d jagged or padded array of int. Sentences generated by model.
-				  Contains end token (eg: ``<eos>``), but without start token (eg: ``<go>``).
-				  Size: ``[batch_size, ~max_turn_length, ~gen_sentence_length]``,
+				"""* **data[gen_key]** (list or :class:`numpy.ndarray`): \
+				  A 3-d jagged or padded array of int. Sentences generated by model. \
+				  Contains end token (eg: ``<eos>``), but without start token (eg: ``<go>``). \
+				  Size: ``[batch_size, ~max_turn_length, ~gen_sentence_length]``, \
 				  where "~" means different sizes in this dimension is allowed."""
 
 	MULTI_TURN_LENGTH_KEY_ARGUMENTS = \
-		r"""turn_length (str):
+		"""turn_length (str): \
 			The key of length of turns. Default: ``turn_length``."""
 	FORWARD_MULTI_TURN_LENGTH_ARGUMENTS = \
-				r"""* **data[turn_len_key]** (list or :class:`numpy.ndarray`):
-				  Length of turns in each sample.
+				"""* **data[turn_len_key]** (list or :class:`numpy.ndarray`): \
+				  Length of turns in each sample. \
 				  Size: ``[batch_size]``."""
 
 	CPU_COUNT_ARGUMENTS = \
-		r"""cpu_count (int): Number of used cpu for multiprocessing. Multiprocessing will **NOT** be used
-			when ``cpu_count`` is set to ``1`` or the dataset is small. Default: if ``None``,
-			the environment variable ``CPU_COUNT`` will be used	when it is set,
+		"""cpu_count (int): Number of used cpu for multiprocessing. Multiprocessing will **NOT** be used \
+			when ``cpu_count`` is set to ``1`` or the dataset is small. Default: if ``None``, \
+			the environment variable ``CPU_COUNT`` will be used	when it is set, \
 			or all available cpu will be used otherwise."""
 
 	def __init__(self, name, version):

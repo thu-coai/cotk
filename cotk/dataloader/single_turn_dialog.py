@@ -8,29 +8,28 @@ from itertools import chain
 import multiprocessing
 from multiprocessing import Pool
 import tqdm
+from typing import Optional, Any, List, Tuple, Dict
 
 import numpy as np
 
 from nltk.tokenize import WordPunctTokenizer
-from .._utils.file_utils import get_resource_file_path
-from .._utils import hooks
-from .dataloader import LanguageProcessingBase
+from ..file_utils import get_resource_file_path
+from ..hooks import hooks
+from .dataloader import LanguageProcessing
 from .tokenizer import PretrainedTokenizer
 from .vocab import PretrainedVocab
-# from .bert_dataloader import BERTLanguageProcessingBase
+# from .bert_dataloader import BERTLanguageProcessing
 from ..metric import MetricChain, PerplexityMetric, BleuCorpusMetric, SingleTurnDialogRecorder
 from .context import FieldContext, VocabContext
 
 # pylint: disable=W0223
-class SingleTurnDialog(LanguageProcessingBase):
+class SingleTurnDialog(LanguageProcessing):
 	r"""Base class for single-turn dialog datasets. This is an abstract class.
 
 	This class is supported for sequence to sequence generation tasks, especially
 	single turn dialog tasks.
 
 	Arguments:{ARGUMENTS}
-
-	Attributes:{ATTRIBUTES}
 	"""
 
 	_version = 1
@@ -56,8 +55,6 @@ class SingleTurnDialog(LanguageProcessingBase):
 	INVALID_VOCAB_TIMES_DEFAULT = ''
 	TOKENIZER_DEFAULT = ''
 	REMAINS_CAPITAL_DEFAULT = ''
-
-	ATTRIBUTES = LanguageProcessingBase.ATTRIBUTES
 
 	@hooks.hook_dataloader
 	def __init__(self, file_id, *, tokenizer=None, \
@@ -92,12 +89,7 @@ class SingleTurnDialog(LanguageProcessingBase):
 		else:
 			raise ValueError("No pretrained name %s" % pretrained)
 
-	def get_batch(self, set_name, indexes):
-		'''{LanguageProcessingBase.GET_BATCH_DOC_WITHOUT_RETURNS}
-
-		Returns:
-			(dict): A dict at least contains:
-
+	_GET_BATCH_MORE_DOC = '''Return a dict contains:
 			* **post_length** (:class:`numpy.ndarray`): A 1-d array, the length of post in each batch.
 			  Size: ``[batch_size]``
 			* **post** (:class:`numpy.ndarray`): A 2-d padded array containing words of id form in posts.
@@ -114,8 +106,9 @@ class SingleTurnDialog(LanguageProcessingBase):
 			* **resp_allvocabs** (:class:`numpy.ndarray`):
 			  A 2-d padded array containing words of id form in responses.
 			  Provide both valid and invalid vocabs.
-			  Size: ``[batch_size, max(sent_length)]``
+			  Size: ``[batch_size, max(sent_length)]``'''
 
+	_GET_BATCH_EXAMPLE = '''
 		Examples:
 			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you",
 			>>> #	"hello", "i", "am", "fine"]
@@ -141,12 +134,13 @@ class SingleTurnDialog(LanguageProcessingBase):
 				]),
 				"post_length": numpy.array([5, 3]), # length of posts
 				"resp_length": numpy.array([5, 3]), # length of responses
-			}
-		'''
+			}'''
+	def get_batch(self, set_name: str, indexes: List[int] #pylint: disable=useless-super-delegation
+			) -> Dict[str, Any]:
 		return super().get_batch(set_name, indexes)
 
 	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob",\
-					   invalid_vocab=False):
+					   invalid_vocab=False) -> MetricChain:
 		'''Get metrics for teacher-forcing.
 
 		It contains:
@@ -158,10 +152,6 @@ class SingleTurnDialog(LanguageProcessingBase):
 				Refer to :class:`.metric.PerplexityMetric`. Default: ``gen_log_prob``.
 			invalid_vocab (bool): Whether ``gen_log_prob`` contains invalid vocab.
 				Refer to :class:`.metric.PerplexityMetric`. Default: ``False``.
-
-
-		Returns:
-			A :class:`.metric.MetricChain` object.
 		'''
 		metric = MetricChain()
 		metric.add_metric(PerplexityMetric(self,\
@@ -171,7 +161,7 @@ class SingleTurnDialog(LanguageProcessingBase):
 			invalid_vocab=invalid_vocab))
 		return metric
 
-	def get_inference_metric(self, gen_key="gen"):
+	def get_inference_metric(self, gen_key="gen") -> MetricChain:
 		'''Get metrics for inference.
 
 		It contains:
@@ -183,9 +173,6 @@ class SingleTurnDialog(LanguageProcessingBase):
 			gen_key (str): The key of generated sentences in index form.
 				Refer to :class:`.metric.BleuCorpusMetric` or
 				:class:`.metric.SingleTurnDialogRecorder`. Default: ``gen``.
-
-		Returns:
-			A :class:`.metric.MetricChain` object.
 		'''
 		metric = MetricChain()
 		metric.add_metric(BleuCorpusMetric(self, gen_key=gen_key, \

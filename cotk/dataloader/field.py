@@ -7,10 +7,10 @@ import hashlib
 import numpy as np
 
 from .._utils import trim_before_target
-from .._utils.metaclass import DocStringInheritor, LoadClassInterface
+from .._utils.metaclass import DocStringInheritor, LoadClassInterface, copy_func, copy_property
 from .._utils.unordered_hash import UnorderedSha256, dumps
-from .tokenizer import SimpleTokenizer, BaseTokenizer, PretrainedTokenizer
-from .vocab import BaseVocab, Vocab, PretrainedVocab, SimpleVocab
+from .tokenizer import SimpleTokenizer, Tokenizer, PretrainedTokenizer
+from .vocab import Vocab, GeneralVocab, PretrainedVocab, SimpleVocab
 from .context import FieldContext
 
 class Field(LoadClassInterface, metaclass=DocStringInheritor):
@@ -37,19 +37,19 @@ class Field(LoadClassInterface, metaclass=DocStringInheritor):
 			is used for test.
 	'''
 
-	def get_vocab(self) -> Optional[BaseVocab]:
-		'''Get :class:`BaseVocab` object for the field. None for no :class:`BaseVocab` specified.
+	def get_vocab(self) -> Optional[Vocab]:
+		'''Get :class:`Vocab` object for the field. None for no :class:`Vocab` specified.
 
 		Returns:
-			(:class:`BaseVocab` or None): :class:`BaseVocab` of the field.
+			(:class:`Vocab` or None): :class:`Vocab` of the field.
 		'''
 		return None
 
-	def get_tokenizer(self) -> Optional[BaseTokenizer]:
-		'''Get :class:`BaseTokenizer` object for the field. None for no :class:`BaseTokenizer` specified.
+	def get_tokenizer(self) -> Optional[Tokenizer]:
+		'''Get :class:`Tokenizer` object for the field. None for no :class:`Tokenizer` specified.
 
 		Returns:
-			(:class:`BaseTokenizer` or None): :class:`BaseTokenizer` of the field.
+			(:class:`Tokenizer` or None): :class:`Tokenizer` of the field.
 		'''
 		return None
 
@@ -67,22 +67,28 @@ class Field(LoadClassInterface, metaclass=DocStringInheritor):
 	def _get_setting_hash(self, vocabs) -> str:
 		'''Get setting hash for the field. ``vocabs`` are provided by :class:`LanguageProcessingBase`.
 		This function only encode index of vocab, and other settings. It only encode index because
-		encode the setting hash of vocabs cannot explain whether a :class:`BaseVocab` is shared between different vocabs or not.
+		encode the setting hash of vocabs cannot explain whether a :class:`Vocab` is shared between different vocabs or not.
 
 		Arguments:
-			vocabs (list): list of :class:`BaseVocab`.
+			vocabs (list): list of :class:`Vocab`.
 
 		Returns:
 			str: the setting hash of this field.
 		'''
 		raise NotImplementedError
 
-	def _get_batch(self, name: str, data, indexes: List[int]) -> Dict[str, Any]:
-		'''Invoked by :meth:`LanguageProcessingBase.get_batch`, return the data specified by this field.
+	_GET_BATCH_DATA_DOCSTRING = '''data (Any): the object returned by :meth:`_FieldContent.get_data`'''
+	_GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch.'''
+	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
+		'''Invoked by :meth:`LanguageProcessing.get_batch`, return the batched data specified by this field.
 
 		Arguments:
 			name (str): name of the field.
-			data (Any): the object returned by :meth:`_FieldContent.get_data`
+			{_GET_BATCH_DATA_DOCSTRING}
+			indexes (List[int]): the indexes of the data in this batch
+
+		Returns:
+			{_GET_BATCH_RETURNS_DOCSTRING}
 		'''
 		raise NotImplementedError
 
@@ -142,7 +148,7 @@ class _FieldContent(metaclass=DocStringInheritor):
 		'''Get the data.
 
 		Returns:
-			Any: Return the data which will be stored in the :class:`LanguageProcessingBase`.
+			Any: Return the data which will be stored in the :class:`LanguageProcessing`.
 		'''
 		raise NotImplementedError
 
@@ -168,10 +174,10 @@ class _SentenceContent(_FieldContent):
 		and it can save data.
 
 	Arguments:
-		field (SentenceBase): The corresponding field of this content.
-		vocab_from (str): The type of vocab, must be one of ["train", "test", "extra"]
+		field (Sentence): The corresponding field of this content.
+		vocab_from (str): The type of vocab, must be one of ["train", "test", "extra", "default"]
 	'''
-	def __init__(self, field: "SentenceBase", vocab_from: str):
+	def __init__(self, field: "Sentence", vocab_from: str):
 		self.field = field
 		self.vocab_from = vocab_from
 		self._tmp_tokenized_data: Any = None
@@ -214,7 +220,7 @@ class _SentenceContent(_FieldContent):
 		id_data = self.field.process_sentences(self._tmp_tokenized_data)
 		return {"id": id_data, "str": self._original_data}
 
-class SentenceBase(Field):
+class Sentence(Field):
 	'''A field for sentence. This class is the base class of
 	:class:`Sentence` and :class:`SentenceGPT2`.
 	{INIT_DOCSTRING}
@@ -225,9 +231,9 @@ class SentenceBase(Field):
 	value will be used.
 
 	Arguments:
-		tokenizer (:class:`BaseTokenizer`, str, optional): The tokenizer used for the field. if str, ``SimpleTokenizer(tokenizer)``
+		tokenizer (:class:`Tokenizer`, str, optional): The tokenizer used for the field. if str, ``SimpleTokenizer(tokenizer)``
 			will be used. No default value, KeyError will be raised.
-		vocab (:class:`{VOCAB_CLASS}`, optional): The vocabulary used for this field. Sharing this object between different field can
+		vocab (:class:`{_VOCAB_CLASS}`, optional): The vocabulary used for this field. Sharing this object between different field can
 			build vocabulary together. No default value, KeyError will be raised.
 		vocab_from (Dict[str, str], optional): Infer the set type (train, test, or extra) from the set name.
 			For example, ``DEFAULT_VOCAB_FROM["dev"] == "test"`` means that the words from the "dev" set
@@ -236,10 +242,10 @@ class SentenceBase(Field):
 			Default: If None, do not cut the sentence.
 		convert_to_lower_letter (bool, optional): Convert all the tokens to lower case after tokenization.
 			Default: False'''
-	VOCAB_CLASS = "BaseVocab"
+	_VOCAB_CLASS = "Vocab"
 
-	def __init__(self, tokenizer: Union[None, BaseTokenizer, str] = None, \
-			vocab: Optional[BaseVocab] = None, \
+	def __init__(self, tokenizer: Union[None, Tokenizer, str] = None, \
+			vocab: Optional[Vocab] = None, \
 			vocab_from: Optional[Dict[str, str]] = None, \
 			max_sent_length: Optional[int] = None, \
 			convert_to_lower_letter: Optional[bool] = None):
@@ -250,16 +256,16 @@ class SentenceBase(Field):
 				vocab_from=vocab_from,\
 				max_sent_length=max_sent_length,\
 				convert_to_lower_letter=convert_to_lower_letter):
-			filled_tokenizer: Union[BaseTokenizer, str] = FieldContext.get("tokenizer", no_default=True)
-			self.vocab: BaseVocab = FieldContext.get("vocab", no_default=True)
+			filled_tokenizer: Union[Tokenizer, str] = FieldContext.get("tokenizer", no_default=True)
+			self.vocab: Vocab = FieldContext.get("vocab", no_default=True)
 			self.vocab_from: Dict[str, str] = FieldContext.get("vocab_from", Field.DEFAULT_VOCAB_FROM)
 			self.max_sent_length: int = FieldContext.get("max_sent_length", None)
 			self.convert_to_lower_letter: bool = FieldContext.get("convert_to_lower_letter", False)
 
-		self.tokenizer: BaseTokenizer
+		self.tokenizer: Tokenizer
 		if isinstance(filled_tokenizer, str):
 			self.tokenizer = SimpleTokenizer(filled_tokenizer)
-		elif isinstance(filled_tokenizer, BaseTokenizer):
+		elif isinstance(filled_tokenizer, Tokenizer):
 			self.tokenizer = filled_tokenizer
 		else:
 			raise TypeError("Unknown tokenizer type")
@@ -288,8 +294,10 @@ class SentenceBase(Field):
 				self.convert_to_lower_letter \
 			])).hexdigest()
 
+	_SENTENCE_MORE_DOCSTRING = ""
 	def tokenize_sentences(self, sentences: List[str]) -> List[List[str]]:
-		'''Tokenize sentences and convert it to lower case if ``convert_to_lower_letter`` is True.
+		'''Tokenize sentences and convert them to lower case if ``convert_to_lower_letter`` is True.
+		{_SENTENCE_MORE_DOCSTRING}
 
 		Arguments:
 			sentences (List[str]): The list of sentence to be tokenized.
@@ -302,6 +310,22 @@ class SentenceBase(Field):
 			return [[token.lower() for token in tokens] for tokens in tokenized_sentences]
 		else:
 			return tokenized_sentences
+
+	def tokenize(self, sentence: str) -> List[str]:
+		'''Tokenize sentence and convert it to lower case if ``convert_to_lower_letter`` is True.
+		{_SENTENCE_MORE_DOCSTRING}
+
+		Arguments:
+			sentence (str): The list of sentence to be tokenized.
+
+		Returns:
+			List[str]: The tokenized sentence.
+		'''
+		tokenized_sentence = self.tokenizer.tokenize(sentence)
+		if self.convert_to_lower_letter:
+			return [token.lower() for token in tokenized_sentence]
+		else:
+			return tokenized_sentence
 
 	def convert_tokens_to_ids(self, tokens: List[str], add_special=False, only_frequent_word=False) -> List[int]:
 		'''TODO: fill
@@ -346,6 +370,20 @@ class SentenceBase(Field):
 		'''
 		tokens = self.convert_ids_to_tokens(ids, remove_special=remove_special, trim=trim)
 		return self.tokenizer.convert_tokens_to_sentence(tokens)
+
+	def convert_sentence_to_ids(self, sentence: str, add_special=False, only_frequent_word=False) -> List[int]:
+		'''TODO: fill
+
+		Arguments:
+			sentence (str): 
+			add_special (bool, optional): . Defaults: False.
+			only_frequent_word (bool, optional): . Defaults: False.
+
+		Returns:
+			List[int]: 
+		'''
+		return self.process_sentences([sentence], add_special=add_special, \
+				only_frequent_word=only_frequent_word, cut=False)[0]
 
 	def add_special_to_ids(self, ids: List[int]) -> List[int]:
 		'''TODO:
@@ -407,31 +445,9 @@ class SentenceBase(Field):
 		# sentence cut
 		return sentences
 
-	def recover_sentence(self, ids: List[int], remove_special=None, trim=True) -> str:
-		'''TODO: fill
-
-		Arguments:
-			ids (List[int]): 
-			remove_special ([type], optional): . Defaults: None.
-			trim (bool, optional): . Defaults: True.
-
-		Returns:
-			str: 
-		'''
-		return self.convert_ids_to_sentence(\
-				self.remove_special_in_ids(ids, remove_special=remove_special, trim=trim), trim=False)
-
-	def _get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
-		'''Invoked by :class:`LanguageProcessingBase`, returned dict will be used for batch.
-
-		Arguments:
-			name (str): The name of this field.
-			data (Dict[str, Any]): The data format returned by :class:`_SentenceContent`.
-			indexes (List[int]): The required index.
-
-		Returns:
-			Dict[str, Any]: The dict for batch.
-		'''
+	_GET_BATCH_DATA_DOCSTRING = '''data (Any): the object returned by :meth:`_SentenceContent.get_data`'''
+	_GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch.'''
+	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
 		raise NotImplementedError
 
 	def trim_in_ids(self, ids: List[int]) -> List[int]:
@@ -465,14 +481,27 @@ class SentenceBase(Field):
 			ed = -1
 		return ids[st:ed]
 
-class Sentence(SentenceBase):
-	'''A field for sentence.
-	{INIT_DOCSTRING}
-	'''
-	INIT_DOCSTRING = SentenceBase.INIT_DOCSTRING
-	VOCAB_CLASS = "Vocab"
+	# copy some functions from vocab
+	_VOCAB_MORE_DOCSTRING = '''It calls the method with the identical name of the :class:`Vocab` instance, \
+		from ``self.get_vocab()``.'''
+	frequent_vocab_size = copy_property(get_vocab, Vocab, "frequent_vocab_size")
+	all_vocab_size = copy_property(get_vocab, Vocab, "all_vocab_size")
+	frequent_vocab_list = copy_property(get_vocab, Vocab, "frequent_vocab_list")
+	all_vocab_list = copy_property(get_vocab, Vocab, "all_vocab_list")
+	get_special_tokens_mapping = copy_func(get_vocab, Vocab, "get_special_tokens_mapping")
+	get_special_tokens_id = copy_func(get_vocab, Vocab, "get_special_tokens_id")
+	pad_id = copy_property(get_vocab, Vocab, "pad_id")
+	unk_id = copy_property(get_vocab, Vocab, "unk_id")
+	go_id = copy_property(get_vocab, Vocab, "go_id")
+	eos_id = copy_property(get_vocab, Vocab, "eos_id")
 
-	def __init__(self, tokenizer: Union[None, BaseTokenizer, str] = None, \
+class SentenceDefault(Sentence):
+	'''A field for sentence.
+	{Sentence.INIT_DOCSTRING}
+	'''
+	_VOCAB_CLASS = "Vocab"
+
+	def __init__(self, tokenizer: Union[None, Tokenizer, str] = None, \
 			vocab: Optional[Vocab] = None, \
 			vocab_from: Optional[Dict[str, str]] = None, \
 			max_sent_length: Optional[int] = None, \
@@ -482,8 +511,6 @@ class Sentence(SentenceBase):
 				vocab=vocab, vocab_from=vocab_from, max_sent_length=max_sent_length, \
 				convert_to_lower_letter=convert_to_lower_letter)
 
-		if not isinstance(self.vocab, Vocab):
-			raise ValueError("Sentence only accept Vocab for vocab")
 		self.vocab: Vocab
 
 	def add_special_to_ids(self, ids: List[int]) -> List[int]:
@@ -496,9 +523,15 @@ class Sentence(SentenceBase):
 			ids = self._remove_special_in_ids(ids, self.vocab.go_id, self.vocab.eos_id)
 		return ids
 
-	def _get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
-		if not isinstance(self.vocab, Vocab):
-			raise RuntimeError("Subclass must override get_batch if self.vocab is not a Vocab.")
+	_GET_BATCH_DATA_DOCSTRING = '''data (Any): the object returned by :meth:`_SentenceContent.get_data` \
+		TODO: fill the format
+	'''
+	_GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch. \
+		TODO: fill the format
+	'''
+	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
+		if not isinstance(self.vocab, GeneralVocab):
+			raise RuntimeError("Subclass must override get_batch if self.vocab is not a GeneralVocab.")
 		res: Dict[str, Any] = {}
 		data_id, data_str = data["id"], data["str"]
 		batch_size = len(indexes)
@@ -520,14 +553,13 @@ class Sentence(SentenceBase):
 		ids = ids[:idx]
 		return ids
 
-class SentenceGPT2(SentenceBase):
+class SentenceGPT2(Sentence):
 	'''A field for sentence in the format of GPT2.
-	{INIT_DOCSTRING}
+	{Sentence.INIT_DOCSTRING}
 	'''
-	INIT_DOCSTRING = SentenceBase.INIT_DOCSTRING
-	VOCAB_CLASS = "PretrainedVocab"
+	_VOCAB_CLASS = "PretrainedVocab"
 
-	def __init__(self, tokenizer: Union[None, BaseTokenizer] = None, \
+	def __init__(self, tokenizer: Union[None, Tokenizer] = None, \
 			vocab: Optional[PretrainedVocab] = None, \
 			vocab_from: Optional[Dict[str, str]] = None, \
 			max_sent_length: Optional[int] = None, \
@@ -556,7 +588,13 @@ class SentenceGPT2(SentenceBase):
 			ids = self._remove_special_in_ids(ids, self.vocab.eos_id, self.vocab.eos_id)
 		return ids
 
-	def _get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
+	_GET_BATCH_DATA_DOCSTRING = '''data (Any): the object returned by :meth:`_SentenceContent.get_data` \
+		TODO: fill the format
+	'''
+	_GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch.\
+		TODO: fill the format
+	'''
+	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
 		res: Dict[str, Any] = {}
 		data_id, data_str = data["id"], data["str"]
 		batch_size = len(indexes)

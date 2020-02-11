@@ -98,7 +98,7 @@ def hook_wordvec(fn):
 		return fn(*args, **kwargs)
 	return wrapped
 
-class BaseHooksListener:
+class HooksListener:
 	r'''An abstract class implement the basic hook listener'''
 	def add_dataloader(self, obj, dataloader, args):
 		r'''invoked at dataloader.__init__
@@ -139,7 +139,7 @@ class BaseHooksListener:
 		'''
 		pass
 
-class SimpleHooksListener(BaseHooksListener):
+class SimpleHooksListener(HooksListener):
 	r'''An simple recorder'''
 	def __init__(self):
 		self.record = {
