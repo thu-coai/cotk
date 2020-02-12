@@ -186,18 +186,16 @@ def copy_func(target, cls, method_name):
 	assert callable(method)
 	@wraps(method)
 	def new_method(self, *args, **kwargs):
-		return method(target(self), *args, **kwargs)
+		return getattr(target(self), method_name)(*args, **kwargs)
 	new_method.__doc__ = cls.META_DOC_FOR_ATTRIBUTES[method_name] # type: ignore
 	return new_method
 
 def copy_property(target, cls, old_property_name):
-	old_property = getattr(cls, old_property_name)
-	assert isinstance(old_property, property)
 	def new_property_fget(self):
-		return old_property.fget(target(self))
+		return getattr(target(self), old_property_name)
 	def new_property_fset(self, a):
-		return old_property.fset(target(self, a))
+		setattr(target(self), old_property_name, a)
 	def new_property_fdel(self):
-		return old_property.fdel(target(self))
+		delattr(target(self), old_property_name)
 	doc = cls.META_DOC_FOR_ATTRIBUTES[old_property_name]
 	return property(new_property_fget, new_property_fset, new_property_fdel, doc) #type: ignore

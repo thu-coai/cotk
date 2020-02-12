@@ -32,8 +32,8 @@ class Context(metaclass=DocStringInheritor):
 		self._old_parameters = self._set_parameters(parameter_dict, weak=weak)
 
 	@classmethod
-	def _set_parameters(cls, parameter_dict: Dict[str, Any], weak=False):
-		old_parameters = []
+	def _set_parameters(cls, parameter_dict: Dict[str, Any], weak=False) -> Dict[str, Any]:
+		old_parameters: Dict[str, Any] = []
 		for key, value in parameter_dict.items():
 			old_parameters.append(cls.set(key, value, weak=weak))
 		return old_parameters
@@ -135,7 +135,7 @@ class VocabContext(Context):
 	A context class for setting parameters for :class:`.Vocab`.
 	'''
 
-	PARAMETER_LIST = ["min_frequent_vocab_times", "min_rare_vocab_times", "special_tokens", "special_appeared_in_data"]
+	PARAMETER_LIST = ["min_frequent_vocab_times", "min_rare_vocab_times", "special_tokens_mapping", "special_appeared_in_data"]
 	context_dict = {key: None for key in PARAMETER_LIST}
 
 	# pylint: disable=unused-argument

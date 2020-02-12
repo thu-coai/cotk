@@ -6,7 +6,7 @@ from nltk import ngrams
 
 from .metric import MetricBase
 from ..hooks import hooks
-from ..dataloader.tokenizer import Tokenizer, SimpleTokenizer
+from ..dataloader import LanguageProcessing, Tokenizer, SimpleTokenizer
 from .._utils import replace_unk
 
 class DistinctNgramsCorpus(MetricBase):
@@ -25,7 +25,7 @@ class DistinctNgramsCorpus(MetricBase):
 	_version = 1
 
 	@hooks.hook_metric
-	def __init__(self, dataloader: "LanguageProcessingBase", ngram=3, *, \
+	def __init__(self, dataloader: "LanguageProcessing", ngram=3, *, \
 			tokenizer: Union[None, Tokenizer, str] = None, \
 			sample=10000, \
 			seed=1234, \
@@ -81,7 +81,7 @@ class DistinctNgramsCorpus(MetricBase):
 		#fill more typeerror hints
 
 		for gen_sen in gen:
-			hyp = self.dataloader.recover_sentence(gen_sen, remove_special=True, trim=True)
+			hyp = self.dataloader.convert_ids_to_sentence(gen_sen, remove_special=True, trim=True)
 			self.hyps.append(hyp)
 
 	@hooks.hook_metric_close
@@ -113,8 +113,8 @@ class DistinctNgramsCorpus(MetricBase):
 		if self.tokenizer:
 			self._do_tokenize()
 
-		if "unk" in self.dataloader.get_special_tokens():
-			self.hyps = replace_unk(self.hyps, self.dataloader.vocab_list[self.dataloader.unk_id])
+		if "unk" in self.dataloader.get_special_tokens_mapping():
+			self.hyps = replace_unk(self.hyps, unk = self.dataloader.get_special_tokens_mapping().get("unk", None))
 
 		ngram_list = list(chain(*[ngrams(sentence, self.ngram, pad_left=True, pad_right=True) for sentence in self.hyps]))
 		ngram_set = set(ngram_list)

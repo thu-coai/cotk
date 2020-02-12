@@ -16,6 +16,8 @@ class Vocab(LoadClassInterface, metaclass=DocStringInheritor):
 	'''A class for storing vocabulary.
 	TODO: see explanation'''
 	def __init__(self):
+		if self.__class__.__name__ == "Vocab":
+			raise NotImplementedError("This calss is an abstract class, use GeneralVocab instead.")
 		self._setting_hash: Optional[str] = None
 
 	def add_tokens(self, tokens: List[str], vocab_from: str) -> None:
@@ -352,13 +354,13 @@ class GeneralVocab(Vocab):
 
 		exclude_set = set(self.special_tokens_mapping.values())
 		if self.mode != "frequent_specified":
-			assert self.all_vocab_list is None
+			assert self._all_vocab_list is None
 			vocab = sorted(Counter(self.train_tokens).most_common(), \
 						key=lambda pair: (-pair[1], pair[0]))
 			frequent_vocab = [x[0] for x in vocab if x[1] >= self.min_frequent_vocab_times and x[0] not in exclude_set]
 		else:
-			assert self.all_vocab_list is not None
-			frequent_vocab = self.all_vocab_list
+			assert self._all_vocab_list is not None
+			frequent_vocab = self._all_vocab_list
 
 		exclude_set.update(frequent_vocab)
 		vocab = sorted(Counter(chain(self.train_tokens, self.test_tokens)).most_common(), \

@@ -95,20 +95,19 @@ class NgramFwBwPerplexityMetric(MetricBase):
 			else:
 				tokenizer = tokenizer
 			if isinstance(origin_refs[0], List):
-				ref_sents = [self.dataloader.recover_sentence(ids, remove_special=True, trim=True) for ids in origin_refs]
+				ref_sents = [self.dataloader.convert_ids_to_sentence(ids, remove_special=True, trim=True) for ids in origin_refs]
 			else:
 				ref_sents = origin_refs
 			refs = tokenizer.tokenize_sentences(ref_sents)
 
-			hyp_sents = [self.dataloader.recover_sentence(ids, remove_special=True, trim=True) for ids in origin_hyps]
+			hyp_sents = [self.dataloader.convert_ids_to_sentence(ids, remove_special=True, trim=True) for ids in origin_hyps]
 			hyps = tokenizer.tokenize_sentences(hyp_sents)
 		else:
 			refs = [self.dataloader.convert_ids_to_tokens(ids, remove_special=True, trim=True) for ids in origin_refs]
 			hyps = [self.dataloader.convert_ids_to_tokens(ids, remove_special=True, trim=True) for ids in origin_hyps]
 
-		left_pad, right_pad, unk = None, None, None
-		if "unk" in self.dataloader.get_special_tokens():
-			unk = self.dataloader.vocab_list[self.dataloader.unk_id]
+		left_pad, right_pad = None, None
+		unk = self.dataloader.get_special_tokens_mapping().get("unk", None)
 
 		model = KneserNeyInterpolated(self.ngram, \
 					left_pad, right_pad, \

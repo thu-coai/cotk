@@ -23,7 +23,7 @@ class Dataloader(LoadClassInterface, metaclass=DocStringInheritor):
 	'''
 
 class LanguageProcessing(Dataloader):
-	r"""Bases: :class:'.dataloader.Dataloader'
+	"""Bases: :class:`.dataloader.Dataloader`
 
 	Base class for all language processing tasks. This is an abstract class.
 	During the initialization of the dataloader, :class:`Vocab` or :class:`Field` may be created.
@@ -141,7 +141,7 @@ class LanguageProcessing(Dataloader):
 					except StopIteration:
 						break
 
-			sample_nums = [fieldcontent.get_data_number() for _, fieldcontent in fieldcontents_in_one_set]
+			sample_nums = [fieldcontent.get_data_number() for _, fieldcontent in fieldcontents_in_one_set.items()]
 			if not all([sample_num == sample_nums[0] for sample_num in sample_nums]):
 				raise RuntimeError("the file %s corrupted at end of the file")
 
@@ -235,7 +235,7 @@ class LanguageProcessing(Dataloader):
 		fieldcontents: OrderedDictType[str, _FieldContent] = OrderedDict()
 		new_fields: OrderedDictType[str, Field] = OrderedDict()
 
-		for name, field_name in fields:
+		for name, field_name in fields.items():
 			if isinstance(field_name, str):
 				field = Field.load_class(field_name)()
 			elif isinstance(field_name, Field):
@@ -258,7 +258,7 @@ class LanguageProcessing(Dataloader):
 		setting_hash = sha256()
 		for _, fields_in_one_set in self.fields.items():
 			for _, field in fields_in_one_set.items():
-				setting_hash.update(dumps(field._get_setting_hash(self.tokenizers, self.vocabs))) #pylint: disable=protected-access
+				setting_hash.update(dumps(field._get_setting_hash(self.vocabs))) #pylint: disable=protected-access
 		for vocab in self.vocabs:
 			setting_hash.update(dumps(vocab.get_setting_hash()))
 		for tokenizer in self.tokenizers:
@@ -435,6 +435,8 @@ class LanguageProcessing(Dataloader):
 		'''Get a batch of data with specified `indexes`.
 		{_GET_BATCH_MORE_DOC}
 
+		See :meth:`get_next_batch`, :meth:`get_batches`, :meth:`get_all_batch` for other way to get data.
+
 		Arguments:
 			{SET_NAME_DESCRIPTION}
 			indexes (list): a list of specified indexes of batched data.
@@ -443,8 +445,8 @@ class LanguageProcessing(Dataloader):
 		if set_name not in self.fields:
 			raise ValueError("No set named %s." % set_name)
 		res: Dict[str, Any] = {}
-		for field_name, field_obj in self.fields[set_name]:
-			res.update(field_obj._get_batch(field_name, self.data[set_name][field_name], indexes)) #pylint: disable=protected-access
+		for field_name, field_obj in self.fields[set_name].items():
+			res.update(field_obj.get_batch(field_name, self.data[set_name][field_name], indexes)) #pylint: disable=protected-access
 		return res
 
 	def get_next_batch(self, set_name, ignore_left_samples=False) -> Optional[Dict[str, Any]]:

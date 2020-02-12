@@ -250,6 +250,9 @@ class Sentence(Field):
 			max_sent_length: Optional[int] = None, \
 			convert_to_lower_letter: Optional[bool] = None):
 
+		if self.__class__.__name__ == "Sentence":
+			raise NotImplementedError("Sentence is an abstract class, use SentenceDefault instead.")
+
 		with FieldContext.set_parameters(\
 				tokenizer=tokenizer,\
 				vocab=vocab,\

@@ -1,6 +1,7 @@
 """Dataloader for language generation"""
 import numpy as np
 from typing import List, Any, Tuple, Optional, Dict
+from collections import OrderedDict
 
 from ..hooks import hooks
 from .dataloader import LanguageProcessing
@@ -12,7 +13,7 @@ from .vocab import GeneralVocab, PretrainedVocab
 
 # pylint: disable=W0223
 class LanguageGeneration(LanguageProcessing):
-	r"""Base class for language modelling datasets. This is an abstract class.
+	"""Bases: :class:`.dataloader.LanguageProcessing`
 
 	This class is supported for language modeling tasks or language generation tasks
 	without any inputs.
@@ -59,7 +60,7 @@ class LanguageGeneration(LanguageProcessing):
 					convert_to_lower_letter=convert_to_lower_letter):
 				with VocabContext.set_parameters(min_frequent_vocab_times=min_frequent_vocab_times, \
 						min_rare_vocab_times=min_rare_vocab_times):
-					super().__init__(file_id, [("sent", "sentence")])
+					super().__init__(file_id, OrderedDict([("sent", "SentenceDefault")]))
 			self.set_default_field("train", "sent")
 
 		elif pretrained == "gpt2":
@@ -70,7 +71,7 @@ class LanguageGeneration(LanguageProcessing):
 					vocab=vocab, \
 					max_sent_length=max_sent_length, \
 					convert_to_lower_letter=convert_to_lower_letter):
-				super().__init__(file_id, [("sent", "sentence_gpt2")])
+				super().__init__(file_id, [("sent", "SentenceGPT2")])
 			self.set_default_field("train", "sent")
 		else:
 			raise ValueError("No pretrained name %s" % pretrained)
@@ -169,11 +170,12 @@ class LanguageGeneration(LanguageProcessing):
 		return metric
 
 class MSCOCO(LanguageGeneration):
-	'''A dataloader for preprocessed MSCOCO dataset.
+	'''Bases: :class:`.dataloader.LanguageGeneration`
+
+	A dataloader for preprocessed MSCOCO dataset.
+	Refer to :class:`.LanguageGeneration` and :class:`.LanguageProcessing` for attributes and methods.
 
 	Arguments:{ARGUMENTS}
-
-	Refer to :class:`.LanguageGeneration` for attributes and methods.
 
 	References:
 		[1] http://images.cocodataset.org/annotations/annotations_trainval2017.zip
@@ -194,9 +196,9 @@ class MSCOCO(LanguageGeneration):
 	def __init__(self, file_id, *, tokenizer="nltk", \
 			max_sent_length=50, \
 			convert_to_lower_letter=False, \
-			min_valid_vocab_times=10, \
-			min_invalid_vocab_times=0, \
+			min_frequent_vocab_times=10, \
+			min_rare_vocab_times=0, \
 			pretrained=None):
 		super().__init__(file_id, tokenizer=tokenizer, max_sent_length=max_sent_length,\
-			convert_to_lower_letter=convert_to_lower_letter, min_valid_vocab_times=min_valid_vocab_times,\
-			min_invalid_vocab_times=min_invalid_vocab_times, pretrained=pretrained)
+			convert_to_lower_letter=convert_to_lower_letter, min_frequent_vocab_times=min_frequent_vocab_times,\
+			min_rare_vocab_times=min_rare_vocab_times, pretrained=pretrained)

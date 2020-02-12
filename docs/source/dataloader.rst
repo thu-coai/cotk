@@ -353,44 +353,82 @@ LanguageProcessing
 ------------------------------------
 .. autoclass:: LanguageProcessing
 
-    .. automethod:: simple_create
+.. automethod:: LanguageProcessing.simple_create
 
-    .. automethod:: get_default_tokenizer
-    .. automethod:: get_default_vocab
-    .. automethod:: get_default_field
-    .. automethod:: set_default_field
-    .. automethod:: get_field
+Tokenizer, Vocabulary, and Field
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. automethod:: LanguageProcessing.get_default_tokenizer
+.. automethod:: LanguageProcessing.get_default_vocab
+.. automethod:: LanguageProcessing.get_default_field
+.. automethod:: LanguageProcessing.set_default_field
+.. automethod:: LanguageProcessing.get_field
 
-    .. automethod:: restart
+Batched Data
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    .. automethod:: LanguageProcessing.get_batch
+    .. automethod:: LanguageProcessing.restart
+    .. automethod:: LanguageProcessing.get_next_batch
+    .. automethod:: LanguageProcessing.get_batches
+    .. automethod:: LanguageProcessing.get_all_batch
+
+Sentences and Ids
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. automethod:: LanguageProcessing.tokenize
+.. automethod:: LanguageProcessing.tokenize_sentences
+.. automethod:: LanguageProcessing.convert_tokens_to_ids
+.. automethod:: LanguageProcessing.convert_ids_to_tokens
+.. automethod:: LanguageProcessing.convert_ids_to_sentence
+.. automethod:: LanguageProcessing.convert_sentence_to_ids
+.. automethod:: LanguageProcessing.add_special_to_ids
+.. automethod:: LanguageProcessing.remove_special_in_ids
+.. automethod:: LanguageProcessing.process_sentences
+.. automethod:: LanguageProcessing.trim_in_ids
+
+Vocabulary List
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoattribute:: LanguageProcessing.frequent_vocab_size
+.. autoattribute:: LanguageProcessing.all_vocab_size
+.. autoattribute:: LanguageProcessing.frequent_vocab_list
+.. autoattribute:: LanguageProcessing.all_vocab_list
+.. automethod:: LanguageProcessing.get_special_tokens_mapping
+.. automethod:: LanguageProcessing.get_special_tokens_id
+.. autoattribute:: LanguageProcessing.pad_id
+.. autoattribute:: LanguageProcessing.unk_id
+.. autoattribute:: LanguageProcessing.go_id
+.. autoattribute:: LanguageProcessing.eos_id
+
+Hash
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. automethod:: LanguageProcessing.get_general_hash
+.. automethod:: LanguageProcessing.get_raw_data_hash
+.. automethod:: LanguageProcessing.get_data_hash
+.. automethod:: LanguageProcessing.get_vocab_hash
+.. automethod:: LanguageProcessing.get_setting_hash
+
+LanguageGeneration
+---------------------------------------
+.. autoclass:: LanguageGeneration
+
     .. automethod:: get_batch
-    .. automethod:: get_next_batch
-    .. automethod:: get_batches
-    .. automethod:: get_all_batch
+    .. automethod:: get_teacher_forcing_metric
+    .. automethod:: get_inference_metric
 
-    .. automethod:: tokenize
-    .. automethod:: tokenize_sentences
-    .. automethod:: convert_tokens_to_ids
-    .. automethod:: convert_ids_to_tokens
-    .. automethod:: convert_ids_to_sentence
-    .. automethod:: convert_sentence_to_ids
-    .. automethod:: add_special_to_ids
-    .. automethod:: remove_special_in_ids
-    .. automethod:: process_sentences
-    .. automethod:: trim_in_ids
+MSCOCO
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autoclass:: MSCOCO
 
-    .. autoattribute:: frequent_vocab_size
-    .. autoattribute:: all_vocab_size
-    .. autoattribute:: frequent_vocab_list
-    .. autoattribute:: all_vocab_list
-    .. automethod:: get_special_tokens_mapping
-    .. automethod:: get_special_tokens_id
-    .. autoattribute:: pad_id
-    .. autoattribute:: unk_id
-    .. autoattribute:: go_id
-    .. autoattribute:: eos_id
+SingleTurnDialog
+---------------------------------------
+.. autoclass:: SingleTurnDialog
 
-    .. automethod:: get_general_hash
-    .. automethod:: get_raw_data_hash
-    .. automethod:: get_data_hash
-    .. automethod:: get_vocab_hash
-    .. automethod:: get_setting_hash
+    .. automethod:: get_batch
+    .. automethod:: get_teacher_forcing_metric
+    .. automethod:: get_inference_metric
+
+OpenSubtitles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autoclass:: OpenSubtitles

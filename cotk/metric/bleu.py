@@ -67,7 +67,7 @@ class BleuCorpusMetric(MetricBase):
 	_version = 1
 
 	@hooks.hook_metric
-	def __init__(self, dataloader: "LanguageProcessingBase", ngram=4, *, tokenizer: Union[None, Tokenizer, str] = None, \
+	def __init__(self, dataloader: "LanguageProcessing", ngram=4, *, tokenizer: Union[None, Tokenizer, str] = None, \
 			reference_num=1, ignore_smoothing_error=False,\
 			reference_allvocabs_key="ref_allvocabs", gen_key="gen", \
 			reference_str_key="ref_str"):
@@ -145,7 +145,7 @@ class BleuCorpusMetric(MetricBase):
 
 		relevant_data = []
 		for i, gen_sen in enumerate(gen):
-			hyp = self.dataloader.recover_sentence(gen_sen, remove_special=True, trim=True)
+			hyp = self.dataloader.convert_ids_to_sentence(gen_sen, remove_special=True, trim=True)
 			if resp_str:
 				if self.reference_num == 1:
 					refs = [resp_str[i]]
@@ -155,11 +155,11 @@ class BleuCorpusMetric(MetricBase):
 					refs = resp_str[i]
 			else:
 				if self.reference_num == 1:
-					refs = [self.dataloader.recover_sentence(resp[i], remove_special=None, trim=True)]
+					refs = [self.dataloader.convert_ids_to_sentence(resp[i], remove_special=None, trim=True)]
 				else:
 					if self.reference_num is not None and len(resp[i]) != self.reference_num:
 						raise RuntimeError("Require %d references but get %d" % (self.reference_num, len(resp[i])))
-					refs = [self.dataloader.recover_sentence(resp_single_sen, remove_special=True, trim=True) for resp_single_sen in resp[i]]
+					refs = [self.dataloader.convert_ids_to_sentence(resp_single_sen, remove_special=True, trim=True) for resp_single_sen in resp[i]]
 			self.hyps.append(hyp)
 			self.refs.append(refs)
 			relevant_data.append(refs)
@@ -182,8 +182,8 @@ class BleuCorpusMetric(MetricBase):
 		if self.tokenizer:
 			self._do_tokenize()
 
-		if "unk" in self.dataloader.get_special_tokens():
-			self.hyps = replace_unk(self.hyps, self.dataloader.vocab_list[self.dataloader.unk_id])
+		if "unk" in self.dataloader.get_special_tokens_mapping():
+			self.hyps = replace_unk(self.hyps, self.dataloader.get_special_tokens_mapping()["unk"])
 		try:
 			weights = np.ones(self.ngram) / self.ngram
 			result.update({"bleu": \
@@ -244,7 +244,7 @@ class SelfBleuCorpusMetric(MetricBase):
 	_version = 1
 
 	@hooks.hook_metric
-	def __init__(self, dataloader: "LanguageProcessingBase", ngram=4, *, \
+	def __init__(self, dataloader: "LanguageProcessing", ngram=4, *, \
 		tokenizer: Union[None, Tokenizer, str] = None, \
 		gen_key="gen", \
 		sample=1000, \
@@ -322,13 +322,13 @@ class SelfBleuCorpusMetric(MetricBase):
 				tokenizer = SimpleTokenizer(self.tokenizer)
 			else:
 				tokenizer = tokenizer
-			ref = [self.dataloader.recover_sentence(ids, remove_special=True, trim=True) for ids in ref]
+			ref = [self.dataloader.convert_ids_to_sentence(ids, remove_special=True, trim=True) for ids in ref]
 			ref = tokenizer.tokenize_sentences(ref)
 		else:
 			ref = [self.dataloader.convert_ids_to_tokens(ids, remove_special=True, trim=True) for ids in ref]
 
-		if "unk" in self.dataloader.get_special_tokens():
-			_ref = replace_unk(ref, self.dataloader.vocab_list[self.dataloader.unk_id])
+		if "unk" in self.dataloader.get_special_tokens_mapping():
+			_ref = replace_unk(ref, self.dataloader.get_special_tokens_mapping()["unk"])
 		else:
 			_ref = ref
 
@@ -483,12 +483,12 @@ class FwBwBleuCorpusMetric(MetricBase):
 			else:
 				tokenizer = tokenizer
 			if isinstance(sample_refs[0], List):
-				ref_sents = [self.dataloader.recover_sentence(ids, remove_special=True, trim=True) for ids in sample_refs]
+				ref_sents = [self.dataloader.convert_ids_to_sentence(ids, remove_special=True, trim=True) for ids in sample_refs]
 			else:
 				ref_sents = sample_refs
 			refs = tokenizer.tokenize_sentences(ref_sents)
 
-			hyp_sents = [self.dataloader.recover_sentence(ids, remove_special=True, trim=True) for ids in sample_hyps]
+			hyp_sents = [self.dataloader.convert_ids_to_sentence(ids, remove_special=True, trim=True) for ids in sample_hyps]
 			hyps = tokenizer.tokenize_sentences(hyp_sents)
 		else:
 			refs = [self.dataloader.convert_ids_to_tokens(ids, remove_special=True, trim=True) for ids in sample_refs]
@@ -500,8 +500,8 @@ class FwBwBleuCorpusMetric(MetricBase):
 		random.shuffle(refs)
 		random.setstate(rng_state)
 
-		if "unk" in self.dataloader.get_special_tokens():
-			refs = replace_unk(refs, self.dataloader.vocab_list[self.dataloader.unk_id])
+		if "unk" in self.dataloader.get_special_tokens_mapping():
+			refs = replace_unk(refs, self.dataloader.get_special_tokens_mapping()["unk"])
 
 
 		bleu_irl_fw, bleu_irl_bw = [], []
@@ -668,7 +668,7 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 			raise RuntimeError("The metric has not been forwarded data correctly.")
 		self.hyps = replace_unk(self.hyps, self.dataloader.unk_id)
 
-		self._hash_relevant_data(self.refs)
+		self._hash_unordered_list(self.refs)
 
 		try:
 			result.update({"bleu": \
