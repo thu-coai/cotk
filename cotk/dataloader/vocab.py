@@ -343,7 +343,7 @@ class GeneralVocab(Vocab):
 			return
 			#raise RuntimeError("Vocabulary has been built, cannot build again.")
 		if self.train_tokens is None or self.test_tokens is None:
-			raise RuntimeError("Train tokens or test toktens should not be None")
+			raise RuntimeError("Train tokens or test tokens should not be None")
 
 		if not self.special_appeared_in_data:
 			all_token_set = set(chain(self.train_tokens, self.test_tokens))
