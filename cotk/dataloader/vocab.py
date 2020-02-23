@@ -349,8 +349,8 @@ class GeneralVocab(Vocab):
 			all_token_set = set(chain(self.train_tokens, self.test_tokens))
 			for special_token in self.special_tokens_mapping.values():
 				if special_token in all_token_set:
-					raise RuntimeError("Dataset file contains special tokens %d. If it is desired, try to set \
-						'special_appeared_in_data' to True in Vocab or Dataloader.")
+					raise RuntimeError("Dataset file contains special tokens %s. If it is desired, try to set \
+						'special_appeared_in_data' to True in Vocab or Dataloader." % special_token)
 
 		exclude_set = set(self.special_tokens_mapping.values())
 		if self.mode != "frequent_specified":
