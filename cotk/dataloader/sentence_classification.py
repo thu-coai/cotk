@@ -1,15 +1,10 @@
 """Dataloader for language generation"""
-from collections import Counter
-from itertools import chain
-import os
-import json
+from collections import OrderedDict
 
-import numpy as np
-
-# from .._utils.unordered_hash import UnorderedSha256
-from .._utils.file_utils import get_resource_file_path
-from .._utils import hooks
+from ..hooks import hooks
 from .dataloader import LanguageProcessing
+from .context import FieldContext
+from .vocab import GeneralVocab
 from ..metric import MetricChain, AccuracyMetric
 
 
@@ -25,13 +20,15 @@ class SentenceClassification(LanguageProcessing):
 	_version = 1
 
 	ARGUMENTS = LanguageProcessing.ARGUMENTS
-	ATTRIBUTES = LanguageProcessing.ATTRIBUTES
+	# TODO: doc for attributes
+	# ATTRIBUTES = LanguageProcessing.ATTRIBUTES
+	ATTRIBUTES = ''
 
-	def get_batch(self, key, indexes):
+	def get_batch(self, set_name, indexes):
 		'''Get a batch of specified `indexes`.
 
 		Arguments:
-			key (str): must be contained in `key_name`
+			set_name (str): must be contained in `key_name`
 			indexes (list): a list of specified indexes
 
 		Returns:
@@ -68,23 +65,7 @@ class SentenceClassification(LanguageProcessing):
 					]),
 			}
 		'''
-		if key not in self.key_name:
-			raise ValueError("No set named %s." % key)
-		res = {}
-		batch_size = len(indexes)
-		res["sent_length"] = np.array( \
-			list(map(lambda i: len(self.data[key]['sent'][i]), indexes)), dtype=int)
-		res_sent = res["sent"] = np.zeros( \
-			(batch_size, np.max(res["sent_length"])), dtype=int)
-		res["label"] = np.zeros(batch_size, dtype=int)
-		for i, j in enumerate(indexes):
-			sentence = self.data[key]['sent'][j]
-			res["sent"][i, :len(sentence)] = sentence
-			res["label"][i] = self.data[key]['label'][j]
-
-		res["sent_allvocabs"] = res_sent.copy()
-		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
-		return res
+		return super().get_batch(set_name, indexes)
 
 	def get_metric(self, prediction_key="prediction"):
 		'''Get metrics for accuracy. In other words, this function
@@ -119,7 +100,7 @@ class SST(SentenceClassification):
 					Default: 10.
 			max_sent_length (int): All sentences longer than `max_sent_length` will be shortened
 					to first `max_sent_length` tokens. Default: 50.
-			invalid_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
+			min_rare_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
 					not less than `invalid_vocab_times` in the **whole dataset** (except valid words) will be
 					marked as invalid words. Otherwise, they are unknown words, both in training or
 					testing stages. Default: 0 (No unknown words).
@@ -134,26 +115,13 @@ class SST(SentenceClassification):
 	'''
 
 	@hooks.hook_dataloader
-	def __init__(self, file_id, min_vocab_times=10, \
-				 max_sent_length=50, invalid_vocab_times=0, tokenizer='space'):
-		self._file_id = file_id
-		self._file_path = get_resource_file_path(file_id)
-		self._min_vocab_times = min_vocab_times
-		self._max_sent_length = max_sent_length
-		self._invalid_vocab_times = invalid_vocab_times
-		super(SST, self).__init__(remains_capital=True, tokenizer=tokenizer)
-
-	def _load_data(self):
-		r'''Loading dataset, invoked by `LanguageProcessingBase.__init__`
-		'''
-		vocab_list, valid_vocab_len, data, data_size = \
-			super()._general_load_data(self._file_path,
-									[['sent', 'Sentence']],
-									self._min_vocab_times,
-									self._max_sent_length,
-									None,
-									self._invalid_vocab_times)
-		for key in self.key_name:
-			with open(os.path.join(self._file_path, key + '_labels.json'), 'r', encoding='utf-8') as fp:
-				data[key]['label'] = json.load(fp)
-		return vocab_list, valid_vocab_len, data, data_size
+	def __init__(self, file_id, min_frequent_vocab_times=10, \
+				 max_sent_length=50, min_rare_vocab_times=0, tokenizer='space'):
+		fields = OrderedDict([['sent', 'SentenceDefault'], ['label', 'DenseLabel']])
+		with FieldContext.set_parameters(
+			tokenizer=tokenizer,
+			vocab=GeneralVocab(min_frequent_vocab_times, min_rare_vocab_times),
+			max_sent_length=max_sent_length,
+			convert_to_lower_letter=False):
+			super().__init__(file_id, fields)
+		self.set_default_field('train', 'sent')

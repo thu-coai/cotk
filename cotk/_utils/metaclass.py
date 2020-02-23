@@ -85,19 +85,21 @@ class DocStringInheritor(type):
 					clsdict['__doc__'] = mro_cls.META_DOC
 					break
 		# second, subtitute CONSTANT with _ prefix
-		while True:
-			doc = re.sub(r'\{\b((\w*\.)?[A-Z][A-Z_]*?)\}', replace_for_clsdict, clsdict['__doc__'])
-			if doc == clsdict['__doc__']:
-				break
-			clsdict['__doc__'] = doc
+		if clsdict.get('__doc__'):
+			while True:
+				doc = re.sub(r'\{\b((\w*\.)?[A-Z][A-Z_]*?)\}', replace_for_clsdict, clsdict['__doc__'])
+				if doc == clsdict['__doc__']:
+					break
+				clsdict['__doc__'] = doc
 		# save docstring now as META_DOC, before the final subtitution
-		clsdict['META_DOC'] = clsdict['__doc__']
+		clsdict['META_DOC'] = clsdict.get('__doc__')
 		# final, do substitution for CONSTANT
-		while True:
-			doc = re.sub(r'\{\b((\w*\.)?[A-Z_]+?)\}', replace_for_clsdict, clsdict['__doc__'])
-			if doc == clsdict['__doc__']:
-				break
-			clsdict['__doc__'] = doc
+		if clsdict.get('__doc__'):
+			while True:
+				doc = re.sub(r'\{\b((\w*\.)?[A-Z_]+?)\}', replace_for_clsdict, clsdict['__doc__'])
+				if doc == clsdict['__doc__']:
+					break
+				clsdict['__doc__'] = doc
 
 		meta_doc = clsdict['META_DOC_FOR_ATTRIBUTES'] = {}
 

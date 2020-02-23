@@ -6,12 +6,17 @@ import hashlib
 
 import numpy as np
 
-from .._utils import trim_before_target
+from .._utils import trim_before_target, chain_sessions, restore_sessions
 from .._utils.metaclass import DocStringInheritor, LoadClassInterface, copy_func, copy_property
 from .._utils.unordered_hash import UnorderedSha256, dumps
 from .tokenizer import SimpleTokenizer, Tokenizer, PretrainedTokenizer
 from .vocab import Vocab, GeneralVocab, PretrainedVocab, SimpleVocab
 from .context import FieldContext
+
+RawSentenceType = str
+TokenizedSentenceType = List[str]
+RawSessionType = List[RawSentenceType]
+TokenizedSessionType = List[TokenizedSentenceType]
 
 class Field(LoadClassInterface, metaclass=DocStringInheritor):
 	'''A base class of data field, which specify the format of the dataset.
@@ -102,11 +107,13 @@ class _FieldContent(metaclass=DocStringInheritor):
 		self._raw_data_hash: str
 		self._data_hash: str
 
+	_GET_NEXT_ARG = """
+			dataset (Iterator[str]): An iterator of the data file.
+	"""
 	def _get_next(self, dataset: Iterator[str]) -> Tuple[Any, int]:
 		'''Read the next element from ``dataset``.
 
-		Arguments:
-			dataset (Iterator[str]): An iterator of the data file.
+		Arguments:{_GET_NEXT_ARG}
 
 		Returns:
 			Tuple[Any, int]: The element, and the number of lines read.
@@ -126,9 +133,8 @@ class _FieldContent(metaclass=DocStringInheritor):
 		if not isinstance(self._original_data, list):
 			raise RuntimeError("read_next must be called before get_data")
 		sent, lines = self._get_next(dataset)
-		if not sent:
-			return 0
-		self._original_data.append(sent)
+		if lines != 0:
+			self._original_data.append(sent)
 		return lines
 
 	def process_before_vocab(self):
@@ -186,16 +192,16 @@ class _SentenceContent(_FieldContent):
 	def _get_next(self, dataset: Iterator[str]) -> Tuple[str, int]:
 		"""read one line. Note that it may raise StopIteration.
 
-		Args: TODO: fill
+		Args:{_FieldContent._GET_NEXT_ARG}
 
 		Examples:
 			>>> dataset = iter(["I love NLP.\\n", "Yes I do\\n", "I love deep learning\\n"])
-			>>> field = Sentence()
-			>>> field._get_next(dataset)
+			>>> field_content = _SentenceContent("Sentence", "test")
+			>>> field_content._get_next(dataset)
 			"I love NLP", 1
-			>>> field._get_next(dataset)
+			>>> field_content._get_next(dataset)
 			"Yes I do", 1
-			>>> field._get_next(dataset)
+			>>> field_content._get_next(dataset)
 			"I love deep learning", 1
 		"""
 		return next(dataset).rstrip(), 1
@@ -330,8 +336,9 @@ class Sentence(Field):
 		else:
 			return tokenized_sentence
 
+	# TODO: arg
 	def convert_tokens_to_ids(self, tokens: List[str], add_special=False, only_frequent_word=False) -> List[int]:
-		'''TODO: fill
+		'''Convert list of tokens to list of ids.
 
 		Arguments:
 			tokens (List[str]): 
@@ -347,7 +354,7 @@ class Sentence(Field):
 		return ids
 
 	def convert_ids_to_tokens(self, ids: List[int], remove_special=True, trim=True) -> List[str]:
-		'''TODO: fill
+		'''Convert list of ids to list of tokens.
 
 		Arguments:
 			ids (List[int]): 
@@ -360,8 +367,9 @@ class Sentence(Field):
 		return self.vocab.convert_ids_to_tokens(\
 				self.remove_special_in_ids(ids, remove_special=remove_special, trim=trim))
 
+	# TODO: arg
 	def convert_ids_to_sentence(self, ids: List[int], remove_special=True, trim=True) -> str:
-		'''TODO: fill
+		'''Convert list of tokens to a sentence.
 
 		Arguments:
 			ids (List[int]): 
@@ -374,8 +382,9 @@ class Sentence(Field):
 		tokens = self.convert_ids_to_tokens(ids, remove_special=remove_special, trim=trim)
 		return self.tokenizer.convert_tokens_to_sentence(tokens)
 
+	# TODO: arg
 	def convert_sentence_to_ids(self, sentence: str, add_special=False, only_frequent_word=False) -> List[int]:
-		'''TODO: fill
+		'''Convert a sentence to a list of ids.
 
 		Arguments:
 			sentence (str): 
@@ -399,12 +408,13 @@ class Sentence(Field):
 		'''
 		raise NotImplementedError
 
+	# TODO: arg
 	def remove_special_in_ids(self, ids: List[int], remove_special=True, trim=True) -> List[int]:
-		'''TODO:
+		'''Remove special token id in input ids.
 
 		Arguments:
-			ids (List[int]): 
-			remove_special (bool, optional): . Defaults: True.
+			ids (List[int]): Input ids.
+			remove_special (bool, optional): If True, special tokens in `ids`, such as `go_id`, are removed. Defaults: True.
 			trim (bool, optional): . Defaults: True.
 
 		Returns:
@@ -412,17 +422,27 @@ class Sentence(Field):
 		'''		
 		raise NotImplementedError
 
-	def process_sentences(self, sentences, add_special=True, cut=True, only_frequent_word=False):
-		'''TODO:
+	def process_sentences(self, sentences: Union[List[str], List[List[str]]],
+						  add_special: bool = True,
+						  cut: bool = True,
+						  only_frequent_word=False) -> List[List[int]]:
+		'''Process input sentences.
+		If sentences haven't been tokenized, tokenize them by invoking :meth:`Sentence.tokenize_sentences`
+		Then, convert the list of tokens to a list of ids.
+		If `self.max_sent_length` is not None and `cut` is True,
+		sentences, whose  length is more than `self.max_sent_length`, are cut.
+
 
 		Arguments:
-			sentences ([type]): 
-			add_special (bool, optional): . Defaults: True.
-			cut (bool, optional): . Defaults: True.
+			sentences (Union[List[str], List[List[str]]]): `sentences` must be a list of sentences or a list of lists of tokens.
+			add_special (bool, optional): If True, special ids, such as go_id and eos_id, are added. Defaults: True.
+			cut (bool, optional): If `cut` is True and `self.max_sent_length` is not None,
+				sentences, whose  length is more than `self.max_sent_length`, are cut.
+				Defaults: True.
 			only_frequent_word (bool, optional): . Defaults: False.
 
 		Returns:
-			[type]: 
+			List[List[int]]: Corresponding ids of input sentences
 		'''
 		# sentences: : Union[List[str], List[List[str]]]
 		if not sentences:
@@ -442,9 +462,10 @@ class Sentence(Field):
 			sentences = [sentence[:self.max_sent_length] for sentence in sentences]
 			after_lengths = [len(sentence) for sentence in sentences]
 			if len(sentences) > 1:
-				logging.info("max length before cut: %d, cut percent: %.2f%%", \
-						max(before_lengths),
-						(sum(before_lengths) - sum(after_lengths)) / sum(before_lengths) * 100)
+				logging.info("max length before cut: %d, cut percent: %.2f%%" % (
+					max(before_lengths),
+					(sum(before_lengths) - sum(after_lengths)) / sum(before_lengths) * 100)
+							 )
 		# sentence cut
 		return sentences
 
@@ -642,11 +663,11 @@ class _SessionContent(_FieldContent):
 
 		Examples:
 			>>> dataset = iter(["a\n", "b\n", "\n", "c\n", "d\e", "e\n", '\n'])
-			>>> field = Session()
-			>>> field.get_next(dataset)
-			['a', 'b']
-			>>> field.get_next(dataset)
-			['c', 'd', 'e']
+			>>> field_content = _SessionContent(Session(), "test")
+			>>> field_content._get_next(dataset)
+			(['a', 'b'], 2)
+			>>> field_content._get_next(dataset)
+			(['c', 'd', 'e'], 3)
 		"""
 		session: List[str] = []
 		lineno = 0
@@ -669,9 +690,7 @@ class _SessionContent(_FieldContent):
 			raw_data_hash.update_data(dumps(data))
 		self._raw_data_hash = raw_data_hash.hexdigest()
 
-		#chained_sessions, session_lengths = self._chain_session(self._original_data)
-		self._tmp_tokenized_data = tokenized_sessions = self.field.tokenize_sessions(chained_sessions)
-		#self._tmp_tokenized_data = self._restore_session(tokenized_sents, session_lengths)
+		self._tmp_tokenized_data = tokenized_sessions = self.field.tokenize_sessions(self._original_data)
 
 		data_hash = UnorderedSha256()
 		for tokenized_data in self._tmp_tokenized_data:
@@ -680,25 +699,185 @@ class _SessionContent(_FieldContent):
 
 		self.field.get_vocab().add_tokens(list(chain(*chain(*tokenized_sessions))), self.vocab_from)
 
-	def get_data(self) -> List[List[List[int]]]:
+	def get_data(self) -> Dict[str, list]:
 		id_data = self.field.process_sessions(self._tmp_tokenized_data)
-		return id_data
+		return {"id": id_data, "str": self._original_data}
 
-class Session(Field):
+class Session(Sentence):
 
-	def __init__(self):
-		pass
+	def __init__(self, tokenizer: Union[None, Tokenizer, str] = None,
+				 vocab: Optional[Vocab] = None,
+				 vocab_from: Optional[Dict[str, str]] = None,
+				 max_sent_length: Optional[int] = None,
+				 max_turn_length: Optional[int] = None,
+				 convert_to_lower_letter: Optional[bool] = None):
+		if type(self) == Session:
+			raise NotImplementedError(
+				"%s is an abstract class, use %s instead." % (Session.__name__, SessionDefault.__name__))
+		super().__init__(tokenizer, vocab, vocab_from, max_sent_length, convert_to_lower_letter)
+		with FieldContext.set_parameters(max_turn_length=max_turn_length):
+			max_turn_length = FieldContext.get('max_turn_length')
+		if max_turn_length is not None:
+			msg = "max_turn_length must be None or an positive integer"
+			if not isinstance(max_turn_length, int):
+				raise TypeError(msg)
+			elif max_turn_length <= 0:
+				raise ValueError(msg)
+		self.max_turn_length = max_turn_length
+
+	def tokenize_sessions(self, sessions: List[RawSessionType]) -> List[TokenizedSessionType]:
+		return [self.tokenize_sentences(session) for session in sessions]
+
+	def process_sessions(self, sessions: List[TokenizedSessionType], add_special: bool = True, cut: bool = True,
+						 only_frequent_word: bool = False):
+		# Cut sessions.
+		# If a session's turn length > `self.max_turn_length`, retain the first `self.max_turn_length` sentences and discard the rest.
+		if cut:
+			turn_length_before_cut = list(map(len, sessions))
+			max_turn_length_before_cut = max(turn_length_before_cut)
+			sessions = [session[:self.max_turn_length] for session in sessions]
+			turn_length_after_cut = list(map(len, sessions))
+			if len(sessions) > 1:
+				logging.info("max turn length before cut: %d, cut percent: %.2f%%" % (
+					max_turn_length_before_cut,
+					100 * (1 - sum(turn_length_after_cut) / sum(turn_length_before_cut)))
+							 )
+
+		sentences: List[TokenizedSentenceType]
+		session_length: List[int]
+		sentences, session_lengths = chain_sessions(sessions)
+		processed_sessions = self.process_sentences(sentences, add_special, cut, only_frequent_word)
+		processed_sessions = restore_sessions(processed_sessions, session_lengths)
+		return processed_sessions
+
+	def _create(self, set_name) -> _SessionContent:
+		try:
+			return _SessionContent(self, self.vocab_from[set_name])
+		except KeyError:
+			raise KeyError("Unknown set_name %s, do not specify in the vocab_from" % set_name) from None
+
+	def convert_multi_turn_tokens_to_ids(self, session: List[List[str]], add_special=False, only_frequent_word=False) -> \
+	List[List[int]]:
+		return [self.convert_tokens_to_ids(sent, add_special, only_frequent_word) for sent in session]
+
+	def convert_multi_turn_ids_to_tokens(self, session_ids, remove_special=True, trim=True):
+		return [self.convert_ids_to_tokens(sent_ids, remove_special, trim) for sent_ids in session_ids]
+
+	def multi_turn_trim_in_ids(self, session_ids: List[List[int]]) -> List[List[int]]:
+		return [self.trim_in_ids(sent_ids) for sent_ids in session_ids]
+
+
+class SessionDefault(Session):
+	add_special_to_ids = SentenceDefault.add_special_to_ids
+	remove_special_to_ids = SentenceDefault.remove_special_in_ids
+	trim_in_ids = SentenceDefault.trim_in_ids
+
+	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
+		if not isinstance(self.vocab, GeneralVocab):
+			raise RuntimeError("Subclass must override get_batch if self.vocab is not a GeneralVocab.")
+		res = {}
+		data_id, data_str = data['id'], data['str']
+		batch_size = len(indexes)
+		turn_lengths = res[name + "_turn_length"] = np.array([len(data_id[i]) for i in indexes], dtype=int)
+		res[name + "_sent_length"] = [[len(sent) for sent in data_id[i]] for i in indexes]
+		max_sent_length = max(map(max, res[name + "_sent_length"]))
+		res_session = res[name] = np.zeros((batch_size, turn_lengths.max(), max_sent_length), dtype=int)
+		for i, j in enumerate(indexes):
+			session = data_id[j]
+			session = [list(sent) + [0] * (max_sent_length-len(sent)) for sent in session]
+			res_session[i, :len(session)] = np.array(session, dtype=int)
+		res[name + "_allvocabs"] = res_session.copy()
+		res_session[res_session >= self.vocab.frequent_vocab_size] = self.vocab.unk_id
+		res[name + "_str"] = [data_str[i] for i in indexes]
+		return res
+
 
 #TODO: this field read integers, and this is just the label
 class DenseLabel(Field):
+	def _create(self, set_name: str) -> "_FieldContent":
+		return _DenseLabelContent(self)
 
-	def __init__(self):
-		pass
+	def _get_setting_hash(self, vocabs) -> str:
+		return hashlib.sha256(dumps([self.__class__.__name__])).hexdigest()
+
+	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
+		ids = [data['label'][i] for i in indexes]
+		ids = np.array(ids, dtype=int)
+		return {name: ids}
+
+
+class _DenseLabelContent(_FieldContent):
+	def __init__(self, field: DenseLabel):
+		self.field = field
+		super().__init__()
+
+	def _get_next(self, dataset: Iterator[str]) -> Tuple[Any, int]:
+		r"""read text and returns the next label(integer). Note that it may raise StopIteration.
+
+		Examples:
+			>>> dataset = iter(["1\n", "0\n"])
+			>>> field_content = _DenseLabelContent()
+			>>> field_content.read_next(dataset)
+			(1, 1)
+			>>> field_content.read_next(dataset)
+			(0, 1)
+		"""
+		label = next(dataset).strip()
+		if not label:
+			return None, 0
+		return int(label), 1
+
+	def get_data(self) -> Any:
+		return {"label": self._original_data}
+
+	def process_before_vocab(self):
+		raw_data_hash = UnorderedSha256()
+		for label in self._original_data:
+			raw_data_hash.update_data(dumps(label))
+		self._data_hash = self._raw_data_hash = raw_data_hash.hexdigest()
 
 #TODO: this field read tokens, and it should be convert to index.
 # However, unlike sentence, it only read one token, and do not need special tokens, rare vocabs, or more.
 class SparseLabel(Field):
+	def __init__(self, vocab: Optional[SimpleVocab] = None):
+		self.vocab = vocab if vocab is not None else SimpleVocab()
 
-	def __init__(self, vocab: SimpleVocab):
-		pass
+	def get_batch(self, name: str, data, indexes: List[int]) -> Dict[str, Any]:
+		ids = [data['id'][i] for i in indexes]
+		ids = np.array(ids, dtype=int)
+		batch_size = len(ids)
+		return {
+			name + "_id": ids,
+			name +"_str": [data['str'][i] for i in indexes]
+		}
+
+	def _get_setting_hash(self, vocabs) -> str:
+		return hashlib.sha256(dumps([self.__class__.__name__]))
+
+	def _create(self, set_name: str) -> "_FieldContent":
+		return _SparseLabelContent(self)
+
+
+class _SparseLabelContent(_FieldContent):
+	def __init__(self, field: SparseLabel):
+		super().__init__()
+		self.field = field
+
+	def _get_next(self, dataset: Iterator[str]) -> Tuple[Union[str, type(None)], int]:
+		label = next(dataset).rstrip()
+		if not label:
+			return None, 0
+		return label, 1
+
+	def process_before_vocab(self):
+		raw_data_hash = UnorderedSha256()
+		for label in self._original_data:
+			raw_data_hash.update_data(dumps(label))
+		self._data_hash = self._raw_data_hash = raw_data_hash.hexdigest()
+
+		self.field.get_vocab().add_tokens(self._original_data, None)
+
+	def get_data(self) -> Any:
+		id_data = self.field.get_vocab().convert_tokens_to_ids(self._original_data)
+		return {"id": id_data, "str": self._original_data}
 

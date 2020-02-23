@@ -205,7 +205,7 @@ class TestMultiTurnDialog():
 
 		sent = [[dl.all_vocab_list[dl.vocab_size]]]
 		assert [[1]] == dl.convert_multi_turn_tokens_to_ids(sent)
-		assert [[dl.vocab_size]] == dl.convert_multi_turn_tokens_to_ids(sent, invalid_vocab=True)
+		assert [[dl.vocab_size]] == dl.convert_multi_turn_tokens_to_ids(sent, only_frequent_word=True)
 
 	def base_test_teacher_forcing_metric(self, dl):
 		assert isinstance(dl.get_teacher_forcing_metric(), MetricBase)
@@ -218,8 +218,8 @@ class TestMultiTurnDialog():
 
 @pytest.fixture
 def load_ubuntucorpus():
-	def _load_ubuntucorpus(invalid_vocab_times=0):
-		return UbuntuCorpus("./tests/dataloader/dummy_ubuntucorpus#Ubuntu", invalid_vocab_times=invalid_vocab_times)
+	def _load_ubuntucorpus(min_rare_vocab_times=0):
+		return UbuntuCorpus("./tests/dataloader/dummy_ubuntucorpus#Ubuntu", min_rare_vocab_times=min_rare_vocab_times)
 	return _load_ubuntucorpus
 
 class TestUbuntuCorpus(TestMultiTurnDialog):
