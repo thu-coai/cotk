@@ -6,12 +6,17 @@ import hashlib
 
 import numpy as np
 
-from .._utils import trim_before_target
+from .._utils import trim_before_target, chain_sessions, restore_sessions
 from .._utils.metaclass import DocStringInheritor, LoadClassInterface, copy_func, copy_property
 from .._utils.unordered_hash import UnorderedSha256, dumps
 from .tokenizer import SimpleTokenizer, Tokenizer, PretrainedTokenizer
 from .vocab import Vocab, GeneralVocab, PretrainedVocab, SimpleVocab
 from .context import FieldContext
+
+RawSentenceType = str
+TokenizedSentenceType = List[str]
+RawSessionType = List[RawSentenceType]
+TokenizedSessionType = List[TokenizedSentenceType]
 
 class Field(LoadClassInterface, metaclass=DocStringInheritor):
 	'''A base class of data field, which specify the format of the dataset.
@@ -126,9 +131,8 @@ class _FieldContent(metaclass=DocStringInheritor):
 		if not isinstance(self._original_data, list):
 			raise RuntimeError("read_next must be called before get_data")
 		sent, lines = self._get_next(dataset)
-		if not sent:
-			return 0
-		self._original_data.append(sent)
+		if lines != 0:
+			self._original_data.append(sent)
 		return lines
 
 	def process_before_vocab(self):
@@ -642,11 +646,11 @@ class _SessionContent(_FieldContent):
 
 		Examples:
 			>>> dataset = iter(["a\n", "b\n", "\n", "c\n", "d\e", "e\n", '\n'])
-			>>> field = Session()
-			>>> field.get_next(dataset)
-			['a', 'b']
-			>>> field.get_next(dataset)
-			['c', 'd', 'e']
+			>>> field = _SessionContent(Session(), "test")
+			>>> field._get_next(dataset)
+			(['a', 'b'], 2)
+			>>> field._get_next(dataset)
+			(['c', 'd', 'e'], 3)
 		"""
 		session: List[str] = []
 		lineno = 0
@@ -669,9 +673,7 @@ class _SessionContent(_FieldContent):
 			raw_data_hash.update_data(dumps(data))
 		self._raw_data_hash = raw_data_hash.hexdigest()
 
-		#chained_sessions, session_lengths = self._chain_session(self._original_data)
-		self._tmp_tokenized_data = tokenized_sessions = self.field.tokenize_sessions(chained_sessions)
-		#self._tmp_tokenized_data = self._restore_session(tokenized_sents, session_lengths)
+		self._tmp_tokenized_data = tokenized_sessions = self.field.tokenize_sessions(self._original_data)
 
 		data_hash = UnorderedSha256()
 		for tokenized_data in self._tmp_tokenized_data:
@@ -684,21 +686,118 @@ class _SessionContent(_FieldContent):
 		id_data = self.field.process_sessions(self._tmp_tokenized_data)
 		return id_data
 
-class Session(Field):
+class Session(Sentence):
 
-	def __init__(self):
-		pass
+	def __init__(self, tokenizer: Union[None, Tokenizer, str] = None,
+				 vocab: Optional[Vocab] = None,
+				 vocab_from: Optional[Dict[str, str]] = None,
+				 max_sent_length: Optional[int] = None,
+				 convert_to_lower_letter: Optional[bool] = None):
+		# TODO
+		super().__init__(tokenizer, vocab, vocab_from, max_sent_length, convert_to_lower_letter)
+
+	def tokenize_sessions(self, sessions: List[RawSessionType]) -> List[TokenizedSessionType]:
+		return [self.tokenize_sentences(session) for session in sessions]
+
+	def process_sessions(self, sessions: List[TokenizedSessionType], add_special=True, cut=True,
+						 only_frequent_word=False):
+		sentences: List[TokenizedSentenceType]
+		session_length: List[int]
+		sentences, session_lengths = chain_sessions(sessions)
+		processed_sessions = self.process_sentences(sentences, add_special, cut, only_frequent_word)
+		processed_sessions: List[TokenizedSessionType] = restore_sessions(processed_sessions, session_lengths)
+		if cut:
+			pass
+
+
+
+class SessionDefault(Session):
+	add_special_to_ids = SentenceDefault.add_special_to_ids
+	remove_special_to_ids = SentenceDefault.remove_special_in_ids
+	trim_in_ids = SentenceDefault.trim_in_ids
+
 
 #TODO: this field read integers, and this is just the label
 class DenseLabel(Field):
+	def _create(self, set_name: str) -> "_FieldContent":
+		return _DenseLabelContent(self)
 
-	def __init__(self):
-		pass
+	def _get_batch(self, name: str, data, indexes: List[int]) -> Dict[str, Any]:
+		return {name: [data["label"][i] for i in indexes]}
+
+	def _get_setting_hash(self, vocabs) -> str:
+		return hashlib.sha256(dumps([self.__class__.__name__])).hexdigest()
+
+
+class _DenseLabelContent(_FieldContent):
+	def __init__(self, field: DenseLabel):
+		self.field = field
+		super().__init__()
+
+	def _get_next(self, dataset: Iterator[str]) -> Tuple[Any, int]:
+		r"""read text and returns the next label(integer). Note that it may raise StopIteration.
+
+		Examples:
+			>>> dataset = iter(["1\n", "0\n"])
+			>>> field_content = _DenseLabelContent()
+			>>> field_content.read_next(dataset)
+			(1, 1)
+			>>> field_content.read_next(dataset)
+			(0, 1)
+		"""
+		label = next(dataset).strip()
+		if not label:
+			return None, 0
+		return int(label), 1
+
+	def get_data(self) -> Any:
+		return {"label": self._original_data}
+
+	def process_before_vocab(self): ...
 
 #TODO: this field read tokens, and it should be convert to index.
 # However, unlike sentence, it only read one token, and do not need special tokens, rare vocabs, or more.
 class SparseLabel(Field):
-
 	def __init__(self, vocab: SimpleVocab):
-		pass
+		self.vocab = vocab
+
+	def _get_batch(self, name: str, data, indexes: List[int]) -> Dict[str, Any]:
+		ids = [data['id'][i] for i in indexes]
+		ids = np.array(ids, dtype=np.int64)
+		batch_size = len(ids)
+		return {
+			name + "_id": ids,
+			name +"_str": [data['str'][i] for i in indexes]
+		}
+
+	def _get_setting_hash(self, vocabs) -> str:
+		return hashlib.sha256(dumps([self.__class__.__name__]))
+
+	def _create(self, set_name: str) -> "_FieldContent":
+		return _SparseLabelContent(self)
+
+
+class _SparseLabelContent(_FieldContent):
+	def __init__(self, field: SparseLabel):
+		super().__init__()
+		self.field = field
+
+	def _get_next(self, dataset: Iterator[str]) -> Tuple[Union[str, type(None)], int]:
+		label = next(dataset).rstrip()
+		if not label:
+			return None, 0
+		return label, 1
+
+	def process_before_vocab(self):
+		raw_data_hash = UnorderedSha256()
+		for label in self._original_data:
+			raw_data_hash.update_data(dumps(label))
+		self._data_hash = self._raw_data_hash = raw_data_hash.hexdigest()
+
+
+		self.field.get_vocab().add_tokens(self._original_data, None)
+
+	def get_data(self) -> Any:
+		id_data = self.field.get_vocab().convert_tokens_to_ids(self._original_data)
+		return {"id": id_data, "str": self._original_data}
 
