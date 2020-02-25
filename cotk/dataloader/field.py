@@ -446,9 +446,10 @@ class Sentence(Field):
 			sentences = [sentence[:self.max_sent_length] for sentence in sentences]
 			after_lengths = [len(sentence) for sentence in sentences]
 			if len(sentences) > 1:
-				logging.info("max length before cut: %d, cut percent: %.2f%%", \
-						max(before_lengths),
-						(sum(before_lengths) - sum(after_lengths)) / sum(before_lengths) * 100)
+				logging.info("max length before cut: %d, cut percent: %.2f%%" % (
+					max(before_lengths),
+					(sum(before_lengths) - sum(after_lengths)) / sum(before_lengths) * 100)
+							 )
 		# sentence cut
 		return sentences
 
@@ -682,9 +683,9 @@ class _SessionContent(_FieldContent):
 
 		self.field.get_vocab().add_tokens(list(chain(*chain(*tokenized_sessions))), self.vocab_from)
 
-	def get_data(self) -> List[List[List[int]]]:
+	def get_data(self) -> Dict[str, list]:
 		id_data = self.field.process_sessions(self._tmp_tokenized_data)
-		return id_data
+		return {"id": id_data, "str": self._original_data}
 
 class Session(Sentence):
 
@@ -692,22 +693,44 @@ class Session(Sentence):
 				 vocab: Optional[Vocab] = None,
 				 vocab_from: Optional[Dict[str, str]] = None,
 				 max_sent_length: Optional[int] = None,
+				 max_turn_length: Optional[int] = None,
 				 convert_to_lower_letter: Optional[bool] = None):
-		# TODO
+		if type(self) == Session:
+			raise NotImplementedError(
+				"%s is an abstract class, use %s instead." % (Session.__name__, SessionDefault.__name__))
 		super().__init__(tokenizer, vocab, vocab_from, max_sent_length, convert_to_lower_letter)
+		if max_turn_length is not None:
+			msg = "max_turn_length must be None or an positive integer"
+			if not isinstance(max_turn_length, int):
+				raise TypeError(msg)
+			elif max_turn_length <= 0:
+				raise ValueError(msg)
+		self.max_turn_length = max_turn_length
 
 	def tokenize_sessions(self, sessions: List[RawSessionType]) -> List[TokenizedSessionType]:
 		return [self.tokenize_sentences(session) for session in sessions]
 
 	def process_sessions(self, sessions: List[TokenizedSessionType], add_special=True, cut=True,
 						 only_frequent_word=False):
+		# Cut sessions.
+		# If a session's turn length > `self.max_turn_length`, retain the first `self.max_turn_length` sentences and discard the rest.
+		if cut:
+			turn_length_before_cut = list(map(len, sessions))
+			max_turn_length_before_cut = max(turn_length_before_cut)
+			sessions = [session[:self.max_turn_length] for session in sessions]
+			turn_length_after_cut = list(map(len, sessions))
+			if len(sessions) > 1:
+				logging.info("max turn length before cut: %d, cut percent: %.2f%%" % (
+					max_turn_length_before_cut,
+					100 * (1 - sum(turn_length_after_cut) / sum(turn_length_before_cut)))
+							 )
+
 		sentences: List[TokenizedSentenceType]
 		session_length: List[int]
 		sentences, session_lengths = chain_sessions(sessions)
 		processed_sessions = self.process_sentences(sentences, add_special, cut, only_frequent_word)
-		processed_sessions: List[TokenizedSessionType] = restore_sessions(processed_sessions, session_lengths)
-		if cut:
-			pass
+		processed_sessions = restore_sessions(processed_sessions, session_lengths)
+		return processed_sessions
 
 
 
@@ -715,6 +738,25 @@ class SessionDefault(Session):
 	add_special_to_ids = SentenceDefault.add_special_to_ids
 	remove_special_to_ids = SentenceDefault.remove_special_in_ids
 	trim_in_ids = SentenceDefault.trim_in_ids
+
+	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
+		if not isinstance(self.vocab, GeneralVocab):
+			raise RuntimeError("Subclass must override get_batch if self.vocab is not a GeneralVocab.")
+		res = {}
+		data_id, data_str = data['id'], data['str']
+		batch_size = len(indexes)
+		turn_lengths = res[name + "_turn_length"] = np.array([len(data_id[i]) for i in indexes], dtype=int)
+		res[name + "_sent_length"] = [[len(sent) for sent in data_id[i]] for i in indexes]
+		max_sent_length = max(map(len, res[name + "_sent_length"]))
+		res_session = res[name] = np.zeros((batch_size, turn_lengths.max(), max_sent_length), dtype=int)
+		for i, j in enumerate(indexes):
+			session = data_id[j]
+			session = [list(sent) + [0] * (max_sent_length-len(sent)) for sent in session]
+			res_session[i, :len(session)] = np.array(session, dtype=int)
+		res_session[res_session >= self.vocab.frequent_vocab_size] = self.vocab.unk_id
+		res[name + "_str"] = [data_str[i] for i in indexes]
+		return res
+
 
 
 #TODO: this field read integers, and this is just the label
@@ -727,6 +769,11 @@ class DenseLabel(Field):
 
 	def _get_setting_hash(self, vocabs) -> str:
 		return hashlib.sha256(dumps([self.__class__.__name__])).hexdigest()
+
+	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
+		ids = [data['label'][i] for i in indexes]
+		ids = np.array(ids, dtype=int)
+		return {name + "_id": ids}
 
 
 class _DenseLabelContent(_FieldContent):
@@ -761,9 +808,9 @@ class SparseLabel(Field):
 	def __init__(self, vocab: SimpleVocab):
 		self.vocab = vocab
 
-	def _get_batch(self, name: str, data, indexes: List[int]) -> Dict[str, Any]:
+	def get_batch(self, name: str, data, indexes: List[int]) -> Dict[str, Any]:
 		ids = [data['id'][i] for i in indexes]
-		ids = np.array(ids, dtype=np.int64)
+		ids = np.array(ids, dtype=int)
 		batch_size = len(ids)
 		return {
 			name + "_id": ids,
