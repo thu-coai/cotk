@@ -107,11 +107,13 @@ class _FieldContent(metaclass=DocStringInheritor):
 		self._raw_data_hash: str
 		self._data_hash: str
 
+	_GET_NEXT_ARG = """
+			dataset (Iterator[str]): An iterator of the data file.
+	"""
 	def _get_next(self, dataset: Iterator[str]) -> Tuple[Any, int]:
 		'''Read the next element from ``dataset``.
 
-		Arguments:
-			dataset (Iterator[str]): An iterator of the data file.
+		Arguments:{_GET_NEXT_ARG}
 
 		Returns:
 			Tuple[Any, int]: The element, and the number of lines read.
@@ -194,12 +196,12 @@ class _SentenceContent(_FieldContent):
 
 		Examples:
 			>>> dataset = iter(["I love NLP.\\n", "Yes I do\\n", "I love deep learning\\n"])
-			>>> field = Sentence()
-			>>> field._get_next(dataset)
+			>>> field_content = _SentenceContent("Sentence", "test")
+			>>> field_content._get_next(dataset)
 			"I love NLP", 1
-			>>> field._get_next(dataset)
+			>>> field_content._get_next(dataset)
 			"Yes I do", 1
-			>>> field._get_next(dataset)
+			>>> field_content._get_next(dataset)
 			"I love deep learning", 1
 		"""
 		return next(dataset).rstrip(), 1
@@ -647,10 +649,10 @@ class _SessionContent(_FieldContent):
 
 		Examples:
 			>>> dataset = iter(["a\n", "b\n", "\n", "c\n", "d\e", "e\n", '\n'])
-			>>> field = _SessionContent(Session(), "test")
-			>>> field._get_next(dataset)
+			>>> field_content = _SessionContent(Session(), "test")
+			>>> field_content._get_next(dataset)
 			(['a', 'b'], 2)
-			>>> field._get_next(dataset)
+			>>> field_content._get_next(dataset)
 			(['c', 'd', 'e'], 3)
 		"""
 		session: List[str] = []
@@ -732,6 +734,11 @@ class Session(Sentence):
 		processed_sessions = restore_sessions(processed_sessions, session_lengths)
 		return processed_sessions
 
+	def _create(self, set_name) -> _SessionContent:
+		try:
+			return _SessionContent(self, self.vocab_from[set_name])
+		except KeyError:
+			raise KeyError("Unknown set_name %s, do not specify in the vocab_from" % set_name) from None
 
 
 class SessionDefault(Session):
