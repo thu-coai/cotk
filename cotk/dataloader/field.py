@@ -764,9 +764,6 @@ class DenseLabel(Field):
 	def _create(self, set_name: str) -> "_FieldContent":
 		return _DenseLabelContent(self)
 
-	def _get_batch(self, name: str, data, indexes: List[int]) -> Dict[str, Any]:
-		return {name: [data["label"][i] for i in indexes]}
-
 	def _get_setting_hash(self, vocabs) -> str:
 		return hashlib.sha256(dumps([self.__class__.__name__])).hexdigest()
 
