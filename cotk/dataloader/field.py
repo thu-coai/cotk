@@ -192,7 +192,7 @@ class _SentenceContent(_FieldContent):
 	def _get_next(self, dataset: Iterator[str]) -> Tuple[str, int]:
 		"""read one line. Note that it may raise StopIteration.
 
-		Args: TODO: fill
+		Args:{_FieldContent._GET_NEXT_ARG}
 
 		Examples:
 			>>> dataset = iter(["I love NLP.\\n", "Yes I do\\n", "I love deep learning\\n"])
@@ -336,8 +336,9 @@ class Sentence(Field):
 		else:
 			return tokenized_sentence
 
+	# TODO: arg
 	def convert_tokens_to_ids(self, tokens: List[str], add_special=False, only_frequent_word=False) -> List[int]:
-		'''TODO: fill
+		'''Convert list of tokens to list of ids.
 
 		Arguments:
 			tokens (List[str]): 
@@ -353,7 +354,7 @@ class Sentence(Field):
 		return ids
 
 	def convert_ids_to_tokens(self, ids: List[int], remove_special=True, trim=True) -> List[str]:
-		'''TODO: fill
+		'''Convert list of ids to list of tokens.
 
 		Arguments:
 			ids (List[int]): 
@@ -366,8 +367,9 @@ class Sentence(Field):
 		return self.vocab.convert_ids_to_tokens(\
 				self.remove_special_in_ids(ids, remove_special=remove_special, trim=trim))
 
+	# TODO: arg
 	def convert_ids_to_sentence(self, ids: List[int], remove_special=True, trim=True) -> str:
-		'''TODO: fill
+		'''Convert list of tokens to a sentence.
 
 		Arguments:
 			ids (List[int]): 
@@ -380,8 +382,9 @@ class Sentence(Field):
 		tokens = self.convert_ids_to_tokens(ids, remove_special=remove_special, trim=trim)
 		return self.tokenizer.convert_tokens_to_sentence(tokens)
 
+	# TODO: arg
 	def convert_sentence_to_ids(self, sentence: str, add_special=False, only_frequent_word=False) -> List[int]:
-		'''TODO: fill
+		'''Convert a sentence to a list of ids.
 
 		Arguments:
 			sentence (str): 
@@ -405,12 +408,13 @@ class Sentence(Field):
 		'''
 		raise NotImplementedError
 
+	# TODO: arg
 	def remove_special_in_ids(self, ids: List[int], remove_special=True, trim=True) -> List[int]:
-		'''TODO:
+		'''Remove special token id in input ids.
 
 		Arguments:
-			ids (List[int]): 
-			remove_special (bool, optional): . Defaults: True.
+			ids (List[int]): Input ids.
+			remove_special (bool, optional): If True, special tokens in `ids`, such as `go_id`, are removed. Defaults: True.
 			trim (bool, optional): . Defaults: True.
 
 		Returns:
@@ -418,17 +422,27 @@ class Sentence(Field):
 		'''		
 		raise NotImplementedError
 
-	def process_sentences(self, sentences, add_special=True, cut=True, only_frequent_word=False):
-		'''TODO:
+	def process_sentences(self, sentences: Union[List[str], List[List[str]]],
+						  add_special: bool = True,
+						  cut: bool = True,
+						  only_frequent_word=False) -> List[List[int]]:
+		'''Process input sentences.
+		If sentences haven't been tokenized, tokenize them by invoking :meth:`Sentence.tokenize_sentences`
+		Then, convert the list of tokens to a list of ids.
+		If `self.max_sent_length` is not None and `cut` is True,
+		sentences, whose  length is more than `self.max_sent_length`, are cut.
+
 
 		Arguments:
-			sentences ([type]): 
-			add_special (bool, optional): . Defaults: True.
-			cut (bool, optional): . Defaults: True.
+			sentences (Union[List[str], List[List[str]]]): `sentences` must be a list of sentences or a list of lists of tokens.
+			add_special (bool, optional): If True, special ids, such as go_id and eos_id, are added. Defaults: True.
+			cut (bool, optional): If `cut` is True and `self.max_sent_length` is not None,
+				sentences, whose  length is more than `self.max_sent_length`, are cut.
+				Defaults: True.
 			only_frequent_word (bool, optional): . Defaults: False.
 
 		Returns:
-			[type]: 
+			List[List[int]]: Corresponding ids of input sentences
 		'''
 		# sentences: : Union[List[str], List[List[str]]]
 		if not sentences:

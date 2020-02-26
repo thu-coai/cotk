@@ -41,12 +41,14 @@ class Vocab(LoadClassInterface, metaclass=DocStringInheritor):
 		raise NotImplementedError
 
 	_VOCAB_MORE_DOCSTRING = ""
+	CONVERT_TOKENS_TO_IDS_ARG = """
+			tokens (List[str]): List of tokens.
+			only_frequent_word (bool, optional): Use ``unk`` for rare tokens. Defaults: False.
+	"""
 	def convert_tokens_to_ids(self, tokens: List[str], only_frequent_word=False) -> List[int]:
 		'''Convert list of tokens to list of ids. {_VOCAB_MORE_DOCSTRING}
 
-		Arguments:
-			tokens (List[str]): List of tokens.
-			only_frequent_word (bool, optional): Use ``unk`` for rare tokens. Defaults: False.
+		Arguments:{CONVERT_TOKENS_TO_IDS_ARG}
 
 		Returns:
 			List[int]: The corresponding list of ids.
