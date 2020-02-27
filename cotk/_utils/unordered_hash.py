@@ -76,6 +76,7 @@ def convert_ordered_iterable(obj):
 
 
 def convert_unordered_iterable(obj):
+	# Elements in a set or a frozenset is unordered. Sort them before dumps.
 	return type(obj), [convert_obj(item) for item in sorted(obj)]
 
 
