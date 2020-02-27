@@ -198,8 +198,8 @@ class LanguageProcessing(Dataloader):
 		'''
 		vocabs: List[Vocab] = []
 		for _, fields_in_one_set in sorted(fields.items()): # sort to keep order
-			for _, fields in fields_in_one_set.items():
-				vocab = fields.get_vocab()
+			for _, field in fields_in_one_set.items():
+				vocab = field.get_vocab()
 				if vocab is not None and vocab not in vocabs:
 					vocabs.append(vocab)
 		return vocabs
@@ -240,6 +240,8 @@ class LanguageProcessing(Dataloader):
 				field = Field.load_class(field_name)()
 			elif isinstance(field_name, Field):
 				field = field_name
+			else:
+				raise TypeError("Each value of `fields` must be a Field object or a string indicating the name of a Field class.")
 			fieldcontent = field._create(set_name) #pylint: disable=protected-access
 			fieldcontents[name] = fieldcontent
 			new_fields[name] = field
@@ -256,7 +258,7 @@ class LanguageProcessing(Dataloader):
 
 	def _create_setting_hash(self):
 		setting_hash = sha256()
-		for _, fields_in_one_set in self.fields.items():
+		for _, fields_in_one_set in sorted(self.fields.items()):
 			for _, field in fields_in_one_set.items():
 				setting_hash.update(dumps(field._get_setting_hash(self.vocabs))) #pylint: disable=protected-access
 		for vocab in self.vocabs:
