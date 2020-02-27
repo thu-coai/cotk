@@ -818,7 +818,11 @@ class _DenseLabelContent(_FieldContent):
 	def get_data(self) -> Any:
 		return {"label": self._original_data}
 
-	def process_before_vocab(self): ...
+	def process_before_vocab(self):
+		raw_data_hash = UnorderedSha256()
+		for label in self._original_data:
+			raw_data_hash.update_data(dumps(label))
+		self._data_hash = self._raw_data_hash = raw_data_hash.hexdigest()
 
 #TODO: this field read tokens, and it should be convert to index.
 # However, unlike sentence, it only read one token, and do not need special tokens, rare vocabs, or more.
@@ -858,7 +862,6 @@ class _SparseLabelContent(_FieldContent):
 		for label in self._original_data:
 			raw_data_hash.update_data(dumps(label))
 		self._data_hash = self._raw_data_hash = raw_data_hash.hexdigest()
-
 
 		self.field.get_vocab().add_tokens(self._original_data, None)
 
