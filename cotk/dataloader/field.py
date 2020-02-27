@@ -768,7 +768,7 @@ class SessionDefault(Session):
 		batch_size = len(indexes)
 		turn_lengths = res[name + "_turn_length"] = np.array([len(data_id[i]) for i in indexes], dtype=int)
 		res[name + "_sent_length"] = [[len(sent) for sent in data_id[i]] for i in indexes]
-		max_sent_length = max(map(len, res[name + "_sent_length"]))
+		max_sent_length = max(map(max, res[name + "_sent_length"]))
 		res_session = res[name] = np.zeros((batch_size, turn_lengths.max(), max_sent_length), dtype=int)
 		for i, j in enumerate(indexes):
 			session = data_id[j]
@@ -777,7 +777,6 @@ class SessionDefault(Session):
 		res_session[res_session >= self.vocab.frequent_vocab_size] = self.vocab.unk_id
 		res[name + "_str"] = [data_str[i] for i in indexes]
 		return res
-
 
 
 #TODO: this field read integers, and this is just the label
