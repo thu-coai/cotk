@@ -715,6 +715,8 @@ class Session(Sentence):
 			raise NotImplementedError(
 				"%s is an abstract class, use %s instead." % (Session.__name__, SessionDefault.__name__))
 		super().__init__(tokenizer, vocab, vocab_from, max_sent_length, convert_to_lower_letter)
+		with FieldContext.set_parameters(max_turn_length=max_turn_length):
+			max_turn_length = FieldContext.get('max_turn_length')
 		if max_turn_length is not None:
 			msg = "max_turn_length must be None or an positive integer"
 			if not isinstance(max_turn_length, int):
