@@ -863,7 +863,7 @@ class _SparseLabelContent(_FieldContent):
 		super().__init__()
 		self.field = field
 
-	def _get_next(self, dataset: Iterator[str]) -> Tuple[Union[str, type(None)], int]:
+	def _get_next(self, dataset: Iterator[str]) -> Tuple[Union[str, None], int]:
 		label = next(dataset).rstrip()
 		if not label:
 			return None, 0
