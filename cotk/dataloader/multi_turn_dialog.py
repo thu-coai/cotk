@@ -209,7 +209,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 				 max_sent_length=50, max_turn_length=1000, min_rare_vocab_times=0, tokenizer='nltk'):
 		fields = {
 			**{k: OrderedDict([['session', 'SessionDefault']]) for k in ['train', 'dev', 'test']},
-			'multi_ref': OrderedDict([['session', 'SessionDefault'], ['multi_ref', "Candidate"]])
+			'multi_ref': OrderedDict([['session', 'SessionDefault'], ['candidate', "Candidate"]])
 		}
 		with FieldContext.set_parameters(
 			tokenizer=tokenizer,
