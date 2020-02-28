@@ -229,15 +229,18 @@ class SSTResourceProcessor(BaseResourceProcessor):
 		return label, ' '.join(sent)
 
 	def _postprocess(self, src, dest, key):
-		with open(os.path.join(src, key + '.txt'), 'r', encoding='utf-8') as fp:
-			labels, sents = [], []
-			for label, sent in map(self._parseline, fp):
-				labels.append(label)
-				sents.append(sent)
-		with open(os.path.join(dest, key + '.txt'), 'w', encoding='utf-8') as fp:
-			fp.writelines(sents)
-		with open(os.path.join(dest, key + '_labels.json'), 'w', encoding='utf-8') as fp:
-			json.dump(labels, fp, ensure_ascii=False)
+		with open(os.path.join(src, key + '.txt'), 'r', encoding='utf-8') as fin, \
+			open(os.path.join(dest, key + '.txt'), 'w', encoding='utf-8') as fout:
+			# labels, sents = [], []
+			for label, sent in map(self._parseline, fin):
+				fout.write(sent)
+				fout.write(str(label) + '\n')
+				# labels.append(label)
+				# sents.append(sent)
+		# with open(os.path.join(dest, key + '.txt'), 'w', encoding='utf-8') as fin:
+		# 	fin.writelines(sents)
+		# with open(os.path.join(dest, key + '_labels.json'), 'w', encoding='utf-8') as fin:
+		# 	json.dump(labels, fin, ensure_ascii=False)
 
 	def postprocess(self, local_path):
 		local_path = super().postprocess(local_path)

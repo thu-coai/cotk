@@ -64,7 +64,7 @@ def convert_obj(obj):
 
 
 def convert_dict(obj):
-	return type(obj), [(convert_dict(k), convert_obj(v)) for k, v in sorted(obj.items())]
+	return type(obj), [(convert_obj(k), convert_obj(v)) for k, v in sorted(obj.items())]
 
 
 def convert_ordered_dict(obj):
@@ -88,4 +88,4 @@ special_type_processing_functions = {
 	dict: convert_dict,
 	OrderedDict: convert_ordered_dict
 }
-common_types = (str, int, float, bytes, bytearray, bool, type)
+common_types = (str, int, float, bytes, bytearray, bool, type, type(None))

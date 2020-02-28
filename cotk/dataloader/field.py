@@ -728,8 +728,8 @@ class Session(Sentence):
 	def tokenize_sessions(self, sessions: List[RawSessionType]) -> List[TokenizedSessionType]:
 		return [self.tokenize_sentences(session) for session in sessions]
 
-	def process_sessions(self, sessions: List[TokenizedSessionType], add_special=True, cut=True,
-						 only_frequent_word=False):
+	def process_sessions(self, sessions: List[TokenizedSessionType], add_special: bool = True, cut: bool = True,
+						 only_frequent_word: bool = False):
 		# Cut sessions.
 		# If a session's turn length > `self.max_turn_length`, retain the first `self.max_turn_length` sentences and discard the rest.
 		if cut:
@@ -756,6 +756,16 @@ class Session(Sentence):
 		except KeyError:
 			raise KeyError("Unknown set_name %s, do not specify in the vocab_from" % set_name) from None
 
+	def convert_multi_turn_tokens_to_ids(self, session: List[List[str]], add_special=False, only_frequent_word=False) -> \
+	List[List[int]]:
+		return [self.convert_tokens_to_ids(sent, add_special, only_frequent_word) for sent in session]
+
+	def convert_multi_turn_ids_to_tokens(self, session_ids, remove_special=True, trim=True):
+		return [self.convert_ids_to_tokens(sent_ids, remove_special, trim) for sent_ids in session_ids]
+
+	def multi_turn_trim_in_ids(self, session_ids: List[List[int]]) -> List[List[int]]:
+		return [self.trim_in_ids(sent_ids) for sent_ids in session_ids]
+
 
 class SessionDefault(Session):
 	add_special_to_ids = SentenceDefault.add_special_to_ids
@@ -776,6 +786,7 @@ class SessionDefault(Session):
 			session = data_id[j]
 			session = [list(sent) + [0] * (max_sent_length-len(sent)) for sent in session]
 			res_session[i, :len(session)] = np.array(session, dtype=int)
+		res[name + "_allvocabs"] = res_session.copy()
 		res_session[res_session >= self.vocab.frequent_vocab_size] = self.vocab.unk_id
 		res[name + "_str"] = [data_str[i] for i in indexes]
 		return res
@@ -792,7 +803,7 @@ class DenseLabel(Field):
 	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
 		ids = [data['label'][i] for i in indexes]
 		ids = np.array(ids, dtype=int)
-		return {name + "_id": ids}
+		return {name: ids}
 
 
 class _DenseLabelContent(_FieldContent):
@@ -828,8 +839,8 @@ class _DenseLabelContent(_FieldContent):
 #TODO: this field read tokens, and it should be convert to index.
 # However, unlike sentence, it only read one token, and do not need special tokens, rare vocabs, or more.
 class SparseLabel(Field):
-	def __init__(self, vocab: SimpleVocab):
-		self.vocab = vocab
+	def __init__(self, vocab: Optional[SimpleVocab] = None):
+		self.vocab = vocab if vocab is not None else SimpleVocab()
 
 	def get_batch(self, name: str, data, indexes: List[int]) -> Dict[str, Any]:
 		ids = [data['id'][i] for i in indexes]

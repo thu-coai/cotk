@@ -1,13 +1,15 @@
 """
 A module for multi turn dialog.
 """
-from itertools import chain
+from collections import OrderedDict
 
-import numpy as np
 
-from .._utils.file_utils import get_resource_file_path
-from .._utils import hooks
-from .dataloader import LanguageProcessing, Session
+from ..hooks import hooks
+from .dataloader import LanguageProcessing
+from .field import SessionDefault, Session
+from .tokenizer import SimpleTokenizer
+from .vocab import GeneralVocab
+from .context import FieldContext
 from ..metric import MetricChain, MultiTurnPerplexityMetric, MultiTurnBleuCorpusMetric, \
 	MultiTurnDialogRecorder
 from ..metric import BleuPrecisionRecallMetric, EmbSimilarityPrecisionRecallMetric
@@ -17,14 +19,21 @@ from ..wordvector import Glove
 class MultiTurnDialog(LanguageProcessing):
 	r"""Base class for multi-turn dialog datasets. This is an abstract class.
 
-	Arguments:{ARGUMENTS}
+	Arguments:{LanguageProcessing.ARGUMENTS}
 
 	Attributes:{ATTRIBUTES}
+
+	Notes:
+		During invoking `__init__` of it's subclass, :meth:`set_default_field` must be called,
+		 and a :class:`Session` field must be set as default field.
 	"""
 
 	_version = 1
 
-	ARGUMENTS = LanguageProcessing.ARGUMENTS
+	# TODO: fill ATTRIBUTES
+	ATTRIBUTES = ''
+	# ATTRIBUTES = LanguageProcessing.ATTRIBUTES
+	# ARGUMENTS = LanguageProcessing.ARGUMENTS
 	GET_BATCH_RETURNS_DICT = r'''
 			* turn_length(:class:`numpy.ndarray`): A 1-d list, the number of turns in sessions.
 			  Size: ``[batch_size]``
@@ -69,37 +78,6 @@ class MultiTurnDialog(LanguageProcessing):
 				"turn_length": np.array([4, 2]), # the number of turns in each session
 				"sent_length": np.array([np.array([3, 3, 5, 5]), np.array([6, 5])]), # length of sentences'''
 
-	def get_batch(self, key, indexes):
-		'''{LanguageProcessingBase.GET_BATCH_DOC_WITHOUT_RETURNS}
-
-		Returns:
-			(dict): A dict at least contains:
-			{GET_BATCH_RETURNS_DICT}
-
-			See the example belows.
-
-		Examples:
-			{GET_BATCH_EXAMPLES_PART}
-			}
-		'''
-		if key not in self.key_name:
-			raise ValueError("No set named %s." % key)
-		res = {}
-		res["turn_length"] = np.array([len(self.data[key]['session'][i]) for i in indexes], dtype=int)
-		res["sent_length"] = []
-		for i in indexes:
-			sent_length = np.array([len(sent) for sent in self.data[key]['session'][i]], dtype=int)
-			res["sent_length"].append(sent_length)
-		res["sent_length"] = np.array(res["sent_length"])
-		res_sent = res["sent"] = np.zeros((len(indexes), np.max(res['turn_length']), \
-			np.max(list(chain(*res['sent_length'])))), dtype=int)
-		for i, index_i in enumerate(indexes):
-			for j, sent in enumerate(self.data[key]['session'][index_i]):
-				res_sent[i, j, :len(sent)] = sent
-
-		res["sent_allvocabs"] = res_sent.copy()
-		res_sent[res_sent >= self.valid_vocab_len] = self.unk_id
-		return res
 
 	def multi_turn_trim(self, index, turn_length=None, ignore_first_token=False):
 		r'''Trim indexes for multi turn dialog. There will be 3 steps:
@@ -148,11 +126,12 @@ class MultiTurnDialog(LanguageProcessing):
 			...     turn_length = None, ignore_first_token = True)
 			[[4, 5, 6, 7, 8], [4, 5, 6, 7, 9]]
 		'''
+		field: Session = self.get_default_field()
 		res = []
 		for i, turn_index in enumerate(index):
 			if turn_length and i >= turn_length:
 				break
-			turn_trim = self.trim(turn_index)
+			turn_trim = field.trim_in_ids(turn_index)
 			if turn_trim and ignore_first_token:
 				turn_trim = turn_trim[1:]
 			if turn_length is None and (not turn_trim):
@@ -160,14 +139,14 @@ class MultiTurnDialog(LanguageProcessing):
 			res.append(turn_trim)
 		return res
 
-	def convert_multi_turn_tokens_to_ids(self, session, invalid_vocab=False):
+	def convert_multi_turn_tokens_to_ids(self, session, only_frequent_word=False):
 		'''Convert a session from string to index representation.
 
 		Arguments:
 			session (list): a jagged 2-d list of string, representing each token of the session.
 					Size: ``[turn_length, ~sent_length]``, where "~" means different sizes
 					in this dimension is allowed.
-			invalid_vocab (bool): whether to provide invalid vocabs.
+			only_frequent_word (bool): whether to provide invalid vocabs.
 					If ``False``, invalid vocabs will be transferred to ``unk_id``.
 					If ``True``, invalid vocabs will using their own id.
 					Default: ``False``.
@@ -179,22 +158,25 @@ class MultiTurnDialog(LanguageProcessing):
 			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have", "been"]
 			>>> dataloader.convert_multi_turn_tokens_to_ids(
 			...	[["<go>", "I", "have", "been", "to", "China", "<eos>"],
-			... ["<go>", "I", "have", "been", "to", "Japan", "<eos>"]], invalid_vocab=False)
+			... ["<go>", "I", "have", "been", "to", "Japan", "<eos>"]], only_frequent_word=False)
 			>>> [[2, 4, 5, 6, 1, 1, 3], [2, 4, 5, 6, 1, 1, 3]]
 			>>> dataloader.convert_multi_turn_tokens_to_ids(
 			...	[["<go>", "I", "have", "been", "to", "China", "<eos>"],
-			... ["<go>", "I", "have", "been", "to", "Japan", "<eos>"]], invalid_vocab=True)
+			... ["<go>", "I", "have", "been", "to", "Japan", "<eos>"]], only_frequent_word=True)
 			>>> [[2, 4, 5, 6, 7, 8, 3], [2, 4, 5, 6, 7, 9, 3]]
 		'''
-		if invalid_vocab:
-			return list(map(lambda sent: list(map( \
-				lambda word: self.word2id.get(word, self.unk_id), sent)), \
-			session))
-		else:
-			return list(map(lambda sent: list(map( \
-				self._valid_word2id, sent)), \
-			session))
+		field: SessionDefault = self.get_default_field()
+		return field.convert_multi_turn_tokens_to_ids(session, False, only_frequent_word)
+		# if invalid_vocab:
+		# 	return list(map(lambda sent: list(map( \
+		# 		lambda word: self.word2id.get(word, self.unk_id), sent)), \
+		# 	session))
+		# else:
+		# 	return list(map(lambda sent: list(map( \
+		# 		self._valid_word2id, sent)), \
+		# 	session))
 
+	# TODO: 参数统一
 	def convert_multi_turn_ids_to_tokens(self, index, trim=True, turn_length=None, \
 				ignore_first_token=False):
 		'''Convert a session from index to string representation
@@ -238,12 +220,18 @@ class MultiTurnDialog(LanguageProcessing):
 		Returns:
 			(list): a list of trimmed index
 		'''
-		if trim:
-			index = self.multi_turn_trim(index, turn_length=turn_length, \
-				ignore_first_token=ignore_first_token)
-		return list(map(lambda sent: \
-			list(map(lambda word: self.all_vocab_list[word], sent)), \
-			index))
+		# if trim:
+		# 	index = self.multi_turn_trim(index, turn_length=turn_length, \
+		# 		ignore_first_token=ignore_first_token)
+		# return list(map(lambda sent: \
+		# 	list(map(lambda word: self.all_vocab_list[word], sent)), \
+		# 	index))
+		field: Session = self.get_default_field()
+		# if trim:
+		# 	index = self.multi_turn_trim(index, turn_length=turn_length, ignore_first_token=ignore_first_token)
+		if turn_length is not None:
+			index = [sent[:turn_length] for sent in index]
+		return field.convert_multi_turn_ids_to_tokens(index, remove_special=ignore_first_token, trim=trim)
 
 	def get_teacher_forcing_metric(self, multi_turn_gen_log_prob_key="multi_turn_gen_log_prob"):
 		'''Get metric for teacher-forcing.
@@ -289,6 +277,8 @@ class MultiTurnDialog(LanguageProcessing):
 			multi_turn_reference_allvocabs_key="sent_allvocabs", turn_len_key="turn_length"))
 		return metric
 
+
+# TODO: doc
 class UbuntuCorpus(MultiTurnDialog):
 
 	'''A dataloader for Ubuntu dataset.
@@ -308,35 +298,31 @@ class UbuntuCorpus(MultiTurnDialog):
 	'''
 
 	ARGUMENTS = r'''
-		min_vocab_times (int):  A cut-off threshold of valid tokens. All tokens appear
+		min_frequent_vocab_times (int):  A cut-off threshold of valid tokens. All tokens appear
 			not less than `min_vocab_times` in **training set** will be marked as valid words.
 			Default: ``10``.
 		max_sent_length (int): All sentences longer than ``max_sent_length`` will be shortened
 			to first ``max_sent_length`` tokens. Default: ``50``.
 		max_turn_length (int): All sessions longer than ``max_turn_length`` will be shortened
 			to first ``max_turn_length`` sentences. Default: ``20``.
-		invalid_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
+		min_rare_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
 			not less than ``invalid_vocab_times`` in the **whole dataset** (except valid words) will be
 			marked as invalid words. Otherwise, they are unknown words, both in training or
 			testing stages. Default: ``0`` (No unknown words).
 	'''
 
 	@hooks.hook_dataloader
-	def __init__(self, file_id="resources://Ubuntu", min_vocab_times=10, \
-			max_sent_length=50, max_turn_length=20, invalid_vocab_times=0):
-		self._file_id = file_id
-		self._file_path = get_resource_file_path(file_id)
-		self._min_vocab_times = min_vocab_times
-		self._max_sent_length = max_sent_length
-		self._max_turn_length = max_turn_length
-		self._invalid_vocab_times = invalid_vocab_times
-		super(UbuntuCorpus, self).__init__(remains_capital=False, tokenizer='nltk')
-
-	def _load_data(self):
-		r'''Loading dataset, invoked during the initialization of :class:`MultiTurnDialog`.
-		'''
-		return super()._general_load_data(self._file_path, [['session', 'Session']], self._min_vocab_times,
-										  self._max_sent_length, self._max_turn_length, self._invalid_vocab_times)
+	def __init__(self, file_id="resources://Ubuntu", min_frequent_vocab_times=10, \
+				 max_sent_length=50, max_turn_length=20, min_rare_vocab_times=0):
+		fields = OrderedDict([['session', 'SessionDefault']])
+		with FieldContext.set_parameters(
+			tokenizer=SimpleTokenizer('nltk'),
+			vocab=GeneralVocab(min_frequent_vocab_times, min_rare_vocab_times),
+			max_sent_length=max_sent_length,
+			max_turn_length=max_turn_length,
+			convert_to_lower_letter=True):
+			super().__init__(file_id, fields)
+		self.set_default_field('train', 'session')
 
 
 class SwitchboardCorpus(MultiTurnDialog):
@@ -359,42 +345,33 @@ class SwitchboardCorpus(MultiTurnDialog):
 
 	ARGUMENTS = UbuntuCorpus.ARGUMENTS
 
+	class Candidate(SessionDefault):
+		def process_sessions(self, sessions, add_special=True, cut=False,
+						 only_frequent_word=False):
+			"""Don't cut sessions."""
+			return super().process_sessions(sessions, add_special, False, only_frequent_word)
+		process_sessions.__annotations__ = SessionDefault.process_sessions.__annotations__  # copy `__annotations__` attribute.
+
 	@hooks.hook_dataloader
-	def __init__(self, file_id="resources://SwitchboardCorpus", min_vocab_times=5, \
-				max_sent_length=50, max_turn_length=1000, invalid_vocab_times=0, tokenizer='nltk'):
-		self._file_id = file_id
-		self._file_path = get_resource_file_path(file_id)
-		self._min_vocab_times = min_vocab_times
-		self._max_sent_length = max_sent_length
-		self._max_turn_length = max_turn_length
-		self._invalid_vocab_times = invalid_vocab_times
+	def __init__(self, file_id="resources://SwitchboardCorpus", min_frequent_vocab_times=5, \
+				 max_sent_length=50, max_turn_length=1000, min_rare_vocab_times=0, tokenizer='nltk'):
+		fields = {
+			**{k: OrderedDict([['session', 'SessionDefault']]) for k in ['train', 'dev', 'test']},
+			'multi_ref': OrderedDict([['session', 'SessionDefault'], ['multi_ref', "Candidate"]])
+		}
+		with FieldContext.set_parameters(
+			tokenizer=tokenizer,
+			vocab=GeneralVocab(min_frequent_vocab_times, min_rare_vocab_times),
+			max_sent_length=max_sent_length,
+			max_turn_length=max_turn_length,
+			convert_to_lower_letter=False,
+			vocab_from={**SessionDefault.DEFAULT_VOCAB_FROM, 'multi_ref': 'extra'}):
+			super().__init__(file_id, fields)
+		self.set_default_field('train', 'session')
 
-		self.word2id = {}
-		super().__init__(remains_capital=True, tokenizer=tokenizer)
-
-	def _load_data(self):
-		r'''Loading dataset, invoked during the initialization of :class:`MultiTurnDialog`.
+	def get_batch(self, set_name, indexes):
+		#'''{LanguageProcessing.GET_BATCH_DOC_WITHOUT_RETURNS}
 		'''
-		if 'multi_ref' not in self.key_name:
-			self.key_name.append('multi_ref')
-		data_fields = {key: [['session', 'Session']] for key in self.key_name}
-
-		class Candidate(Session):
-			"""Each candidate contains several sentences. These sentences won't be cut."""
-			def cut(self, element, max_sent_length=None, max_turn_length=None):
-				# don\'t cut
-				return super().cut(element, None, None)
-
-		data_fields['multi_ref'].append(['candidate_allvocabs', Candidate()])
-		return super()._general_load_data(self._file_path,
-										  data_fields,
-										  self._min_vocab_times,
-										  self._max_sent_length,
-										  self._max_turn_length,
-										  self._invalid_vocab_times)
-
-	def get_batch(self, key, indexes):
-		'''{LanguageProcessingBase.GET_BATCH_DOC_WITHOUT_RETURNS}
 
 		Returns:
 			(dict): A dict contains what is in the return of MultiTurnDialog.get_batch.
@@ -416,12 +393,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 				[[2, 6, 5, 10, 3]]]           # one response to 2nd session:  <go> you are fine <eos>
 			}
 		'''
-		res = super().get_batch(key, indexes)
-		if "candidate_allvocabs" in self.data[key]:
-			res['candidate_allvocabs'] = []
-			for i in indexes:
-				res['candidate_allvocabs'].append(self.data[key]['candidate_allvocabs'][i])
-		return res
+		return super().get_batch(set_name, indexes)
 
 	def get_multi_ref_metric(self, generated_num_per_context=20, word2vec=None,\
 				multiple_gen_key="multiple_gen_key"):
@@ -443,7 +415,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 		metric = MetricChain()
 		if word2vec is None:
 			glove = Glove("resources://Glove300d")
-			word2vec = glove.load_dict(self.vocab_list)
+			word2vec = glove.load_dict(self.frequent_vocab_list)
 		for ngram in range(1, 5):
 			metric.add_metric(BleuPrecisionRecallMetric(self, ngram, generated_num_per_context,\
 			multiple_gen_key=multiple_gen_key))
