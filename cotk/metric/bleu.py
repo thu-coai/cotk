@@ -15,7 +15,7 @@ from ..hooks import hooks
 from ..dataloader.tokenizer import Tokenizer, SimpleTokenizer
 from .._utils import replace_unk
 
-if False: # for type check
+if False: # for type check # disable: using-constant-test
 	from ..dataloader.dataloader import LanguageProcessing
 
 def _sentence_bleu(ele):
