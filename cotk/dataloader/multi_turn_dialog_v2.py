@@ -4,6 +4,7 @@ A module for multi turn dialog.
 from collections import OrderedDict
 
 
+from .._utils.metaclass import copy_func
 from ..hooks import hooks
 from .dataloader import LanguageProcessing
 from .field import SessionDefault, Session
@@ -79,159 +80,10 @@ class MultiTurnDialog(LanguageProcessing):
 				"sent_length": np.array([np.array([3, 3, 5, 5]), np.array([6, 5])]), # length of sentences'''
 
 
-	def multi_turn_trim(self, index, turn_length=None, ignore_first_token=False):
-		r'''Trim indexes for multi turn dialog. There will be 3 steps:
+	multi_turn_trim_in_ids = copy_func(LanguageProcessing.get_default_field, Session, 'multi_turn_trim_in_ids')
+	convert_multi_turn_tokens_to_ids = copy_func(LanguageProcessing.get_default_field, Session, 'convert_multi_turn_tokens_to_ids')
+	convert_multi_turn_ids_to_tokens = copy_func(LanguageProcessing.get_default_field, Session, 'convert_multi_turn_ids_to_tokens')
 
-		* For every turn, if there is an ``<eos>``, \
-		  find first ``<eos>`` and abandon words after it (included the ``<eos>``).
-		* Ignore ``<pad>`` s at the end of every turn.
-		* When ``turn_length`` is None, discard the first empty turn and the turn after it. \
-		  Otherwise, discard the turn according to turn_length.
-
-		Arguments:
-			index (list or :class:`numpy.ndarray`): a 2-d jagged array of int.
-				Size: ``[turn_length, ~sent_length]``, where "~" means different sizes
-				in this dimension is allowed.
-			turn_length (int): Default: ``None``
-			ignore_first_token (bool): if True, ignore first token of each turn (must be ``<go>``).
-
-		Returns:
-			(list) a jagged 2-d array of trimmed index. Size: ``[turn_length, ~sent_length]``.
-
-		Examples:
-			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
-			>>> #	"been", "to", "China", "Japan"]
-			>>> dataloader.multi_turn_trim(
-			...     [[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0],
-			...         # <go> I have been to China <pad> <pad> <eos> I <eos> <pad>
-			...     [2, 4, 5, 6, 7, 9, 3, 0, 3, 4, 3, 0],
-			...         # <go> I have been to Japan <eos> <pad> <eos> I <eos> <pad>
-			...     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-			...     [2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0]],
-			...         # <go> I have been to China <pad> <pad> <eos> I <eos> <pad>
-			...     turn_length = None, ignore_first_token = False)
-			[[2, 4, 5, 6, 7, 8], [2, 4, 5, 6, 7, 9]]
-			>>> dataloader.multi_turn_trim(
-			...     [[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0],
-			...     [2, 4, 5, 6, 7, 9, 3, 0, 3, 4, 3, 0],
-			...     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-			...     [2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0]],
-			...     turn_length = 1, ignore_first_token = False)
-			[[2, 4, 5, 6, 7, 8]]
-			>>> dataloader.multi_turn_trim(
-			...     [[2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0],
-			...     [2, 4, 5, 6, 7, 9, 3, 0, 3, 4, 3, 0],
-			...     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-			...     [2, 4, 5, 6, 7, 8, 0, 0, 3, 4, 3, 0]],
-			...     turn_length = None, ignore_first_token = True)
-			[[4, 5, 6, 7, 8], [4, 5, 6, 7, 9]]
-		'''
-		field: Session = self.get_default_field()
-		res = []
-		for i, turn_index in enumerate(index):
-			if turn_length and i >= turn_length:
-				break
-			turn_trim = field.trim_in_ids(turn_index)
-			if turn_trim and ignore_first_token:
-				turn_trim = turn_trim[1:]
-			if turn_length is None and (not turn_trim):
-				break
-			res.append(turn_trim)
-		return res
-
-	def convert_multi_turn_tokens_to_ids(self, session, only_frequent_word=False):
-		'''Convert a session from string to index representation.
-
-		Arguments:
-			session (list): a jagged 2-d list of string, representing each token of the session.
-					Size: ``[turn_length, ~sent_length]``, where "~" means different sizes
-					in this dimension is allowed.
-			only_frequent_word (bool): whether to provide invalid vocabs.
-					If ``False``, invalid vocabs will be transferred to ``unk_id``.
-					If ``True``, invalid vocabs will using their own id.
-					Default: ``False``.
-
-		Examples:
-			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
-			>>> #	"been", "to", "China", "Japan"]
-			>>> # vocab_size = 7
-			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have", "been"]
-			>>> dataloader.convert_multi_turn_tokens_to_ids(
-			...	[["<go>", "I", "have", "been", "to", "China", "<eos>"],
-			... ["<go>", "I", "have", "been", "to", "Japan", "<eos>"]], only_frequent_word=False)
-			>>> [[2, 4, 5, 6, 1, 1, 3], [2, 4, 5, 6, 1, 1, 3]]
-			>>> dataloader.convert_multi_turn_tokens_to_ids(
-			...	[["<go>", "I", "have", "been", "to", "China", "<eos>"],
-			... ["<go>", "I", "have", "been", "to", "Japan", "<eos>"]], only_frequent_word=True)
-			>>> [[2, 4, 5, 6, 7, 8, 3], [2, 4, 5, 6, 7, 9, 3]]
-		'''
-		field: SessionDefault = self.get_default_field()
-		return field.convert_multi_turn_tokens_to_ids(session, False, only_frequent_word)
-		# if invalid_vocab:
-		# 	return list(map(lambda sent: list(map( \
-		# 		lambda word: self.word2id.get(word, self.unk_id), sent)), \
-		# 	session))
-		# else:
-		# 	return list(map(lambda sent: list(map( \
-		# 		self._valid_word2id, sent)), \
-		# 	session))
-
-	# TODO: 参数统一
-	def convert_multi_turn_ids_to_tokens(self, index, trim=True, turn_length=None, \
-				ignore_first_token=False):
-		'''Convert a session from index to string representation
-
-		Arguments:
-			index (list or :class:`numpy.ndarray`): a jagged 2-d array of int.
-				Size: ``[turn_length, ~sent_length]``, where where "~" means different sizes
-				in this dimension is allowed.
-			trim (bool): if True, call :func:`multi_turn_trim` before convertion.
-			turn_length (int): Only works when trim=``True``.
-				If True, the session is trimmed according the turn_length. Default: None
-			ignore_first_token (bool): Only works when trim=``True``.
-				If True, ignore first token of each turn (must be `<go>`).
-
-		Examples:
-			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "I", "have",
-			>>> #	"been", "to", "China", "Japan"]
-			>>> dataloader.convert_multi_turn_ids_to_tokens(
-			...	[[2, 4, 5, 6, 7, 8, 3, 0, 0],
-			... [2, 4, 5, 6, 7, 9, 3, 0, 0]],
-			... trim=True, turn_length=None, ignore_first_token=False)
-			>>> [["<go>", "I", "have", "been", "to", "China"],
-			... ["<go>", "I", "have", "been", "to", "Japan"]]
-			>>> dataloader.convert_multi_turn_ids_to_tokens(
-			...	[[2, 4, 5, 6, 7, 8, 3, 0, 0],
-			... [2, 4, 5, 6, 7, 9, 3, 0, 0]],
-			... trim=True, turn_length=1, ignore_first_token=False)
-			>>> [["<go>", "I", "have", "been", "to", "China"]]
-			>>> dataloader.convert_multi_turn_ids_to_tokens(
-			...	[[2, 4, 5, 6, 7, 8, 3, 0, 0],
-			... [2, 4, 5, 6, 7, 9, 3, 0, 0]],
-			... trim=True, turn_length=None, ignore_first_token=True)
-			>>> [["I", "have", "been", "to", "China"],
-			... ["I", "have", "been", "to", "Japan"]]
-			>>> dataloader.convert_multi_turn_ids_to_tokens(
-			...	[[2, 4, 5, 6, 7, 8, 3, 0, 0],
-			... [2, 4, 5, 6, 7, 9, 3, 0, 0]], trim=False)
-			>>> [["<go>", "I", "have", "been", "to", "China", "<eos>", "<pad>", "<pad>"],
-			... ["<go>", "I", "have", "been", "to", "Japan", "<eos>", "<pad>", "<pad>"]]
-
-		Returns:
-			(list): a list of trimmed index
-		'''
-		# if trim:
-		# 	index = self.multi_turn_trim(index, turn_length=turn_length, \
-		# 		ignore_first_token=ignore_first_token)
-		# return list(map(lambda sent: \
-		# 	list(map(lambda word: self.all_vocab_list[word], sent)), \
-		# 	index))
-		field: Session = self.get_default_field()
-		# if trim:
-		# 	index = self.multi_turn_trim(index, turn_length=turn_length, ignore_first_token=ignore_first_token)
-		if turn_length is not None:
-			index = [sent[:turn_length] for sent in index]
-		return field.convert_multi_turn_ids_to_tokens(index, remove_special=ignore_first_token, trim=trim)
 
 	def get_teacher_forcing_metric(self, multi_turn_gen_log_prob_key="multi_turn_gen_log_prob"):
 		'''Get metric for teacher-forcing.

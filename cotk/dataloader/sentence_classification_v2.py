@@ -1,6 +1,4 @@
 """Dataloader for language generation"""
-import os
-import json
 from collections import OrderedDict
 
 from ..hooks import hooks
@@ -127,9 +125,3 @@ class SST(SentenceClassification):
 			convert_to_lower_letter=False):
 			super().__init__(file_id, fields)
 		self.set_default_field('train', 'sent')
-
-		# # TODO: fix
-		# data = {}
-		# for set_name in self.fields:
-		# 	with open(os.path.join(self.file_path, set_name + '_labels.json'), 'r', encoding='utf-8') as fp:
-		# 		data[set_name]['label'] = json.load(fp)
