@@ -57,7 +57,7 @@ class PerplexityMetric(MetricBase):
 	_version = 1
 
 	@hooks.hook_metric
-	def __init__(self, dataloader: Union[LanguageProcessing, Sentence], \
+	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence"], \
 					   reference_allvocabs_key="ref_allvocabs", \
 					   reference_len_key="ref_length", \
 					   gen_log_prob_key="gen_log_prob", \
