@@ -41,12 +41,14 @@ class Vocab(LoadClassInterface, metaclass=DocStringInheritor):
 		raise NotImplementedError
 
 	_VOCAB_MORE_DOCSTRING = ""
+	CONVERT_TOKENS_TO_IDS_ARG = """
+			tokens (List[str]): List of tokens.
+			only_frequent_word (bool, optional): Use ``unk`` for rare tokens. Defaults: False.
+	"""
 	def convert_tokens_to_ids(self, tokens: List[str], only_frequent_word=False) -> List[int]:
 		'''Convert list of tokens to list of ids. {_VOCAB_MORE_DOCSTRING}
 
-		Arguments:
-			tokens (List[str]): List of tokens.
-			only_frequent_word (bool, optional): Use ``unk`` for rare tokens. Defaults: False.
+		Arguments:{CONVERT_TOKENS_TO_IDS_ARG}
 
 		Returns:
 			List[int]: The corresponding list of ids.
@@ -343,14 +345,14 @@ class GeneralVocab(Vocab):
 			return
 			#raise RuntimeError("Vocabulary has been built, cannot build again.")
 		if self.train_tokens is None or self.test_tokens is None:
-			raise RuntimeError("Train tokens or test toktens should not be None")
+			raise RuntimeError("Train tokens or test tokens should not be None")
 
 		if not self.special_appeared_in_data:
 			all_token_set = set(chain(self.train_tokens, self.test_tokens))
 			for special_token in self.special_tokens_mapping.values():
 				if special_token in all_token_set:
-					raise RuntimeError("Dataset file contains special tokens %d. If it is desired, try to set \
-						'special_appeared_in_data' to True in Vocab or Dataloader.")
+					raise RuntimeError("Dataset file contains special tokens %s. If it is desired, try to set \
+						'special_appeared_in_data' to True in Vocab or Dataloader." % special_token)
 
 		exclude_set = set(self.special_tokens_mapping.values())
 		if self.mode != "frequent_specified":
@@ -500,4 +502,68 @@ class PretrainedVocab(Vocab):
 #TODO: add a class for sparse label. It convert sparse tokens to id, but it do not use special tokens,
 # frequent tokens or more.
 class SimpleVocab(Vocab):
-	pass
+	def __init__(self):
+		super().___init__()
+		self._setting_hash = hashlib.sha256(
+			dumps([self.__class__.__name__, "configs"])
+		).hexdigest()
+		self._token_counter = Counter()
+		self._all_vocab_list: List[str] = None
+		self.word2id: Dict[str, int] = None
+		self.mode = "init"
+
+	def add_tokens(self, tokens: List[str], vocab_from: str) -> None:
+		if self.mode == "init":
+			for token, num in Counter(tokens).items():
+				self._token_counter[token] += num
+
+	def build_vocab(self):
+		if self.mode == "finish":
+			return
+		vocabs = sorted(
+			self._token_counter.items(),
+			key=lambda item:(-item[1], item[0])
+		)
+		self._all_vocab_list = [item[0] for item in vocabs]
+		self.word2id = {w: i for i, w in enumerate(self._all_vocab_list)}
+
+		self.mode = "finish"
+		self._token_counter = None
+
+	def convert_tokens_to_ids(self, tokens: List[str], only_frequent_word=False) -> List[int]:
+		if self.word2id is None:
+			raise RuntimeError("You have to run build_vocab first")
+		return [self.word2id[token] for token in tokens]
+
+	def convert_ids_to_tokens(self, ids: List[int]) -> List[str]:
+		if self._all_vocab_list is None:
+			raise RuntimeError("You have to run build_vocab first")
+		return [self._all_vocab_list[i] for i in ids]
+
+	@property
+	def frequent_vocab_size(self):
+		return len(self._all_vocab_list)
+
+	@property
+	def all_vocab_size(self):
+		return len(self._all_vocab_list)
+
+	@property
+	def frequent_vocab_list(self):
+		return self._all_vocab_list
+
+	@property
+	def all_vocab_list(self):
+		return self._all_vocab_list
+
+	def get_special_tokens_mapping(self) -> OrderedDictType[str, str]:
+		return {}
+
+	def get_special_tokens_id(self, name: str) -> int:
+		raise NotImplementedError("SimpleVocab don\'t use any special tokens.")
+
+	def get_vocab_hash(self) -> str:
+		return hashlib.sha256(
+			dumps([self._all_vocab_list])
+		).hexdigest()
+

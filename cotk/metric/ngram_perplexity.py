@@ -93,7 +93,7 @@ class NgramFwBwPerplexityMetric(MetricBase):
 			if isinstance(self.tokenizer, str):
 				tokenizer = SimpleTokenizer(self.tokenizer)
 			else:
-				tokenizer = tokenizer
+				tokenizer = self.tokenizer
 			if isinstance(origin_refs[0], List):
 				ref_sents = [self.dataloader.convert_ids_to_sentence(ids, remove_special=True, trim=True) for ids in origin_refs]
 			else:
