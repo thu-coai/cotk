@@ -57,7 +57,7 @@ class Context(metaclass=DocStringInheritor):
 			return cls.context_dict[key]
 		else:
 			if no_default:
-				raise KeyError("Must specify %s in Context.")
+				raise KeyError("Must specify %s in Context." % key)
 			else:
 				return default
 
