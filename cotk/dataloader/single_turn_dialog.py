@@ -1,8 +1,6 @@
 '''
 A module for single turn dialog.
 '''
-import os
-import time
 from collections import Counter, OrderedDict
 from itertools import chain
 import multiprocessing
