@@ -1,4 +1,4 @@
-~~ location readme ../../README.md
+!! location readme ../../README.md
 
 # Conversational Toolkits
 
@@ -46,9 +46,9 @@ This project is a part of ``dialtk`` (Toolkits for Dialog System by Tsinghua Uni
 - [License](#license)
 
 
-~~ include ./meta_installation.md
+!! include ./notes/installation.md
 
-~~ include ./meta_quickstart.md
+!! include ./notes/quickstart.md
 
 ## Issues
 

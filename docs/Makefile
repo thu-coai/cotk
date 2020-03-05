@@ -11,6 +11,17 @@ BUILDDIR      = build
 # Put it first so that "make" without argument is like "make help".
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	
+public:
+	@cd meta && python update_doc.py -D public && cd ..
+	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	
+internal:
+	@cd meta && python update_doc.py -D internal && cd ..
+	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	
+checkpublic:
+	@cd meta && python update_doc.py --check -D public && cd ..
 
 .PHONY: help Makefile
 

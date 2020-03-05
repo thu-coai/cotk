@@ -1,3 +1,5 @@
+File Utilities
+
 file_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. automodule:: cotk.file_utils.file_utils
@@ -14,28 +16,6 @@ file_utils
 .. autofunction:: get_resource_file_path
 .. autofunction:: import_local_resources
 .. autofunction:: load_file_from_url
-
-hooks
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: cotk.hooks
-
-.. autofunction:: invoke_listener
-.. autofunction:: compress_dict
-.. autofunction:: hook_dataloader
-.. autofunction:: hook_metric
-.. autofunction:: hook_metric_close
-.. autofunction:: hook_wordvec
-
-.. autoclass:: HooksListener
-  :members:
-  :private-members:
-
-.. autoclass:: SimpleHooksListener
-  :members:
-  :private-members:
-
-.. autofunction:: start_recorder
-.. autofunction:: close_recorder
 
 resources_processor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

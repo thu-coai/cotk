@@ -1,4 +1,3 @@
-
 ## Installation
 
 ### Requirements
@@ -8,8 +7,8 @@
 -  nltk >= 3.4
 -  tqdm >= 4.30
 -  checksumdir >= 1.1
--  pytorch >= 1.0.0 (optional, used for calculation of perplexity)
--  transformers (optional, used for tokenizer of pretrained models)
+-  pytorch >= 1.0.0 (optional, accelerating the calculation of some metrics)
+-  transformers (optional, used for pretrained models)
 
 We support Unix, Windows, and macOS.
 
@@ -35,5 +34,4 @@ You can simply get the latest stable version from pip using
     cd cotk
     pip install -e .
 ```
-
 
