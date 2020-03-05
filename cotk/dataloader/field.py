@@ -108,7 +108,7 @@ class _FieldContent(metaclass=DocStringInheritor):
 		self._data_hash: str
 
 	_GET_NEXT_ARG = """
-			dataset (Iterator[str]): An iterator of the data file.
+			dataset (Iterator[str]): An iterator of the data file content.
 	"""
 	def _get_next(self, dataset: Iterator[str]) -> Tuple[Any, int]:
 		'''Read the next element from ``dataset``.
@@ -325,7 +325,7 @@ class Sentence(Field):
 		{_SENTENCE_MORE_DOCSTRING}
 
 		Arguments:
-			sentence (str): The list of sentence to be tokenized.
+			sentence (str): The sentence to be tokenized.
 
 		Returns:
 			List[str]: The tokenized sentence.
@@ -336,89 +336,83 @@ class Sentence(Field):
 		else:
 			return tokenized_sentence
 
-	# TODO: arg
+	CONVERT_TO_ID_ARG = """
+			add_special (bool, optional): If it's True, special ids are added to the result. Defaults: False.
+			only_frequent_word (bool, optional): If it's True, rare tokens will be replaced by `unk_id`. Defaults: False.
+	"""
 	def convert_tokens_to_ids(self, tokens: List[str], add_special=False, only_frequent_word=False) -> List[int]:
 		'''Convert list of tokens to list of ids.
 
 		Arguments:
-			tokens (List[str]): 
-			add_special (bool, optional): . Defaults: False.
-			only_frequent_word (bool, optional): . Defaults: False.
+			tokens (List[str]): The tokens to be converted.{CONVERT_ID_TO_ARG}
 
 		Returns:
-			List[int]: 
+			List[int]: The converted ids.
 		'''
 		ids = self.vocab.convert_tokens_to_ids(tokens, only_frequent_word=only_frequent_word)
 		if add_special:
 			ids = self.add_special_to_ids(ids)
 		return ids
 
+	CONVERT_FROM_ID_ARG = """
+			remove_special (bool, optional): If it's True, special ids, such as `go_id`, will be removed. Defaults: True.
+			trim (bool, optional): If it's True, the extra special ids, such as `eos_id`, will be removed. Defaults: True.
+	"""
 	def convert_ids_to_tokens(self, ids: List[int], remove_special=True, trim=True) -> List[str]:
 		'''Convert list of ids to list of tokens.
 
 		Arguments:
-			ids (List[int]): 
-			remove_special (bool, optional): . Defaults: True.
-			trim (bool, optional): . Defaults: True.
+			ids (List[int]): The ids to be converted.{CONVERT_FROM_ID_ARG}
 
 		Returns:
-			List[str]: 
+			List[str]: The converted tokens.
 		'''
 		return self.vocab.convert_ids_to_tokens(\
 				self.remove_special_in_ids(ids, remove_special=remove_special, trim=trim))
 
-	# TODO: arg
 	def convert_ids_to_sentence(self, ids: List[int], remove_special=True, trim=True) -> str:
 		'''Convert list of tokens to a sentence.
 
 		Arguments:
-			ids (List[int]): 
-			remove_special (bool, optional): . Defaults: True.
-			trim (bool, optional): . Defaults: True.
+			ids (List[int]): The ids to be converted.{CONVERT_FROM_ID_ARG}
 
 		Returns:
-			str: 
+			str: The converted sentence.
 		'''
 		tokens = self.convert_ids_to_tokens(ids, remove_special=remove_special, trim=trim)
 		return self.tokenizer.convert_tokens_to_sentence(tokens)
 
-	# TODO: arg
 	def convert_sentence_to_ids(self, sentence: str, add_special=False, only_frequent_word=False) -> List[int]:
 		'''Convert a sentence to a list of ids.
 
 		Arguments:
-			sentence (str): 
-			add_special (bool, optional): . Defaults: False.
-			only_frequent_word (bool, optional): . Defaults: False.
+			sentence (str): The sentence to be converted.{CONVERT_TO_ID_ARG}
 
 		Returns:
-			List[int]: 
+			List[int]: The converted ids.
 		'''
 		return self.process_sentences([sentence], add_special=add_special, \
 				only_frequent_word=only_frequent_word, cut=False)[0]
 
 	def add_special_to_ids(self, ids: List[int]) -> List[int]:
-		'''TODO:
+		'''Add special ids, such as `go_id` or `eos_id` to the input `ids'.
 
 		Arguments:
-			ids (List[int]): 
+			ids (List[int]): The input ids.
 
 		Returns:
-			List[int]: 
+			List[int]: ids with special token ids.
 		'''
 		raise NotImplementedError
 
-	# TODO: arg
 	def remove_special_in_ids(self, ids: List[int], remove_special=True, trim=True) -> List[int]:
-		'''Remove special token id in input ids.
+		'''Remove special ids in input `ids`.
 
 		Arguments:
-			ids (List[int]): Input ids.
-			remove_special (bool, optional): If True, special tokens in `ids`, such as `go_id`, are removed. Defaults: True.
-			trim (bool, optional): . Defaults: True.
+			ids (List[int]): Input ids.{CONVERT_FROM_ID_ARG}
 
 		Returns:
-			List[int]: 
+			List[int]: ids with special id removed.
 		'''		
 		raise NotImplementedError
 
@@ -430,7 +424,7 @@ class Sentence(Field):
 		If sentences haven't been tokenized, tokenize them by invoking :meth:`Sentence.tokenize_sentences`
 		Then, convert the list of tokens to a list of ids.
 		If `self.max_sent_length` is not None and `cut` is True,
-		sentences, whose  length is more than `self.max_sent_length`, are cut.
+		sentences, whose  length are more than `self.max_sent_length`, are cut.
 
 
 		Arguments:
@@ -439,7 +433,7 @@ class Sentence(Field):
 			cut (bool, optional): If `cut` is True and `self.max_sent_length` is not None,
 				sentences, whose  length is more than `self.max_sent_length`, are cut.
 				Defaults: True.
-			only_frequent_word (bool, optional): . Defaults: False.
+			only_frequent_word (bool, optional): If it's True, rare tokens will be replaced by `unk_id`. Defaults: False.
 
 		Returns:
 			List[List[int]]: Corresponding ids of input sentences
@@ -475,13 +469,14 @@ class Sentence(Field):
 		raise NotImplementedError
 
 	def trim_in_ids(self, ids: List[int]) -> List[int]:
-		'''TODO: fill
+		''' Remove all target id in the trailing part of `ids`.
+		The target id, such as `eos_id`, is specified by implementation of subclass.
 
 		Arguments:
-			ids (List[int]): 
+			ids (List[int]): The input ids.
 
 		Returns:
-			List[int]: 
+			List[int]: ids with trailing target id removed.
 		'''
 		raise NotImplementedError
 
@@ -547,11 +542,19 @@ class SentenceDefault(Sentence):
 			ids = self._remove_special_in_ids(ids, self.vocab.go_id, self.vocab.eos_id)
 		return ids
 
-	_GET_BATCH_DATA_DOCSTRING = '''data (Any): the object returned by :meth:`_SentenceContent.get_data` \
-		TODO: fill the format
+	_GET_BATCH_DATA_DOCSTRING = '''data (Dict[str, Any]): the object returned by :meth:`_SentenceContent.get_data`.
+ 		data['str'] is raw sentences.
+ 		data['id'] is ids of tokenized sentences.
 	'''
-	_GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch. \
-		TODO: fill the format
+	_GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch.
+		{
+			name + '_length': value0, # np.ndarray object with shape == (batch size, ). Each element is the length of corresponding sentence.
+			name: value1, # np.ndarray object with shape == (batch size, max sentence length).
+						  # Each row is the ids of a sentence. Those sentences, whose length is less than max sentence length, are padded by 0.
+						  # If an id in the array is rare vocab, it will be replaced be `unk_id`.
+			name + '_allvocabs': value2, # np.ndarray object with shape == (batch size, max sentence length). Each row is the ids of a sentence.
+			name + '_str': value3, # List[str]. Each element is the raw sentence, which has not been tokenized.
+		}
 	'''
 	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
 		if not isinstance(self.vocab, GeneralVocab):
@@ -612,11 +615,16 @@ class SentenceGPT2(Sentence):
 			ids = self._remove_special_in_ids(ids, self.vocab.eos_id, self.vocab.eos_id)
 		return ids
 
-	_GET_BATCH_DATA_DOCSTRING = '''data (Any): the object returned by :meth:`_SentenceContent.get_data` \
-		TODO: fill the format
-	'''
-	_GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch.\
-		TODO: fill the format
+	_GET_BATCH_DATA_DOCSTRING = SentenceDefault._GET_BATCH_DATA_DOCSTRING
+	_GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch.
+		{
+			name + '_length': value0, # np.ndarray object with shape == (batch size, ). Each element is the length of corresponding sentence.
+			name: value1, # np.ndarray object with shape == (batch size, max sentence length).
+						  # Each row is the ids of a sentence. Those sentences, whose length is less than max sentence length, are padded by `eos_id`.
+						  # If an id in the array is rare vocab, it will be replaced be `unk_id`.
+			name + '_allvocabs': value2, # np.ndarray object with shape == (batch size, max sentence length). Each row is the ids of a sentence.
+			name + '_str': value3, # List[str]. Each element is the raw sentence, which has not been tokenized.
+		}
 	'''
 	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
 		res: Dict[str, Any] = {}
@@ -655,19 +663,22 @@ class _SessionContent(_FieldContent):
 		super().__init__()
 
 	def _get_next(self, dataset: Iterator[str]) -> Tuple[List[str], int]:
-		#TODO: fix the docstring
 		r"""read **several(one or more)** elements and returns the next session. The first several non-space elements,
 		followed by a '\\n', are regarded as a session. The first element must not be empty string or '\\n'.
 		Note that it may raise StopIteration.
-		Args:
 
+		Args:
+			{_FieldContent._GET_NEXT_ARG}
 		Examples:
 			>>> dataset = iter(["a\n", "b\n", "\n", "c\n", "d\e", "e\n", '\n'])
-			>>> field_content = _SessionContent(Session(), "test")
+			>>> session_field = "Session"  # For simplicity, `session_field` is a string, rather than a Session object.
+			>>> field_content = _SessionContent(session_field, "test")
 			>>> field_content._get_next(dataset)
 			(['a', 'b'], 2)
 			>>> field_content._get_next(dataset)
 			(['c', 'd', 'e'], 3)
+		Returns:
+			Tuple[List[str], int]: a session and its turn length.
 		"""
 		session: List[str] = []
 		lineno = 0
@@ -704,21 +715,28 @@ class _SessionContent(_FieldContent):
 		return {"id": id_data, "str": self._original_data}
 
 class Session(Sentence):
+	"""
+	A field for session. Each session is a list of sentences.
 
+	{Sentence.INIT_DOCSTRING}
+		max_turn_length (int, optional): Set the maximum turn length of a session. The left sentences are ignored.
+			If it's None, don't cut sessions.
+			Default: None.
+	"""
 	def __init__(self, tokenizer: Union[None, Tokenizer, str] = None,
 				 vocab: Optional[Vocab] = None,
 				 vocab_from: Optional[Dict[str, str]] = None,
 				 max_sent_length: Optional[int] = None,
-				 max_turn_length: Optional[int] = None,
-				 convert_to_lower_letter: Optional[bool] = None):
+				 convert_to_lower_letter: Optional[bool] = None,
+				 max_turn_length: Optional[int] = None,):
 		if type(self) == Session:
 			raise NotImplementedError(
-				"%s is an abstract class, use %s instead." % (Session.__name__, SessionDefault.__name__))
+				"%s is an abstract class. Please use %s instead." % (Session.__name__, SessionDefault.__name__))
 		super().__init__(tokenizer, vocab, vocab_from, max_sent_length, convert_to_lower_letter)
 		with FieldContext.set_parameters(max_turn_length=max_turn_length):
 			max_turn_length = FieldContext.get('max_turn_length')
 		if max_turn_length is not None:
-			msg = "max_turn_length must be None or an positive integer"
+			msg = "max_turn_length must be None or a positive integer"
 			if not isinstance(max_turn_length, int):
 				raise TypeError(msg)
 			elif max_turn_length <= 0:
@@ -730,6 +748,23 @@ class Session(Sentence):
 
 	def process_sessions(self, sessions: List[TokenizedSessionType], add_special: bool = True, cut: bool = True,
 						 only_frequent_word: bool = False):
+		"""Process input sessions.
+		If `self.max_turn_length` is not None and `cut` is True,
+		sessions, whose turn length are more than `self.max_turn_length`, are cut.
+		Each session, is processed by :meth:`Sentence.process_sentences`.
+
+		Arguments:
+			sessions (Union[List[List[str]], List[List[List[str]]]]): `sentences` must be a list of lists of sentences or a list of lists of lists of tokens.
+			add_special (bool, optional): If True, special ids, such as go_id and eos_id, are added. Defaults: True.
+			cut (bool, optional): If `cut` is True and `self.max_turn_length` is not None,
+				sessions, whose turn length are more than `self.max_turn_length`, are cut.
+				If `cut` is True and `self.max_sent_length` is not None,
+				sentences, whose length are more than `self.max_sent_length`, are cut.
+				Defaults: True.
+			only_frequent_word (bool, optional): If it's True, rare tokens will be replaced by `unk_id`. Defaults: False.
+
+		Returns:
+			List[List[List[int]]]: Corresponding ids of input sentences"""
 		# Cut sessions.
 		# If a session's turn length > `self.max_turn_length`, retain the first `self.max_turn_length` sentences and discard the rest.
 		if cut:
@@ -772,6 +807,26 @@ class SessionDefault(Session):
 	remove_special_to_ids = SentenceDefault.remove_special_in_ids
 	trim_in_ids = SentenceDefault.trim_in_ids
 
+	_GET_BATCH_DATA_DOCSTRING = SentenceDefault._GET_BATCH_DATA_DOCSTRING\
+		.replace(_SentenceContent.__name__, _SessionContent.__name__)\
+		.replace('sentences', 'sessions')
+	_GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch.
+			{
+				name + '_turn_length': value0, # np.ndarray object with shape == (batch size, ). Each element is the length of corresponding sssion.
+				name + '_sent_length': value1, # List[List[int]]. Each integer is the length of corresponding sentence.
+				name: value2, # np.ndarray object with shape == (batch size, max turn length, max sentence length).
+							  # value2[i] is a session. value2[i, j] is a sentence. value2[i, j, k] is an id.
+							  # If `self.max_turn_length` is not None and j >= `self.max_turn_length`, 
+							  # or `self.max_sent_length` is not None and k >= `self.max_sent_length`,
+							  # value2[i, j, k] is 0.
+							  # If an id in the array is rare vocab, it will be replaced be `unk_id`.
+							  
+				name + '_allvocabs': value3, # np.ndarray object with shape == (batch size, max turn length, max sentence length).
+				                             # It's the same with value2, except that rare vocabs won't be replaced by `unk_id`.
+				name + '_str': value4, # List[List[str]]. Each sublist is the raw session, which has not been tokenized.
+			}
+		'''
+
 	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
 		if not isinstance(self.vocab, GeneralVocab):
 			raise RuntimeError("Subclass must override get_batch if self.vocab is not a GeneralVocab.")
@@ -792,8 +847,8 @@ class SessionDefault(Session):
 		return res
 
 
-#TODO: this field read integers, and this is just the label
 class DenseLabel(Field):
+	"""A field fo dense label. A dense label is just an integer."""
 	def _create(self, set_name: str) -> "_FieldContent":
 		return _DenseLabelContent(self)
 
@@ -812,15 +867,21 @@ class _DenseLabelContent(_FieldContent):
 		super().__init__()
 
 	def _get_next(self, dataset: Iterator[str]) -> Tuple[Any, int]:
-		r"""read text and returns the next label(integer). Note that it may raise StopIteration.
+		r"""Read text and returns the next label(integer). Note that it may raise StopIteration.
+
+		Args:{FieldContent._GET_NEXT_ARG}
 
 		Examples:
 			>>> dataset = iter(["1\n", "0\n"])
-			>>> field_content = _DenseLabelContent()
+			>>> field = "DenseLabel"  # For simplicity, field is a string rather than a DenseLabel object.
+			>>> field_content = _DenseLabelContent(field)
 			>>> field_content.read_next(dataset)
 			(1, 1)
 			>>> field_content.read_next(dataset)
 			(0, 1)
+
+		Returns:
+			Tuple[Any, int]: The label, and the number of lines read.
 		"""
 		label = next(dataset).strip()
 		if not label:
@@ -839,9 +900,25 @@ class _DenseLabelContent(_FieldContent):
 #TODO: this field read tokens, and it should be convert to index.
 # However, unlike sentence, it only read one token, and do not need special tokens, rare vocabs, or more.
 class SparseLabel(Field):
+	"""A field for sparse label. A sparse label is a token.
+
+	Args:
+		vocab (SimpleVocab, optional): If it's None, a SimpleVocab object is automatically created.
+	"""
 	def __init__(self, vocab: Optional[SimpleVocab] = None):
+		super().__init__()
 		self.vocab = vocab if vocab is not None else SimpleVocab()
 
+	_GET_BATCH_DATA_DOCSTRING = '''data (Dict[str, Any]): the object returned by :meth:`_SparseLabelContent.get_data`.
+	 	data['str'] is raw labels.
+		data['id'] is ids of labels.
+	'''
+	_GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch.
+		{
+			name + '_id': value0, # np.ndarray object with shape == (batch size, ). Each element is the id of corresponding label.
+			name + '_str': value1, # List[str]. Each element is the raw label.
+		}
+	'''
 	def get_batch(self, name: str, data, indexes: List[int]) -> Dict[str, Any]:
 		ids = [data['id'][i] for i in indexes]
 		ids = np.array(ids, dtype=int)
@@ -864,6 +941,21 @@ class _SparseLabelContent(_FieldContent):
 		self.field = field
 
 	def _get_next(self, dataset: Iterator[str]) -> Tuple[Union[str, None], int]:
+		r"""Read text and returns the next label(string). Note that it may raise StopIteration.
+
+		Args:{FieldContent._GET_NEXT_ARG}
+
+		Examples:
+			>>> dataset = iter(["Java\n", "Python\n", "Cpp\n", "Java\n"])
+			>>> field_content = _SparseLabelContent()
+			>>> field_content.read_next(dataset)
+			('Java', 1)
+			>>> field_content.read_next(dataset)
+			('Python', 1)
+
+		Returns:
+			Tuple[Any, int]: The label, and the number of lines read.
+		"""
 		label = next(dataset).rstrip()
 		if not label:
 			return None, 0
