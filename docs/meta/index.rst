@@ -36,6 +36,7 @@ your models fairly with baselines.
    metric
    resources
    file_utils
+   hooks
 
 .. _model_zoo:
 
