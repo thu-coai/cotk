@@ -232,13 +232,15 @@ class Sentence(Field):
 	{INIT_DOCSTRING}
 	'''
 
+	ARG_TOKENIZER = """
+		tokenizer (:class:`Tokenizer`, str, optional): The tokenizer used for the field. if str, ``SimpleTokenizer(tokenizer)``
+			will be used. No default value, KeyError will be raised."""
+
 	INIT_DOCSTRING = '''If any argument is not specified,
 	the value will be first retrieved from :class:`FieldContext`. If still ``None``, default
 	value will be used.
 
-	Arguments:
-		tokenizer (:class:`Tokenizer`, str, optional): The tokenizer used for the field. if str, ``SimpleTokenizer(tokenizer)``
-			will be used. No default value, KeyError will be raised.
+	Arguments:{ARG_TOKENIZER}
 		vocab (:class:`{_VOCAB_CLASS}`, optional): The vocabulary used for this field. Sharing this object between different field can
 			build vocabulary together. No default value, KeyError will be raised.
 		vocab_from (Dict[str, str], optional): Infer the set type (train, test, or extra) from the set name.
@@ -344,7 +346,7 @@ class Sentence(Field):
 		'''Convert list of tokens to list of ids.
 
 		Arguments:
-			tokens (List[str]): The tokens to be converted.{CONVERT_ID_TO_ARG}
+			tokens (List[str]): The tokens to be converted.{CONVERT_TO_ID_ARG}
 
 		Returns:
 			List[int]: The converted ids.
@@ -869,7 +871,7 @@ class _DenseLabelContent(_FieldContent):
 	def _get_next(self, dataset: Iterator[str]) -> Tuple[Any, int]:
 		r"""Read text and returns the next label(integer). Note that it may raise StopIteration.
 
-		Args:{FieldContent._GET_NEXT_ARG}
+		Args:{_FieldContent._GET_NEXT_ARG}
 
 		Examples:
 			>>> dataset = iter(["1\n", "0\n"])
@@ -943,7 +945,7 @@ class _SparseLabelContent(_FieldContent):
 	def _get_next(self, dataset: Iterator[str]) -> Tuple[Union[str, None], int]:
 		r"""Read text and returns the next label(string). Note that it may raise StopIteration.
 
-		Args:{FieldContent._GET_NEXT_ARG}
+		Args:{_FieldContent._GET_NEXT_ARG}
 
 		Examples:
 			>>> dataset = iter(["Java\n", "Python\n", "Cpp\n", "Java\n"])

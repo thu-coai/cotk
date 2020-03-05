@@ -7,7 +7,7 @@ from collections import OrderedDict
 from .._utils.metaclass import copy_func
 from ..hooks import hooks
 from .dataloader import LanguageProcessing
-from .field import SessionDefault, Session
+from .field import SessionDefault, Session, Sentence
 from .tokenizer import SimpleTokenizer
 from .vocab import GeneralVocab
 from .context import FieldContext
@@ -137,8 +137,7 @@ class UbuntuCorpus(MultiTurnDialog):
 
 	Arguments:
 		file_id (str): a str indicates the source of UbuntuCorpus dataset.
-			Default: ``resources://Ubuntu``. A preset dataset is downloaded and cached.
-		{ARGUMENTS}
+			Default: ``resources://Ubuntu``. A preset dataset is downloaded and cached.{ARGUMENTS}
 
 	Refer to :class:`.MultiTurnDialog` for attributes and methods.
 
@@ -149,19 +148,25 @@ class UbuntuCorpus(MultiTurnDialog):
 		for Research in Unstructured Multi-Turn Dialogue Systems. SIGDIAL 2015.
 	'''
 
-	ARGUMENTS = r'''
+	ARGUMENTS_FORMAT = r'''
 		min_frequent_vocab_times (int):  A cut-off threshold of valid tokens. All tokens appear
-			not less than `min_vocab_times` in **training set** will be marked as valid words.
-			Default: ``10``.
+			not less than `min_vocab_times` in **training set** will be marked as frequent words.
+			Default: ``{default_min_frequent_vocab_times}``.
 		max_sent_length (int): All sentences longer than ``max_sent_length`` will be shortened
-			to first ``max_sent_length`` tokens. Default: ``50``.
+			to first ``max_sent_length`` tokens. Default: ``{default_max_sent_length}``.
 		max_turn_length (int): All sessions longer than ``max_turn_length`` will be shortened
-			to first ``max_turn_length`` sentences. Default: ``20``.
-		min_rare_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
+			to first ``max_turn_length`` sentences. Default: ``{default_max_turn_length}``.
+		min_rare_vocab_times (int):  A cut-off threshold of rare tokens. All tokens appear
 			not less than ``invalid_vocab_times`` in the **whole dataset** (except valid words) will be
-			marked as invalid words. Otherwise, they are unknown words, both in training or
-			testing stages. Default: ``0`` (No unknown words).
-	'''
+			marked as rare words. Otherwise, they are unknown words, both in training or
+			testing stages. Default: ``{default_min_rare_vocab_times}`` (No unknown words).'''
+
+	ARGUMENTS = ARGUMENTS_FORMAT.format(
+		default_min_frequent_vocab_times=10,
+		default_max_sent_length=50,
+		default_max_turn_length=20,
+		default_min_rare_vocab_times=0
+	)
 
 	@hooks.hook_dataloader
 	def __init__(self, file_id="resources://Ubuntu", min_frequent_vocab_times=10, \
@@ -184,8 +189,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 
 	Arguments:
 		file_id (str): a string indicating the source of SwitchboardCorpus dataset.
-			Default: ``resources://SwitchboardCorpus``. A preset dataset is downloaded and cached.
-		{ARGUMENTS}
+			Default: ``resources://SwitchboardCorpus``. A preset dataset is downloaded and cached.{ARGUMENTS}{ARG_TOKENIZER}
 
 	Refer to :class:`.MultiTurnDialog` for attributes and methods.
 
@@ -195,7 +199,13 @@ class SwitchboardCorpus(MultiTurnDialog):
 		[2] John J G and Edward H. Switchboard-1 release 2. Linguistic Data Consortium, Philadelphia 1997.
 	'''
 
-	ARGUMENTS = UbuntuCorpus.ARGUMENTS
+	ARGUMENTS = UbuntuCorpus.ARGUMENTS_FORMAT.format(
+		default_min_frequent_vocab_times=5,
+		default_max_sent_length=50,
+		default_max_turn_length=1000,
+		default_min_rare_vocab_times=0
+	)
+	ARG_TOKENIZER = Sentence.ARG_TOKENIZER
 
 	class Candidate(SessionDefault):
 		def process_sessions(self, sessions, add_special=True, cut=False,

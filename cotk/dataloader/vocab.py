@@ -437,7 +437,7 @@ class PretrainedVocab(Vocab):
 	This class is usually used for pretrained models, and it do not have rare words.
 
 	Arguments:
-		tokenizer (``transformers.Pretrainedtokenizer``): A pretrained tokenizer from transformers package.
+		tokenizer (``transformers.PretrainedTokenizer``): A pretrained tokenizer from transformers package.
 	'''
 	def __init__(self, tokenizer: Any):
 		super().__init__()
@@ -499,9 +499,8 @@ class PretrainedVocab(Vocab):
 		except KeyError:
 			raise KeyError("No such special token in this class")
 
-#TODO: add a class for sparse label. It convert sparse tokens to id, but it do not use special tokens,
-# frequent tokens or more.
 class SimpleVocab(Vocab):
+	"""A simple implementation of :class:Vocab. It doesn't us any special tokens and it doesn't care about frequency of tokens."""
 	def __init__(self):
 		super().___init__()
 		self._setting_hash = hashlib.sha256(
@@ -516,6 +515,11 @@ class SimpleVocab(Vocab):
 		if self.mode == "init":
 			for token, num in Counter(tokens).items():
 				self._token_counter[token] += num
+	add_tokens.__doc__ = Vocab.add_tokens.__doc__ + """
+	
+	Notes:
+		Since frequency is not import in this class, argument `vocab_from` has no effect.
+	"""
 
 	def build_vocab(self):
 		if self.mode == "finish":
@@ -550,6 +554,9 @@ class SimpleVocab(Vocab):
 
 	@property
 	def frequent_vocab_list(self):
+		'''list: The list of vocabulary list. This class do not have rare words. Thus the return value
+		is always the same with :meth:`all_vocab_list`.
+		'''
 		return self._all_vocab_list
 
 	@property
