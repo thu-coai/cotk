@@ -1,6 +1,7 @@
 """Dataloader for language generation"""
 from collections import OrderedDict
 
+from .field import Sentence
 from ..hooks import hooks
 from .dataloader import LanguageProcessing
 from .context import FieldContext
@@ -14,16 +15,11 @@ class SentenceClassification(LanguageProcessing):
 	r"""Base class for sentence classification datasets. This is an abstract class.
 
 	Arguments:{ARGUMENTS}
-
-	Attributes:{ATTRIBUTES}
 	"""
 
 	_version = 1
 
 	ARGUMENTS = LanguageProcessing.ARGUMENTS
-	# TODO: doc for attributes
-	# ATTRIBUTES = LanguageProcessing.ATTRIBUTES
-	ATTRIBUTES = ''
 
 	def get_batch(self, set_name, indexes):
 		'''Get a batch of specified `indexes`.
@@ -96,16 +92,15 @@ class SST(SentenceClassification):
 
 	Arguments:
 			file_id (str): a str indicates the source of SST dataset.
-			file_type (str): a str indicates the type of SST dataset. Default: "SST"
-			valid_vocab_times (int): A cut-off threshold of valid tokens. All tokens appear
-					not less than `min_vocab_times` in **training set** will be marked as valid words.
+			min_frequent_vocab_times (int): A cut-off threshold of valid tokens. All tokens appear
+					not less than `min_frequent_vocab_times` in **training set** will be marked as frequent words.
 					Default: 10.
 			max_sent_length (int): All sentences longer than `max_sent_length` will be shortened
 					to first `max_sent_length` tokens. Default: 50.
 			min_rare_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
-					not less than `invalid_vocab_times` in the **whole dataset** (except valid words) will be
-					marked as invalid words. Otherwise, they are unknown words, both in training or
-					testing stages. Default: 0 (No unknown words).
+					not less than `min_rare_vocab_times` in the **whole dataset** (except valid words) will be
+					marked as rare words. Otherwise, they are unknown words, both in training or
+					testing stages. Default: 0 (No unknown words).{ARG_TOKENIZER}
 
 	Refer to :class:`.SentenceClassification` for attributes and methods.
 
@@ -115,6 +110,7 @@ class SST(SentenceClassification):
 		[2] Lin T Y, Maire M, Belongie S, et al. Microsoft COCO: Common Objects in Context. ECCV 2014.
 
 	'''
+	ARF_TOKENIZER = Sentence.ARG_TOKENIZER
 
 	@hooks.hook_dataloader
 	def __init__(self, file_id, min_frequent_vocab_times=10, \
