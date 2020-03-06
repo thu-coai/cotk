@@ -12,6 +12,7 @@ from .context import Context, FieldContext, VocabContext
 from .dataloader import Dataloader, LanguageProcessing
 from .language_generation import LanguageGeneration, MSCOCO
 from .single_turn_dialog import SingleTurnDialog, OpenSubtitles
+from .multi_turn_dialog import MultiTurnDialog, SwitchboardCorpus, UbuntuCorpus
 
 __all__ = [ \
 	'Tokenizer', 'SimpleTokenizer', 'PretrainedTokenizer', \
