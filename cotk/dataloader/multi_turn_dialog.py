@@ -11,10 +11,10 @@ from .field import SessionDefault, Session, Sentence
 from .tokenizer import SimpleTokenizer
 from .vocab import GeneralVocab
 from .context import FieldContext
-from ..metric import MetricChain, MultiTurnPerplexityMetric, MultiTurnBleuCorpusMetric, \
-	MultiTurnDialogRecorder
-from ..metric import BleuPrecisionRecallMetric, EmbSimilarityPrecisionRecallMetric
 from ..wordvector import Glove
+
+if False: # for type check # pylint: disable=using-constant-test
+	from ..metric import MetricChain #pylint: disable=unused-import
 
 # pylint: disable=W0223
 class MultiTurnDialog(LanguageProcessing):
@@ -99,6 +99,7 @@ class MultiTurnDialog(LanguageProcessing):
 		Returns:
 			A :class:`.metric.MetricChain` object.
 		'''
+		from ..metric import MetricChain, MultiTurnPerplexityMetric
 		metric = MetricChain()
 		metric.add_metric(MultiTurnPerplexityMetric(self, \
 			multi_turn_gen_log_prob_key=multi_turn_gen_log_prob_key, \
@@ -122,6 +123,7 @@ class MultiTurnDialog(LanguageProcessing):
 		Returns:
 			A :class:`.metric.MetricChain` object.
 		'''
+		from ..metric import MetricChain, MultiTurnBleuCorpusMetric, MultiTurnDialogRecorder
 		metric = MetricChain()
 		metric.add_metric(MultiTurnBleuCorpusMetric(self, multi_turn_gen_key=multi_turn_gen_key,\
 			multi_turn_reference_allvocabs_key="sent_allvocabs", turn_len_key="turn_length"))
@@ -274,6 +276,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 		Returns:
 			A :class:`.metric.MetricChain` object.
 		'''
+		from ..metric import MetricChain, BleuPrecisionRecallMetric, EmbSimilarityPrecisionRecallMetric
 		metric = MetricChain()
 		if word2vec is None:
 			glove = Glove("resources://Glove300d")
