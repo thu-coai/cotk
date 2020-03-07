@@ -44,17 +44,11 @@ class Field(LoadClassInterface, metaclass=DocStringInheritor):
 
 	def get_vocab(self) -> Optional[Vocab]:
 		'''Get :class:`Vocab` object for the field. None for no :class:`Vocab` specified.
-
-		Returns:
-			(:class:`Vocab` or None): :class:`Vocab` of the field.
 		'''
 		return None
 
 	def get_tokenizer(self) -> Optional[Tokenizer]:
 		'''Get :class:`Tokenizer` object for the field. None for no :class:`Tokenizer` specified.
-
-		Returns:
-			(:class:`Tokenizer` or None): :class:`Tokenizer` of the field.
 		'''
 		return None
 
@@ -64,8 +58,6 @@ class Field(LoadClassInterface, metaclass=DocStringInheritor):
 		Arguments:
 			set_name (str): specify the set name for the :class:`_FieldContent`, which may affect the vocab type.
 
-		Returns:
-			:class:`_FieldContent`: the created :class:`_FieldContent` object
 		'''
 		raise NotImplementedError
 
@@ -77,23 +69,19 @@ class Field(LoadClassInterface, metaclass=DocStringInheritor):
 		Arguments:
 			vocabs (list): list of :class:`Vocab`.
 
-		Returns:
-			str: the setting hash of this field.
 		'''
 		raise NotImplementedError
 
 	_GET_BATCH_DATA_DOCSTRING = '''data (Any): the object returned by :meth:`_FieldContent.get_data`'''
-	_GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch.'''
+	_GET_BATCH_RETURNS_DOCSTRING = ''
 	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
 		'''Invoked by :meth:`LanguageProcessing.get_batch`, return the batched data specified by this field.
+		{_GET_BATCH_RETURNS_DOCSTRING}
 
 		Arguments:
 			name (str): name of the field.
 			{_GET_BATCH_DATA_DOCSTRING}
 			indexes (List[int]): the indexes of the data in this batch
-
-		Returns:
-			{_GET_BATCH_RETURNS_DOCSTRING}
 		'''
 		raise NotImplementedError
 
@@ -107,28 +95,24 @@ class _FieldContent(metaclass=DocStringInheritor):
 		self._raw_data_hash: str
 		self._data_hash: str
 
-	_GET_NEXT_ARG = """
+	_GET_NEXT_ARG = r"""
 			dataset (Iterator[str]): An iterator of the data file content.
+				Generally, each element is a string, that ends with '\n'.
 	"""
 	def _get_next(self, dataset: Iterator[str]) -> Tuple[Any, int]:
-		'''Read the next element from ``dataset``.
+		'''Read the next data from ``dataset`` and returns a 2-tuple (the data, and the number of elements it read from `dataset`).
 
 		Arguments:{_GET_NEXT_ARG}
-
-		Returns:
-			Tuple[Any, int]: The element, and the number of lines read.
 
 		'''
 		raise NotImplementedError
 
 	def read_next(self, dataset: Iterator[str]) -> int:
 		'''Read the next element from ``dataloader`` and store the elements.
+		Returns the number of lines read.
 
 		Arguments:
 			dataset (Iterator[str]): An iterator of the data file.
-
-		Returns:
-			int: the number of lines read.
 		'''
 		if not isinstance(self._original_data, list):
 			raise RuntimeError("read_next must be called before get_data")
@@ -143,34 +127,22 @@ class _FieldContent(metaclass=DocStringInheritor):
 		raise NotImplementedError
 
 	def get_data_number(self) -> int:
-		'''Get the number of elements.
-
-		Returns:
-			int: The elements in this field.
+		'''Get the number of elements in this field.
 		'''
 		return len(self._original_data)
 
 	def get_data(self) -> Any:
-		'''Get the data.
-
-		Returns:
-			Any: Return the data which will be stored in the :class:`LanguageProcessing`.
+		'''Get the data, which will be stored in the :class:`LanguageProcessing`.
 		'''
 		raise NotImplementedError
 
 	def get_raw_data_hash(self) -> str:
 		'''Return the raw data hash of this field content.
-
-		Returns:
-			str: raw data hash
 		'''
 		return self._raw_data_hash
 
 	def get_data_hash(self) -> str:
-		'''Return raw data hash of this field content.
-
-		Returns:
-			str: data hash
+		'''Return the data hash of this field content.
 		'''
 		return self._data_hash
 
@@ -190,7 +162,8 @@ class _SentenceContent(_FieldContent):
 		super().__init__()
 
 	def _get_next(self, dataset: Iterator[str]) -> Tuple[str, int]:
-		"""read one line. Note that it may raise StopIteration.
+		"""read the next sentence and returns a 2-tuple (the sentence and number of elements it reads from `dataset`).
+		Note that it may raise StopIteration.
 
 		Args:{_FieldContent._GET_NEXT_ARG}
 
@@ -312,9 +285,6 @@ class Sentence(Field):
 
 		Arguments:
 			sentences (List[str]): The list of sentence to be tokenized.
-
-		Returns:
-			List[List[str]]: The tokenized sentences.
 		'''
 		tokenized_sentences = self.tokenizer.tokenize_sentences(sentences)
 		if self.convert_to_lower_letter:
@@ -328,9 +298,6 @@ class Sentence(Field):
 
 		Arguments:
 			sentence (str): The sentence to be tokenized.
-
-		Returns:
-			List[str]: The tokenized sentence.
 		'''
 		tokenized_sentence = self.tokenizer.tokenize(sentence)
 		if self.convert_to_lower_letter:
@@ -347,9 +314,6 @@ class Sentence(Field):
 
 		Arguments:
 			tokens (List[str]): The tokens to be converted.{CONVERT_TO_ID_ARG}
-
-		Returns:
-			List[int]: The converted ids.
 		'''
 		ids = self.vocab.convert_tokens_to_ids(tokens, only_frequent_word=only_frequent_word)
 		if add_special:
@@ -365,9 +329,6 @@ class Sentence(Field):
 
 		Arguments:
 			ids (List[int]): The ids to be converted.{CONVERT_FROM_ID_ARG}
-
-		Returns:
-			List[str]: The converted tokens.
 		'''
 		return self.vocab.convert_ids_to_tokens(\
 				self.remove_special_in_ids(ids, remove_special=remove_special, trim=trim))
@@ -377,9 +338,6 @@ class Sentence(Field):
 
 		Arguments:
 			ids (List[int]): The ids to be converted.{CONVERT_FROM_ID_ARG}
-
-		Returns:
-			str: The converted sentence.
 		'''
 		tokens = self.convert_ids_to_tokens(ids, remove_special=remove_special, trim=trim)
 		return self.tokenizer.convert_tokens_to_sentence(tokens)
@@ -389,9 +347,6 @@ class Sentence(Field):
 
 		Arguments:
 			sentence (str): The sentence to be converted.{CONVERT_TO_ID_ARG}
-
-		Returns:
-			List[int]: The converted ids.
 		'''
 		return self.process_sentences([sentence], add_special=add_special, \
 				only_frequent_word=only_frequent_word, cut=False)[0]
@@ -401,9 +356,6 @@ class Sentence(Field):
 
 		Arguments:
 			ids (List[int]): The input ids.
-
-		Returns:
-			List[int]: ids with special token ids.
 		'''
 		raise NotImplementedError
 
@@ -412,10 +364,7 @@ class Sentence(Field):
 
 		Arguments:
 			ids (List[int]): Input ids.{CONVERT_FROM_ID_ARG}
-
-		Returns:
-			List[int]: ids with special id removed.
-		'''		
+		'''
 		raise NotImplementedError
 
 	def process_sentences(self, sentences: Union[List[str], List[List[str]]],
@@ -423,10 +372,11 @@ class Sentence(Field):
 						  cut: bool = True,
 						  only_frequent_word=False) -> List[List[int]]:
 		'''Process input sentences.
-		If sentences haven't been tokenized, tokenize them by invoking :meth:`Sentence.tokenize_sentences`
+		If sentences haven't been tokenized, tokenize them by invoking :meth:`Sentence.tokenize_sentences`.
 		Then, convert the list of tokens to a list of ids.
 		If `self.max_sent_length` is not None and `cut` is True,
 		sentences, whose  length are more than `self.max_sent_length`, are cut.
+		Returns the ids.
 
 
 		Arguments:
@@ -436,9 +386,6 @@ class Sentence(Field):
 				sentences, whose  length is more than `self.max_sent_length`, are cut.
 				Defaults: True.
 			only_frequent_word (bool, optional): If it's True, rare tokens will be replaced by `unk_id`. Defaults: False.
-
-		Returns:
-			List[List[int]]: Corresponding ids of input sentences
 		'''
 		# sentences: : Union[List[str], List[List[str]]]
 		if not sentences:
@@ -466,7 +413,7 @@ class Sentence(Field):
 		return sentences
 
 	_GET_BATCH_DATA_DOCSTRING = '''data (Any): the object returned by :meth:`_SentenceContent.get_data`'''
-	_GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch.'''
+	# _GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch.'''
 	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
 		raise NotImplementedError
 
@@ -476,9 +423,6 @@ class Sentence(Field):
 
 		Arguments:
 			ids (List[int]): The input ids.
-
-		Returns:
-			List[int]: ids with trailing target id removed.
 		'''
 		raise NotImplementedError
 
@@ -489,9 +433,6 @@ class Sentence(Field):
 			ids (List[int]): the original ids
 			go_id (int): go token
 			eos_id (int): eos token
-
-		Returns:
-			List[int]: the ids with the special token removed.
 		'''
 		if not ids:
 			return ids
@@ -548,7 +489,7 @@ class SentenceDefault(Sentence):
  		data['str'] is raw sentences.
  		data['id'] is ids of tokenized sentences.
 	'''
-	_GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch.
+	_GET_BATCH_RETURNS_DOCSTRING = '''The return value is a dict like this. 
 		{
 			name + '_length': value0, # np.ndarray object with shape == (batch size, ). Each element is the length of corresponding sentence.
 			name: value1, # np.ndarray object with shape == (batch size, max sentence length).
@@ -618,7 +559,7 @@ class SentenceGPT2(Sentence):
 		return ids
 
 	_GET_BATCH_DATA_DOCSTRING = SentenceDefault._GET_BATCH_DATA_DOCSTRING
-	_GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch.
+	_GET_BATCH_RETURNS_DOCSTRING = '''The return value is a dict like this.
 		{
 			name + '_length': value0, # np.ndarray object with shape == (batch size, ). Each element is the length of corresponding sentence.
 			name: value1, # np.ndarray object with shape == (batch size, max sentence length).
@@ -665,8 +606,9 @@ class _SessionContent(_FieldContent):
 		super().__init__()
 
 	def _get_next(self, dataset: Iterator[str]) -> Tuple[List[str], int]:
-		r"""read **several(one or more)** elements and returns the next session. The first several non-space elements,
-		followed by a '\\n', are regarded as a session. The first element must not be empty string or '\\n'.
+		r"""read **several(one or more)** elements and returns a 2-tuple (the next session, and the number of elements it reads).
+		The first several non-space elements in `dataset`, followed by a '\\n', are regarded as a session.
+		The first element must not be empty string or '\\n'.
 		Note that it may raise StopIteration.
 
 		Args:
@@ -676,11 +618,9 @@ class _SessionContent(_FieldContent):
 			>>> session_field = "Session"  # For simplicity, `session_field` is a string, rather than a Session object.
 			>>> field_content = _SessionContent(session_field, "test")
 			>>> field_content._get_next(dataset)
-			(['a', 'b'], 2)
+			(['a', 'b'], 2)  # The first session. '\n' separates sessions.
 			>>> field_content._get_next(dataset)
-			(['c', 'd', 'e'], 3)
-		Returns:
-			Tuple[List[str], int]: a session and its turn length.
+			(['c', 'd', 'e'], 3)  # The second(last) session. For the last session, it doesn't matter whether it's followed by '\n'.
 		"""
 		session: List[str] = []
 		lineno = 0
@@ -750,7 +690,7 @@ class Session(Sentence):
 
 	def process_sessions(self, sessions: List[TokenizedSessionType], add_special: bool = True, cut: bool = True,
 						 only_frequent_word: bool = False):
-		"""Process input sessions.
+		"""Process input sessions and returns corresponding ids
 		If `self.max_turn_length` is not None and `cut` is True,
 		sessions, whose turn length are more than `self.max_turn_length`, are cut.
 		Each session, is processed by :meth:`Sentence.process_sentences`.
@@ -765,8 +705,7 @@ class Session(Sentence):
 				Defaults: True.
 			only_frequent_word (bool, optional): If it's True, rare tokens will be replaced by `unk_id`. Defaults: False.
 
-		Returns:
-			List[List[List[int]]]: Corresponding ids of input sentences"""
+		"""
 		# Cut sessions.
 		# If a session's turn length > `self.max_turn_length`, retain the first `self.max_turn_length` sentences and discard the rest.
 		if cut:
@@ -812,7 +751,7 @@ class SessionDefault(Session):
 	_GET_BATCH_DATA_DOCSTRING = SentenceDefault._GET_BATCH_DATA_DOCSTRING\
 		.replace(_SentenceContent.__name__, _SessionContent.__name__)\
 		.replace('sentences', 'sessions')
-	_GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch.
+	_GET_BATCH_RETURNS_DOCSTRING = '''The return value is a dict like this.
 			{
 				name + '_turn_length': value0, # np.ndarray object with shape == (batch size, ). Each element is the length of corresponding sssion.
 				name + '_sent_length': value1, # List[List[int]]. Each integer is the length of corresponding sentence.
@@ -857,6 +796,11 @@ class DenseLabel(Field):
 	def _get_setting_hash(self, vocabs) -> str:
 		return hashlib.sha256(dumps([self.__class__.__name__])).hexdigest()
 
+	_GET_BATCH_RETURNS_DOCSTRING = """The return value is a dict like this.
+			{
+				name: [0, 1, 2, ...]  # A list of integers. Each element of it, is a label. 
+			}
+	"""
 	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
 		ids = [data['label'][i] for i in indexes]
 		ids = np.array(ids, dtype=int)
@@ -869,7 +813,9 @@ class _DenseLabelContent(_FieldContent):
 		super().__init__()
 
 	def _get_next(self, dataset: Iterator[str]) -> Tuple[Any, int]:
-		r"""Read text and returns the next label(integer). Note that it may raise StopIteration.
+		r"""Read the next label and returns a 2-tuple (the next label(integer) and the number of elements it reads).
+		Each element in `dataset` represents a label.
+		Note that it may raise StopIteration.
 
 		Args:{_FieldContent._GET_NEXT_ARG}
 
@@ -882,8 +828,6 @@ class _DenseLabelContent(_FieldContent):
 			>>> field_content.read_next(dataset)
 			(0, 1)
 
-		Returns:
-			Tuple[Any, int]: The label, and the number of lines read.
 		"""
 		label = next(dataset).strip()
 		if not label:
@@ -915,7 +859,7 @@ class SparseLabel(Field):
 	 	data['str'] is raw labels.
 		data['id'] is ids of labels.
 	'''
-	_GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch.
+	_GET_BATCH_RETURNS_DOCSTRING = '''The return value is a dict like this.
 		{
 			name + '_id': value0, # np.ndarray object with shape == (batch size, ). Each element is the id of corresponding label.
 			name + '_str': value1, # List[str]. Each element is the raw label.
@@ -943,7 +887,9 @@ class _SparseLabelContent(_FieldContent):
 		self.field = field
 
 	def _get_next(self, dataset: Iterator[str]) -> Tuple[Union[str, None], int]:
-		r"""Read text and returns the next label(string). Note that it may raise StopIteration.
+		r"""Read the next label and returns a 2-tuple (the next label(string) and the number of elements it reads).
+		Each element in `dataset` represents a label.
+		Note that it may raise StopIteration.
 
 		Args:{_FieldContent._GET_NEXT_ARG}
 
@@ -954,9 +900,6 @@ class _SparseLabelContent(_FieldContent):
 			('Java', 1)
 			>>> field_content.read_next(dataset)
 			('Python', 1)
-
-		Returns:
-			Tuple[Any, int]: The label, and the number of lines read.
 		"""
 		label = next(dataset).rstrip()
 		if not label:
@@ -974,4 +917,3 @@ class _SparseLabelContent(_FieldContent):
 	def get_data(self) -> Any:
 		id_data = self.field.get_vocab().convert_tokens_to_ids(self._original_data)
 		return {"id": id_data, "str": self._original_data}
-
