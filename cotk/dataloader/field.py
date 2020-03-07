@@ -974,4 +974,3 @@ class _SparseLabelContent(_FieldContent):
 	def get_data(self) -> Any:
 		id_data = self.field.get_vocab().convert_tokens_to_ids(self._original_data)
 		return {"id": id_data, "str": self._original_data}
-
