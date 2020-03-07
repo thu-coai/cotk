@@ -3,7 +3,7 @@ A module for word vector
 '''
 import numpy as np
 from .._utils.metaclass import DocStringInheritor, LoadClassInterface
-from typing import List, Dict, Union, Optional
+from typing import List, Dict, Union, Optional, Any
 
 
 class WordVector(LoadClassInterface, metaclass=DocStringInheritor):
@@ -20,7 +20,7 @@ class WordVector(LoadClassInterface, metaclass=DocStringInheritor):
 		* ``default_embeddings``, if it is not ``None``.
 		* normal distribution with ``mean`` and ``std``, otherwise.
 
-		Parameters:
+		Arguments:
 			n_dims (int): specify the dimension size of word vector. If ``n_dims``
 				is bigger than size of pretrained word vector, the rest embedding will be
 				initialized by ``default_embeddings`` or a normal distribution.
@@ -35,6 +35,7 @@ class WordVector(LoadClassInterface, metaclass=DocStringInheritor):
 
 
 		Returns:
+		
 			(:class:`numpy.ndarray`): A  2-d array. Size:``[len(vocab_list), n_dims]``.
 		'''
 		raise NotImplementedError("WordVector.load_matrix is a virtual function.")
@@ -42,7 +43,7 @@ class WordVector(LoadClassInterface, metaclass=DocStringInheritor):
 	def load_dict(self, vocab_list: List[str]) -> Dict[str, np.ndarray]:
 		'''Load word vector and return a dict that maps words to vectors.
 
-		Parameters:
+		Arguments:
 			vocab_list (list): specify the vocab list used in data loader. If there
 				is any word not appeared in pretrained word vector, the feature will
 				not be returned.
