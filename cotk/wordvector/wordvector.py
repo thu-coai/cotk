@@ -12,7 +12,7 @@ class WordVector(LoadClassInterface, metaclass=DocStringInheritor):
 	def __init__(self):
 		pass
 
-	def load_matrix(self, n_dims: int, vocab_list: List, mean: float=0, std: float=0.1, default_embeddings: Optional[List]=None) -> np.ndarray:
+	def load_matrix(self, n_dims: int, vocab_list: List[str], mean: float=0, std: float=0.1, default_embeddings: Any=None) -> np.ndarray:
 		'''Load pretrained word vector and return a numpy 2-d array. The ith row is the feature
 		of the ith word in ``vocab_list``. If some feature is not included in pretrained
 		word vector, it will be initialized by:
@@ -29,7 +29,7 @@ class WordVector(LoadClassInterface, metaclass=DocStringInheritor):
 				initialized by ``default_embeddings`` or a normal distribution.
 			mean (float, optional): The mean of normal distribution. Default: 0.
 			std (float, optional): The standard deviation of normal distribution. Default: 0.1.
-			default_embeddings (list, optional): The default embeddings, it size should be
+			default_embeddings (Any, optional): The default embeddings, it size should be
 				``[len(vocab_list), ndims]``. Default: None, which indicates initializing
 				the embeddings from the normal distribution with ``mean`` and ``std``
 

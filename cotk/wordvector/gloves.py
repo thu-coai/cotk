@@ -21,7 +21,7 @@ class Glove(WordVector):
 			it can be a directory contains 'glove.txt' or just a text file.
 			Default: ``resources://Glove300d``.	A 300d glove is downloaded and cached.
 	'''
-	def __init__(self, file_id: str="resources://Glove300d") -> None:
+	def __init__(self, file_id: str="resources://Glove300d"):
 		super().__init__()
 		if file_id is not None:
 			self.file_id = file_id
