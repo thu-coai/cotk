@@ -148,7 +148,7 @@ class UbuntuCorpus(MultiTurnDialog):
 		for Research in Unstructured Multi-Turn Dialogue Systems. SIGDIAL 2015.
 	'''
 
-	ARGUMENTS_FORMAT = r'''
+	ARGUMENTS_FORMATTER = r'''
 		min_frequent_vocab_times (int):  A cut-off threshold of valid tokens. All tokens appear
 			not less than `min_vocab_times` in **training set** will be marked as frequent words.
 			Default: ``{default_min_frequent_vocab_times}``.
@@ -161,7 +161,7 @@ class UbuntuCorpus(MultiTurnDialog):
 			marked as rare words. Otherwise, they are unknown words, both in training or
 			testing stages. Default: ``{default_min_rare_vocab_times}`` (No unknown words).'''
 
-	ARGUMENTS = ARGUMENTS_FORMAT.format(
+	ARGUMENTS = ARGUMENTS_FORMATTER.format(
 		default_min_frequent_vocab_times=10,
 		default_max_sent_length=50,
 		default_max_turn_length=20,
@@ -199,7 +199,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 		[2] John J G and Edward H. Switchboard-1 release 2. Linguistic Data Consortium, Philadelphia 1997.
 	'''
 
-	ARGUMENTS = UbuntuCorpus.ARGUMENTS_FORMAT.format(
+	ARGUMENTS = UbuntuCorpus.ARGUMENTS_FORMATTER.format(
 		default_min_frequent_vocab_times=5,
 		default_max_sent_length=50,
 		default_max_turn_length=1000,

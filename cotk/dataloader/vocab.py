@@ -518,7 +518,7 @@ class SimpleVocab(Vocab):
 	add_tokens.__doc__ = Vocab.add_tokens.__doc__ + """
 	
 	Notes:
-		Since frequency is not import in this class, argument `vocab_from` has no effect.
+		Since frequency is not important in this class, argument `vocab_from` has no effect.
 	"""
 
 	def build_vocab(self):
