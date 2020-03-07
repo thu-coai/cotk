@@ -17,8 +17,8 @@ def setup_module():
 class TestWordVector():
 	def base_test_init(self, dl):
 		assert isinstance(dl, WordVector)
-		with pytest.raises(Exception):
-			WordVector.load(None, None, None)
+		assert isinstance(dl.file_id, str)
+		assert isinstance(dl.file_path, str)
 		WordVector.get_all_subclasses()
 		assert WordVector.load_class('Glove') == Glove
 		assert WordVector.load_class('not_subclass') == None
