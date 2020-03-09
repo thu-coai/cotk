@@ -287,8 +287,7 @@ class LanguageProcessing(Dataloader):
 		'''Get the default :class:`Vocab` in this dataloader.
 		TODO:
 		# If there is only one vocabulary in the dataloader,
-		# return it; otherwise, it can be set by :meth:`set_default_vocab` or
-		# :meth:`.set_default_field`.
+		# return it; otherwise, it can be set by :meth:`set_default_vocab` or :meth:`.set_default_field`.
 		'''
 		vocab = self.get_default_field().get_vocab()
 		if vocab is None:
@@ -311,8 +310,7 @@ class LanguageProcessing(Dataloader):
 		'''Get the default :class:`Tokenizer` in this dataloader.
 		TODO:
 		# If there is only one tokenizer in the dataloader,
-		# return it; otherwise, it can be set by :meth:`set_default_tokenizer` or
-		# :meth:`.set_default_field`.
+		# return it; otherwise, it can be set by :meth:`set_default_tokenizer` or :meth:`.set_default_field`.
 		'''
 		tokenizer = self.get_default_field().get_tokenizer()
 		if tokenizer is None:
@@ -346,7 +344,7 @@ class LanguageProcessing(Dataloader):
 
 	def set_default_field(self, set_name: str, field_name: str):
 		'''Set the default :class:`Field` in this dataloader. In the meanwhile,
-		the default :class:`Vocab` and :class:`BaseTokenizer` is also set according
+		the default :class:`Vocab` and :class:`Tokenizer` is also set according
 		to the field (if the field have vocab and tokenizer).
 		
 		The default field will affect the action in the following methods:
@@ -511,8 +509,8 @@ class LanguageProcessing(Dataloader):
 
 	def get_batches(self, set_name, batch_size=None, shuffle=True,
 			ignore_left_samples=False) -> Iterable[Dict[str, Any]]:
-		'''An iterator over batches. It first call :func:`restart`, and then :func:`get_next_batches`
-			until no more data is available. Returns an iterator where each element is like :func:`get_batch`.
+		'''An iterator over batches. It first call :func:`restart`, and then :func:`get_next_batch`
+		until no more data is available. Returns an iterator where each element is like :func:`get_batch`.
 
 		Arguments:
 			{SET_NAME_DESCRIPTION}
@@ -534,7 +532,7 @@ class LanguageProcessing(Dataloader):
 		Returns a dict like :func:`get_batch`, but all the values are not padded
 		and their type will be converted to list.
 
-		Exactly, this function called :func:`.get_batch` where ``len(indexes)==1`` multiple times
+		Exactly, this function called :func:`get_batch` where ``len(indexes)==1`` multiple times
 		and concatenate all the values in the returned dicts.
 
 		Arguments:
