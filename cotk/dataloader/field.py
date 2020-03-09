@@ -20,7 +20,7 @@ TokenizedSessionType = List[TokenizedSentenceType]
 
 class Field(LoadClassInterface, metaclass=DocStringInheritor):
 	'''A base class of data field, which specify the format of the dataset.
-	See :class:`LanguageProcessingBase` for the usage.
+	See :class:`LanguageProcessing` for the usage.
 
 	Notice :class:`Field` object may be shared between different fields, data sets or dataloader.
 	Thus it should contain only settings and not data. (Data can be stored by :class:`_FieldContent`.)
@@ -62,7 +62,7 @@ class Field(LoadClassInterface, metaclass=DocStringInheritor):
 		raise NotImplementedError
 
 	def _get_setting_hash(self, vocabs) -> str:
-		'''Get setting hash for the field. ``vocabs`` are provided by :class:`LanguageProcessingBase`.
+		'''Get setting hash for the field. ``vocabs`` are provided by :class:`LanguageProcessing`.
 		This function only encode index of vocab, and other settings. It only encode index because
 		encode the setting hash of vocabs cannot explain whether a :class:`Vocab` is shared between different vocabs or not.
 
@@ -352,7 +352,7 @@ class Sentence(Field):
 				only_frequent_word=only_frequent_word, cut=False)[0]
 
 	def add_special_to_ids(self, ids: List[int]) -> List[int]:
-		'''Add special ids, such as `go_id` or `eos_id` to the input `ids'.
+		'''Add special ids, such as `go_id` or `eos_id` to the input `ids`.
 
 		Arguments:
 			ids (List[int]): The input ids.

@@ -2,6 +2,7 @@
 import re
 import inspect
 import types
+from typing import Optional, Iterable, Any
 from functools import wraps
 
 class DocStringInheritor(type):
@@ -152,25 +153,19 @@ class DocStringInheritor(type):
 class LoadClassInterface:
 	r"""The support of dynamic class load."""
 	@classmethod
-	def get_all_subclasses(cls):
+	def get_all_subclasses(cls) -> Iterable[Any]:
 		'''Return a generator of all subclasses.
-
-		Returns:
-			(generator) A iterator over all subclasses.
 		'''
 		for subclass in cls.__subclasses__():
 			yield from subclass.get_all_subclasses()
 			yield subclass
 
 	@classmethod
-	def load_class(cls, class_name):
+	def load_class(cls, class_name) -> Any:
 		'''Return a subclass of ``class_name``, case insensitively.
 
 		Arguments:
 			class_name (str): target class name.
-
-		Returns:
-			(class) The subclass specified by ``class_name``
 		'''
 		result = None
 		for subclass in cls.get_all_subclasses():
