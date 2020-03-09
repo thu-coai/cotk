@@ -116,7 +116,7 @@ if __name__ == "__main__":
             if path.is_file():
                 err = check(text, path)
             else:
-                err = None
+                err = True
 
             if path.is_file() and cargs.check:
                 if err:
