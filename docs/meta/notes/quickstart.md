@@ -1,5 +1,3 @@
-~~ location sphinx ../source/notes/quickstart.md
-
 ## Quick Start
 
 Let's skim through the whole package to find what you want. 
@@ -69,15 +67,15 @@ Or using ``while`` if you like
     ...    print(data)
 ```
 
-~~ contentstart sphinx
+!! ifndef readme
 .. note::
 
    If you want to know more about ``Dataloader``, please refer to :mod:`docs of dataloader <cotk.dataloader>`.
-~~ contentend sphinx
+!! endif
 
-~~ contentstart readme
+!! ifdef readme
 **note**: If you want to know more about ``Dataloader``, please refer to [docs of dataloader](https://thu-coai.github.io/cotk_docs/index.html#model-zoo).
-~~ contentend readme
+!! endif
 
 ### Metrics
 
@@ -102,12 +100,12 @@ checking whether the same data is used. The metric object receives mini-batches.
      'self-bleu hashvalue': 'c206893c2272af489147b80df306ee703e71d9eb178f6bb06c73cb935f474452'}
 ```
 
-~~ contentstart sphinx
+!! ifndef readme
 You can merge multiple metrics together by :class:`cotk.metric.MetricChain`.
-~~ contentend sphinx
-~~ contentstart readme
+!! endif
+!! ifdef readme
 You can merge multiple metrics together by cotk.metric.MetricChain.
-~~ contentend readme
+!! endif
 
 
 ```python
@@ -146,24 +144,24 @@ We also provide recommended metrics for selected dataloader.
      ]}
 ```
 
-~~ contentstart sphinx
+!! ifndef readme
 .. note::
 
    If you want to know more about metrics, please refer to :mod:`docs of metrics <cotk.metric>`.
-~~ contentend sphinx
+!! endif
 
-~~ contentstart readme
+!! ifdef readme
 **note**: If you want to know more about metrics, please refer to [docs of metrics](https://thu-coai.github.io/cotk_docs/metric.html).
-~~ contentend readme
+!! endif
 
 ### Publish Experiments
 
-~~ contentstart sphinx
+!! ifndef readme
 We provide an online `dashboard <http://coai.cs.tsinghua.edu.cn/dashboard/>`__ to manage your experiments.
-~~ contentend sphinx
-~~ contentstart readme
+!! endif
+!! ifdef readme
 We provide an online [dashboard](http://coai.cs.tsinghua.edu.cn/dashboard/) to manage your experiments.
-~~ contentend readme
+!! endif
 
 Here we provide an simple example:
 
@@ -190,17 +188,17 @@ Here we provide an simple example:
         json.dump(metric.close(), open("result.json", 'w'))
 ```
 
-~~ contentstart sphinx
+!! ifndef readme
 .. note::
 
     The only requirement of your function is to output a file named ``result.json``,
     you can do whatever you want (even don't load data using ``cotk``).
-~~ contentend sphinx
+!! endif
 
-~~ contentstart readme
+!! ifdef readme
 **note**: The only requirement of your model is to output a file named ``result.json``,
 you can do whatever you want (even don't load data using ``cotk``).
-~~ contentend readme
+!! endif
 
 
 * Commit your changes and set upstream branch in your command line.
@@ -212,19 +210,19 @@ you can do whatever you want (even don't load data using ``cotk``).
     git push origin -u master
 ```
 
-~~ contentstart sphinx
+!! ifndef readme
 .. note::
 
     In this version, we only support github for identifying your repository and commit.
     However, you can use private repositories or do not push your commit to the repository.
     That means the others cannot access your code or reproduce your results.
-~~ contentend sphinx
+!! endif
 
-~~ contentstart readme
+!! ifdef readme
 **note**: In current version, we only support github for identifying your repository and commit.
 However, you can use private repositories or do not push your commit to the repository.
 That means the others cannot access your code or reproduce your results.
-~~ contentend readme
+!! endif
 
 * Type ``cotk run`` to run your model and upload to cotk dashboard.
 
@@ -232,38 +230,38 @@ That means the others cannot access your code or reproduce your results.
 and ``result.json`` to the cotk dashboard. You can manage your experiments or share results
 with others on the dashboard.
 
-~~ contentstart sphinx
+!! ifndef readme
 .. image:: dashboard.png
-~~ contentend sphinx
-~~ contentstart readme
+!! endif
+!! ifdef readme
 ![dashboard](https://github.com/thu-coai/cotk/blob/master/docs/source/notes/dashboard.png)
-~~ contentend readme
+!! endif
 
-~~ contentstart sphinx
+!! ifndef readme
 If you don't want to use the cotk dashboard, you can also directly upload your model
 to github. Follow the instructions at :ref:`Fast Model Reproduction <fast_model_reproduction>`.
-~~ contentend sphinx
+!! endif
 
-~~ contentstart readme
+!! ifdef readme
 If you don't want to use the cotk dashboard, you can also directly upload your model
 to github. Follow the instructions at [Fast Model Reproduction](https://thu-coai.github.io/cotk_docs/notes/tutorial_reproduction.html).
-~~ contentend readme
+!! endif
 
-~~ contentstart sphinx
+!! ifndef readme
 .. note::
 
     The reproducibility should be maintained by the author. We only make sure all the inputs
     are the same, but differences can be introduced by different random seeds, devices or other
     affects. Before you upload, run ``cotk run --only-run`` several times and check whether
     the results are the same.
-~~ contentend sphinx
+!! endif
 
-~~ contentstart readme
+!! ifdef readme
 **note**: The reproducibility should be maintained by the author. We only make sure all the inputs
 are the same, but differences can be introduced by different random seeds, devices or other
 affects. Before you upload, run ``cotk run --only-run`` several times  and check whether the results
 are the same.
-~~ contentend readme
+!! endif
 
 ### Reproduce Experiments
 
@@ -286,15 +284,15 @@ Model running cmd:  cd ./PATH && cotk run --only-run --entry main
 
 Type ``cotk run --only-run`` will reproduce the same experiments.
 
-~~ contentstart sphinx
+!! ifndef readme
 You can also directly download your model from github.
 Follow the instructions at :ref:`Fast Model Reproduction <fast_model_reproduction>`. For example:
-~~ contentend sphinx
+!! endif
 
-~~ contentstart readme
+!! ifdef readme
 You can also directly download your model from github.
 Follow the instructions at [Fast Model Reproduction](https://thu-coai.github.io/cotk_docs/notes/tutorial_reproduction.html). For example:
-~~ contentend readme
+!! endif
 
 ```bash
     cotk download thu-coai/seq2seq-pytorch/master
@@ -302,12 +300,12 @@ Follow the instructions at [Fast Model Reproduction](https://thu-coai.github.io/
 
 ### Predefined Models
 
-~~ contentstart sphinx
+!! ifndef readme
 We have provided some baselines for the classical tasks, see :ref:`Model Zoo <model_zoo>` in docs for details.
-~~ contentend sphinx
+!! endif
 
-~~ contentstart readme
+!! ifdef readme
 We have provided some baselines for the classical tasks, see [Model Zoo](https://thu-coai.github.io/cotk_docs/index.html#model-zoo) in docs for details.
-~~ contentend readme
+!! endif
 
 You can also use ``cotk download thu-coai/MODEL_NAME/master`` to get the codes.

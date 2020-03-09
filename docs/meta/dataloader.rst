@@ -145,8 +145,6 @@ id from pretrained models. Now, we have 3 representation methods of sentences:
 
 Here is the path of conversion.
 
-.. image:: conversion.png
-
 1.  :meth:`.BERTLanguageProcessingBase.convert_bert_ids_to_tokens`.
     May cause ``<unk>`` due to model's id can't cover all tokens.
     (But this won't happen in BERT, because BERT has a tokenizer

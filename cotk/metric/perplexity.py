@@ -5,15 +5,13 @@ import random
 import numpy as np
 from typing import Union, List, Any, Optional
 
-from .metric import MetricBase
 from .._utils.imports import LazyObject, LazyModule
+from ..dataloader import LanguageProcessing, Sentence
 from ..hooks import hooks
+from .metric import MetricBase
 
 torch = LazyModule("torch", globals())
 torch.Tensor = LazyObject("torch.Tensor") #type: ignore
-
-if False: # for type check # disable: using-constant-test
-	from ..dataloader import LanguageProcessing, Sentence
 
 class PerplexityMetric(MetricBase):
 	'''Metric for calculating perplexity.

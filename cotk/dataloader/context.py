@@ -32,8 +32,8 @@ class Context(metaclass=DocStringInheritor):
 		self._old_parameters = self._set_parameters(parameter_dict, weak=weak)
 
 	@classmethod
-	def _set_parameters(cls, parameter_dict: Dict[str, Any], weak=False) -> Dict[str, Any]:
-		old_parameters: Dict[str, Any] = []
+	def _set_parameters(cls, parameter_dict: Dict[str, Any], weak=False) -> List[Any]:
+		old_parameters: List[Any] = []
 		for key, value in parameter_dict.items():
 			old_parameters.append(cls.set(key, value, weak=weak))
 		return old_parameters

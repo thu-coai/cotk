@@ -6,8 +6,9 @@ from ..hooks import hooks
 from .dataloader import LanguageProcessing
 from .context import FieldContext
 from .vocab import GeneralVocab
-from ..metric import MetricChain, AccuracyMetric
 
+if False: # for type check # pylint: disable=using-constant-test
+	from ..metric import MetricChain #pylint: disable=unused-import
 
 # pylint: disable=W0223
 class SentenceClassification(LanguageProcessing):
@@ -78,6 +79,7 @@ class SentenceClassification(LanguageProcessing):
 		Returns:
 			A :class:`.metric.MetricChain` object.
 		'''
+		from ..metric import MetricChain, AccuracyMetric
 		metric = MetricChain()
 		metric.add_metric(AccuracyMetric(self, \
 										 label_key='label', \

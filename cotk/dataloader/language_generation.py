@@ -5,11 +5,12 @@ from collections import OrderedDict
 
 from ..hooks import hooks
 from .dataloader import LanguageProcessing
-from ..metric import MetricChain, PerplexityMetric, LanguageGenerationRecorder, \
-	FwBwBleuCorpusMetric, SelfBleuCorpusMetric
 from .context import FieldContext, VocabContext
 from .tokenizer import PretrainedTokenizer
 from .vocab import GeneralVocab, PretrainedVocab
+
+if False: # for type check # pylint: disable=using-constant-test
+	from ..metric import MetricChain #pylint: disable=unused-import
 
 # pylint: disable=W0223
 class LanguageGeneration(LanguageProcessing):
@@ -113,7 +114,7 @@ class LanguageGeneration(LanguageProcessing):
 			) -> Dict[str, Any]:
 		return super().get_batch(set_name, indexes)
 
-	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob") -> MetricChain:
+	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob") -> "MetricChain":
 		'''Get metrics for teacher-forcing. In other words, this function
 		provides metrics for language modelling task.
 
@@ -125,6 +126,7 @@ class LanguageGeneration(LanguageProcessing):
 			gen_log_prob_key (str): The key of predicted log probability over words.
 				Refer to :class:`.metric.PerplexityMetric`. Default: ``gen_log_prob``.
 		'''
+		from ..metric import MetricChain, PerplexityMetric
 		metric = MetricChain()
 		metric.add_metric(PerplexityMetric(self, \
 					reference_allvocabs_key='sent_allvocabs', \
@@ -132,7 +134,7 @@ class LanguageGeneration(LanguageProcessing):
 					gen_log_prob_key=gen_log_prob_key))
 		return metric
 
-	def get_inference_metric(self, gen_key="gen", sample=1000, seed=1229, cpu_count=None) -> MetricChain:
+	def get_inference_metric(self, gen_key="gen", sample=1000, seed=1229, cpu_count=None) -> "MetricChain":
 		'''Get metrics for inference. In other words, this function provides metrics for
 		language generation tasks.
 
@@ -154,6 +156,8 @@ class LanguageGeneration(LanguageProcessing):
 			cpu_count (int): Number of used cpu for multiprocessing.
 				Refer to :class:`.metric.SelfBleuCorpusMetric`. Default: ``None``.
 		'''
+		from ..metric import MetricChain, LanguageGenerationRecorder, \
+			FwBwBleuCorpusMetric, SelfBleuCorpusMetric
 		metric = MetricChain()
 		metric.add_metric(SelfBleuCorpusMetric(self, \
 					gen_key=gen_key, \

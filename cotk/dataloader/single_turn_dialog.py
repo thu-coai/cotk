@@ -16,9 +16,10 @@ from ..hooks import hooks
 from .dataloader import LanguageProcessing
 from .tokenizer import PretrainedTokenizer
 from .vocab import PretrainedVocab
-# from .bert_dataloader import BERTLanguageProcessing
-from ..metric import MetricChain, PerplexityMetric, BleuCorpusMetric, SingleTurnDialogRecorder
 from .context import FieldContext, VocabContext
+
+if False: # for type check # pylint: disable=using-constant-test
+	from ..metric import MetricChain #pylint: disable=unused-import
 
 # pylint: disable=W0223
 class SingleTurnDialog(LanguageProcessing):
@@ -139,7 +140,7 @@ class SingleTurnDialog(LanguageProcessing):
 		return super().get_batch(set_name, indexes)
 
 	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob",\
-					   generate_rare_vocab=False) -> MetricChain:
+					   generate_rare_vocab=False) -> "MetricChain":
 		'''Get metrics for teacher-forcing.
 
 		It contains:
@@ -152,6 +153,7 @@ class SingleTurnDialog(LanguageProcessing):
 			generate_rare_vocab (bool): Whether ``gen_log_prob`` contains invalid vocab.
 				Refer to :class:`.metric.PerplexityMetric`. Default: ``False``.
 		'''
+		from ..metric import MetricChain, PerplexityMetric
 		metric = MetricChain()
 		metric.add_metric(PerplexityMetric(self,\
 			reference_allvocabs_key="resp_allvocabs",\
@@ -160,7 +162,7 @@ class SingleTurnDialog(LanguageProcessing):
 			generate_rare_vocab=generate_rare_vocab))
 		return metric
 
-	def get_inference_metric(self, gen_key="gen") -> MetricChain:
+	def get_inference_metric(self, gen_key="gen") -> "MetricChain":
 		'''Get metrics for inference.
 
 		It contains:
@@ -173,6 +175,7 @@ class SingleTurnDialog(LanguageProcessing):
 				Refer to :class:`.metric.BleuCorpusMetric` or
 				:class:`.metric.SingleTurnDialogRecorder`. Default: ``gen``.
 		'''
+		from ..metric import MetricChain, BleuCorpusMetric, SingleTurnDialogRecorder
 		metric = MetricChain()
 		metric.add_metric(BleuCorpusMetric(self, gen_key=gen_key, \
 			reference_allvocabs_key="resp_allvocabs", reference_str_key="resp_str"))

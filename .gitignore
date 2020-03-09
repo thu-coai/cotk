@@ -19,4 +19,4 @@ result.json
 docs/build
 !docs/build/LICENSE.txt
 !docs/build/README.md
-docs/source/models
+docs/source
