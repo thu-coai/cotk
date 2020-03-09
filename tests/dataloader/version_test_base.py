@@ -16,10 +16,10 @@ class PatchDataloader:
 	Decorator a dataloader class and record arguments and hash value when the dataloader's `__init__` is called.
 
 	Examples:
-		>>> from cotk.dataloader import SwitchboardCorpus
-		>>> PatchedSwitchboardCorpus = PatchDataloader(SwitchboardCorpus)
-		>>> PatchedSwitchboardCorpus("./tests/dataloader/dummy_switchboardcorpus#SwitchboardCorpus")
-		>>> PatchedSwitchboardCorpus("./tests/dataloader/dummy_switchboardcorpus#SwitchboardCorpus", invalid_vocab_times=1)
+		>>> from cotk.dataloader import OpenSubtitles
+		>>> PatchedSwitchboardCorpus = PatchDataloader(OpenSubtitles)
+		>>> PatchedSwitchboardCorpus("./tests/dataloader/dummy_opensubtitles#OpenSubtitles")
+		>>> PatchedSwitchboardCorpus("./tests/dataloader/dummy_opensubtitles#OpenSubtitles", invalid_vocab_times=1)
 		>>> PatchedSwitchboardCorpus.save()
 	"""
 
@@ -68,11 +68,18 @@ def base_test_version(dl_class):
 	version_info = load_version_info(version_path)
 	assert version_info
 	for dic in version_info:
-		assert 'hash_value' in dic
+		assert 'setting_hash' in dic
+		assert 'vocab_hash' in dic
+		assert 'raw_data_hash' in dic
+		assert 'data_hash' in dic
+		
 		assert 'args' in dic
 		assert 'kwargs' in dic
-		hash_value = dic['hash_value']
+		
 		args = dic['args']
 		kwargs = dic['kwargs']
 		dl = dl_class(*args, **kwargs)
-		assert hash_value == dl.hash_value
+		assert dic['setting_hash'] == dl._setting_hash
+		assert dic['vocab_hash'] == dl._vocab_hash
+		assert dic['raw_data_hash'] == dl._raw_data_hash
+		assert dic['data_hash'] == dl._data_hash

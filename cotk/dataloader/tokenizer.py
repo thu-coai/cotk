@@ -2,6 +2,7 @@
 from typing import Any, List, Callable
 import hashlib
 import tempfile
+import re
 
 from nltk.tokenize import WordPunctTokenizer
 from checksumdir import dirhash
@@ -92,8 +93,17 @@ class SimpleTokenizer(Tokenizer):
 		self._setting_hash = hashlib.sha256(dumps(["adapter", method, special_tokens])).hexdigest()
 
 	def tokenize(self, sentence: str) -> List[str]:
-		#TODO: don't tokenize special tokens
-		return self._callable_tokenizer(sentence)
+		if self.special_tokens is None:
+			return self._callable_tokenizer(sentence)
+		regexPattern = '(' + '|'.join(map(re.escape, self.special_tokens)) + ')'
+		segments = re.split(regexPattern, sentence)
+		sent = []
+		for seg in segments:
+			if seg not in self.special_tokens:
+				sent += self._callable_tokenizer(seg.strip())
+			else:
+				sent += [seg]
+		return sent
 
 	def convert_tokens_to_sentence(self, tokens: List[str]) -> str:
 		if self.method == "nltk":
