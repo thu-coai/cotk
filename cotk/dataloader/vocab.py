@@ -49,9 +49,6 @@ class Vocab(LoadClassInterface, metaclass=DocStringInheritor):
 		'''Convert list of tokens to list of ids. {_VOCAB_MORE_DOCSTRING}
 
 		Arguments:{CONVERT_TOKENS_TO_IDS_ARG}
-
-		Returns:
-			List[int]: The corresponding list of ids.
 		'''
 		raise NotImplementedError
 
@@ -60,9 +57,6 @@ class Vocab(LoadClassInterface, metaclass=DocStringInheritor):
 
 		Arguments:
 			ids (List[int]): List of ids.
-
-		Returns:
-			List[str]: The Corresponding list of tokens.
 		'''
 		raise NotImplementedError
 
@@ -135,9 +129,6 @@ class Vocab(LoadClassInterface, metaclass=DocStringInheritor):
 	def get_setting_hash(self) -> str:
 		'''Get setting hash for the Vocabulary instance.
 		See :ref:`here <dataloader_hash>` for the explaination of ``setting hash``.
-
-		Returns:
-			str: the setting hash.
 		'''
 		assert self._setting_hash is not None
 		return self._setting_hash
@@ -145,9 +136,6 @@ class Vocab(LoadClassInterface, metaclass=DocStringInheritor):
 	def get_vocab_hash(self) -> str:
 		'''Get vocab hash for the Vocabulary instance.
 		See :ref:`here <dataloader_hash>` for the explaination of ``vocab hash``.
-
-		Returns:
-			str: the vocab hash.
 		'''
 		raise NotImplementedError
 
@@ -213,7 +201,7 @@ class GeneralVocab(Vocab):
 	def from_predefined(vocab_list: List[str], \
 		frequent_vocab_size: int, \
 		special_tokens_mapping: Optional[OrderedDictType[str, str]] = None) -> "GeneralVocab":
-		'''Initialize the vocabulary from a predefined list. See :meth:`.from_predefined_vocab` if
+		'''Return a :class:`GeneralVocab` instance, whose vocabulary comes from a predefined list. See :meth:`.from_predefined_vocab` if
 		you want to use the vocabulary from an existing :class:`GeneralVocab` instance.
 
 		Arguments:
@@ -223,8 +211,6 @@ class GeneralVocab(Vocab):
 			special_tokens_mapping (OrderedDict, optional): {SPECIAL_TOKEN_DOCS_WITH_DEFAULT} \
 				Notice special tokens should be in the front of the ``vocab_list`` (included in frequent words, \
 				ordered sensitive).
-		Returns:
-			:class:`GeneralVocab`: A GeneralVocab instance with specified vocabulary.
 		'''
 		vocab = GeneralVocab(special_tokens_mapping=special_tokens_mapping)
 		special_values = list(vocab.get_special_tokens_mapping().values())
@@ -257,14 +243,11 @@ class GeneralVocab(Vocab):
 
 	@staticmethod
 	def from_predefined_vocab(vocab: "GeneralVocab") -> "GeneralVocab":
-		'''Init a new :class:`GeneralVocab` instance from ``vocab``. The new instance have the same
+		'''Return a new :class:`GeneralVocab` instance from ``vocab``. The new instance have the same
 		vocabulary list as the old one.
 
 		Arguments:
 			vocab(:class:`GeneralVocab`): The old instance.
-
-		Returns:
-			:class:`GeneralVocab`: The new instance that have the same vocabulary with the old one.
 		'''
 		if not isinstance(vocab, GeneralVocab):
 			raise TypeError("vocab must be an instance of GeneralVocab class.")
@@ -277,7 +260,8 @@ class GeneralVocab(Vocab):
 	@staticmethod
 	def from_frequent_word(frequent_vocab_list: List[str], \
 			special_tokens_mapping: Optional[OrderedDictType[str, str]] = None) -> "GeneralVocab":
-		'''Initialize the vocabulary from a predefined frequent list, and the rare word list can be built later.
+		'''Return a :class:`GeneralVocab` instance, whose vocabulary comes from a predefined frequent list.
+		And its rare word list can be built later.
 		See :meth:`.from_frequent_word_of_vocab`
 		if you want to use the frequent vocabulary from an existing :class:`GeneralVocab` instance.
 
@@ -285,8 +269,6 @@ class GeneralVocab(Vocab):
 			frequent_vocab_list (List[str]): A list of frequent vocabulary.
 			special_tokens_mapping (OrderedDict, optional): {SPECIAL_TOKEN_DOCS_WITH_DEFAULT} \
 				Notice special tokens should be in the front of the ``frequent_vocab_list`` (ordered sensitive).
-		Returns:
-			:class:`GeneralVocab`: A GeneralVocab instance with specified vocabulary.
 		'''
 
 		vocab = GeneralVocab(special_tokens_mapping=special_tokens_mapping)
@@ -311,14 +293,12 @@ class GeneralVocab(Vocab):
 
 	@staticmethod
 	def from_frequent_word_of_vocab(vocab: "GeneralVocab") -> "GeneralVocab":
-		'''Init a new :class:`Vocab` instance from the frequent words of ``vocab``. The new instance have the same
-		frequent vocabulary list as the old one. The rare word list can be built later.
+		'''Return a :class:`GeneralVocab` instance, which has the same frequent vocabulary list as the old one.
+		The rare word list can be built later.
 
 		Arguments:
 			vocab(:class:`GeneralVocab`): The old instance to provide frequent words.
 
-		Returns:
-			:class:`GeneralVocab`: The new instance that have the same frequent vocabulary with the old one.
 		'''
 		if not isinstance(vocab, GeneralVocab):
 			raise TypeError("vocab must be an instance of GeneralVocab class.")
