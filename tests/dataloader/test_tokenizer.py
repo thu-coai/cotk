@@ -9,10 +9,6 @@ import numpy as np
 
 from transformers.tokenization_gpt2 import GPT2Tokenizer
 
-import sys
-sys.path.append('/home/zhengchujie/GitHub/cotk')
-
-
 from cotk.dataloader.tokenizer import Tokenizer, SimpleTokenizer, PretrainedTokenizer
 
 
