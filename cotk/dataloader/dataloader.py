@@ -32,6 +32,16 @@ class LanguageProcessing(Dataloader):
 	See the examples for how to create a dataloader. #TODO: write the example
 
 	Arguments:{ARGUMENTS}
+	
+	Examples:
+			>>> from cotk.dataloader import GeneralVocab, SimpleTokenizer, SentenceDefault, LanguageProcessing
+			>>> file_id = './tests/dataloader/dummy_mscoco#MSCOCO'
+			>>> set_names = ['train', 'dev', 'test']
+			>>> vocab = GeneralVocab(1)
+			>>> toker = SimpleTokenizer('space', ['<pad>', '<unk>', '<go>', '<eos>'])
+			>>> sent = SentenceDefault(toker, vocab, convert_to_lower_letter=True)
+			>>> fields = {set_name: {'sent': sent} for set_name in set_names}
+			>>> lp = LanguageProcessing(file_id, fields)
 	"""
 
 	ARGUMENTS = r"""
@@ -338,6 +348,25 @@ class LanguageProcessing(Dataloader):
 		'''Set the default :class:`Field` in this dataloader. In the meanwhile,
 		the default :class:`Vocab` and :class:`BaseTokenizer` is also set according
 		to the field (if the field have vocab and tokenizer).
+		
+		The default field will affect the action in the following methods:
+		
+		* :meth:`get_default_field`
+		* :meth:`tokenize`
+		* :meth:`tokenize_sentences`
+		* :meth:`convert_tokens_to_ids`
+		* :meth:`convert_ids_to_tokens`
+		* :meth:`convert_ids_to_sentence`
+		* :meth:`convert_sentence_to_ids`
+		* :meth:`add_special_to_ids`
+		* :meth:`remove_special_in_ids`
+		* :meth:`process_sentences`
+		* :meth:`trim_in_ids`
+		* :meth:`get_default_vocab`
+		* :meth:`get_special_tokens_mapping`
+		* :meth:`get_special_tokens_id`
+		* :meth:`get_default_tokenizer`
+		
 		TODO: find the related function.
 
 		Arguments:

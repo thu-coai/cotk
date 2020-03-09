@@ -4,12 +4,11 @@ import operator
 import pytest
 from pytest_mock import mocker
 
-from cotk.dataloader import LanguageGeneration, MSCOCO
-from cotk.metric import MetricBase
-from cotk.dataloader import Dataloader
-from cotk.dataloader import LanguageProcessing
-
 from version_test_base import base_test_version
+
+from cotk.dataloader import LanguageProcessing, Field, Vocab, Tokenizer, LanguageGeneration, MSCOCO, Dataloader
+from cotk.metric import MetricBase
+
 
 def setup_module():
 	import random
@@ -20,91 +19,91 @@ def setup_module():
 class TestLanguageGeneration():
 	def base_test_init(self, dl):
 		assert isinstance(dl, LanguageGeneration)
-		assert isinstance(dl.ext_vocab, list)
-		assert dl.ext_vocab[:4] == ["<pad>", "<unk>", "<go>", "<eos>"]
-		assert [dl.pad_id, dl.unk_id, dl.go_id, dl.eos_id] == [0, 1, 2, 3]
-		assert isinstance(dl.key_name, list)
-		assert dl.key_name
-		for word in dl.key_name:
-			assert isinstance(word, str)
+		assert isinstance(dl.file_id, str)
+		assert isinstance(dl.file_path, str)
+		for set_name, fields in dl.fields.items():
+			assert isinstance(set_name, str)
+			assert isinstance(fields, dict)
+			for field_name, field in fields.items():
+				assert isinstance(field_name, str)
+				assert isinstance(field, Field)
+				
+		assert isinstance(dl.vocabs, list)
+		for vocab in dl.vocabs:
+			assert isinstance(vocab, Vocab)
+		assert isinstance(dl.tokenizers, list)
+		for toker in dl.tokenizers:
+			assert isinstance(toker, Tokenizer)
+			
+		for (_, data), (_, index) in zip(dl.data.items(), dl.index.items()):
+			assert isinstance(data, dict)
+			assert isinstance(index, list)
+			for field_name, content in data.items():
+				assert isinstance(content, dict)
+				for _, each_content in content.items():
+					assert isinstance(each_content, list)
+					assert len(index) == len(each_content)
+		for _, batch_id in dl.batch_id.items():
+			assert batch_id == 0
+		for _, batch_size in dl.batch_size.items():
+			assert batch_size is None
+			
+		assert isinstance(dl.frequent_vocab_list, list)
+		assert dl.frequent_vocab_size == len(dl.frequent_vocab_list)
 		assert isinstance(dl.all_vocab_list, list)
-		assert dl.vocab_list[:len(dl.ext_vocab)] == dl.ext_vocab
-		assert isinstance(dl.word2id, dict)
-		assert len(dl.word2id) == len(dl.all_vocab_list)
-		assert dl.vocab_size == len(dl.vocab_list)
-		for i, word in enumerate(dl.all_vocab_list):
-			assert isinstance(word, str)
-			assert dl.word2id[word] == i
 		assert dl.all_vocab_size == len(dl.all_vocab_list)
-		for key in dl.key_name:
-			sentence = dl.data[key]['sent']
-			assert isinstance(sentence, list)
-			assert isinstance(sentence[0], list)
-			assert sentence[0][0] == dl.go_id
-			assert sentence[0][-1] == dl.eos_id
-
-		# assert the data has valid token
-		assert dl.vocab_size > 4
-		# assert the data has invalid token
-		assert dl.all_vocab_size > dl.vocab_size
-
-
-
-		gen = Dataloader().get_all_subclasses()
-		for each in gen:
-			pass
-		Dataloader().load_class('LanguageGeneration')
-		Dataloader().load_class('None')
+		assert dl.all_vocab_size > 4
+		assert dl.all_vocab_size > dl.frequent_vocab_size
+		
+		for _, data in dl.data.items():
+			sent = data['sent']
+			ids = sent['id']
+			assert isinstance(ids, list)
+			assert isinstance(ids[0], list)
+			assert ids[0][0] == dl.go_id
+			assert ids[0][-1] == dl.eos_id
+			strs = sent['str']
+			assert isinstance(strs, list)
+			assert isinstance(strs[0], str)
 
 		with pytest.raises(TypeError):
-			_ = LanguageProcessing()
-
-		with pytest.raises(NotImplementedError):
-			basic = LanguageProcessing(tokenizer='space')
-
-
-
-		with pytest.raises(NotImplementedError):
-			class MyLanguageGeneration(LanguageProcessing):
-				def __init__(self):
-					super().__init__(tokenizer='space')
-			MyLanguageGeneration().get_batch(None, None)
-
+			LanguageGeneration()
 
 	def base_test_all_unknown(self, dl):
 		# if invalid_vocab_times very big, there is no invalid words.
-		assert dl.vocab_size == dl.vocab_size
+		assert dl.frequent_vocab_size == dl.frequent_vocab_size
 
 	def base_test_restart(self, dl):
 		with pytest.raises(ValueError):
 			dl.restart("unknown set")
-		for key in dl.key_name:
+		for set_name in dl.data.keys():
 			with pytest.raises(ValueError):
-				dl.restart(key)
-			record_index = copy.copy(dl.index[key])
-			dl.restart(key, batch_size=3, shuffle=False)
-			assert record_index == dl.index[key]
-			assert dl.batch_id[key] == 0
-			assert dl.batch_size[key] == 3
-			rng_state_st = random.getstate()			
-			dl.restart(key, shuffle=True)
-			rng_state_ed = random.getstate()
-			assert operator.eq(rng_state_st, rng_state_ed)			
-			assert dl.batch_id[key] == 0
-			record_index = copy.copy(dl.index[key])
-			dl.restart(key, shuffle=False)
-			assert record_index == dl.index[key]
-			assert dl.batch_id[key] == 0
+				dl.restart(set_name)
+			record_index = copy.copy(dl.index[set_name])
+			dl.restart(set_name, batch_size=3, shuffle=False)
+			assert record_index == dl.index[set_name]
+			assert dl.batch_id[set_name] == 0
+			assert dl.batch_size[set_name] == 3
+			#rng_state_st = random.getstate()
+			dl.restart(set_name, shuffle=True)
+			#rng_state_ed = random.getstate()
+			#assert operator.eq(rng_state_st, rng_state_ed)
+			assert dl.batch_id[set_name] == 0
+			record_index = copy.copy(dl.index[set_name])
+			dl.restart(set_name, shuffle=False)
+			assert record_index == dl.index[set_name]
+			assert dl.batch_id[set_name] == 0
 
 	def base_test_get_batch(self, dl):
 		with pytest.raises(ValueError):
 			dl.get_batch("unknown set", [0, 1])
-		for key in dl.key_name:
+		for set_name in dl.data.keys():
 			with pytest.raises(IndexError):
-				length = len(dl.data[key]['sent'])
-				dl.get_batch(key, [length-1, length])	
-			assert len(dl.index[key]) >= 2
-			batch = dl.get_batch(key, [0, 1])
+				length = len(dl.index[set_name])
+				dl.get_batch(set_name, [length-1, length])
+			assert len(dl.index[set_name]) >= 2
+			batch = dl.get_batch(set_name, [0, 1])
+			
 			assert len(batch["sent_length"]) == 2
 			assert batch["sent"].shape[0] == 2
 			if batch["sent_length"][0] < batch['sent'].shape[1]:
@@ -117,12 +116,12 @@ class TestLanguageGeneration():
 		# this is true, only when there is no unknown words in dl
 		# (Only valid & invalid words)
 		flag = False
-		for key in dl.key_name:
-			length = len(dl.data[key]['sent'])
+		for set_name in dl.data.keys():
+			length = len(dl.data[set_name]['sent'])
 			for i in range(length):
-				batch = dl.get_batch(key, [i])
+				batch = dl.get_batch(set_name, [i])
 				assert dl.unk_id not in batch["sent_allvocabs"]
-				batch = dl.get_batch(key, [i])
+				batch = dl.get_batch(set_name, [i])
 				if dl.unk_id in batch["sent"]:
 					flag = True
 		assert flag
@@ -130,34 +129,33 @@ class TestLanguageGeneration():
 	def base_test_get_next_batch(self, dl):
 		with pytest.raises(ValueError):
 			dl.get_next_batch("unknown set")
-
-		for key in dl.key_name:
+		for set_name in dl.data.keys():
 			with pytest.raises(RuntimeError):
-				dl.get_next_batch(key)
+				dl.get_next_batch(set_name)
 
-			dl.restart(key, 7)
+			dl.restart(set_name, 7)
 			sample_num = 0
 			while True:
-				batch = dl.get_next_batch(key, ignore_left_samples=True)
+				batch = dl.get_next_batch(set_name, ignore_left_samples=True)
 				if not batch:
 					break
 				assert batch["sent"].shape[0] == 7
 				sample_num += batch["sent"].shape[0]
-			assert sample_num + 7 >= len(dl.data[key]['sent'])
+			assert sample_num + 7 >= len(dl.data[set_name]['sent']['id'])
 
-			dl.restart(key, 7)
+			dl.restart(set_name, 7)
 			sample_num = 0
 			while True:
-				batch = dl.get_next_batch(key)
+				batch = dl.get_next_batch(set_name)
 				assert batch is not None # dummy dataset must not be multiple of 7
 				if batch["sent"].shape[0] == 7:
 					sample_num += 7
 				else:
 					sample_num += batch['sent'].shape[0]
-					batch = dl.get_next_batch(key)
+					batch = dl.get_next_batch(set_name)
 					assert not batch
 					break
-			assert sample_num == len(dl.data[key]['sent'])
+			assert sample_num == len(dl.data[set_name]['sent']['id'])
 
 	def base_test_convert(self, dl):
 		sent_id = [0, 1, 2]
@@ -168,11 +166,11 @@ class TestLanguageGeneration():
 		sent = ["<unk>", "<go>", "<pad>", "<unkownword>", "<pad>", "<go>"]
 		sent_id = [1, 2, 0, 1, 0, 2]
 		assert sent_id == dl.convert_tokens_to_ids(sent)
-		assert sent_id == dl.convert_tokens_to_ids(sent, invalid_vocab=True)
+		assert sent_id == dl.convert_tokens_to_ids(sent, only_frequent_word=True)
 
-		sent = [dl.all_vocab_list[dl.vocab_size]]
-		assert [1] == dl.convert_tokens_to_ids(sent)
-		assert [dl.vocab_size] == dl.convert_tokens_to_ids(sent, invalid_vocab=True)
+		sent = [dl.all_vocab_list[dl.frequent_vocab_size]]
+		assert [1] == dl.convert_tokens_to_ids(sent, only_frequent_word=True)
+		assert [dl.frequent_vocab_size] == dl.convert_tokens_to_ids(sent)
 
 		sent_id = [0, 1, 2, 0, 0, 3, 1, 0, 0]
 		sent = ["<pad>", "<unk>", "<go>", "<pad>", "<pad>", "<eos>", "<unk>", "<pad>", "<pad>"]
@@ -182,12 +180,12 @@ class TestLanguageGeneration():
 
 		sent_id = [0, 0, 3]
 		sent = ["<pad>", "<pad>", "<eos>"]
-		assert sent == dl.convert_ids_to_tokens(sent_id, trim=False)
+		assert sent == dl.convert_ids_to_tokens(sent_id, remove_special=False, trim=False)
 		assert not dl.convert_ids_to_tokens(sent_id)
 
 		sent_id = [3, 3, 3]
 		sent = ["<eos>", "<eos>", "<eos>"]
-		assert sent == dl.convert_ids_to_tokens(sent_id, trim=False)
+		assert sent == dl.convert_ids_to_tokens(sent_id, remove_special=False, trim=False)
 		assert not dl.convert_ids_to_tokens(sent_id)
 
 		sent_id = [0, 0, 0]
@@ -202,12 +200,12 @@ class TestLanguageGeneration():
 		assert isinstance(dl.get_inference_metric(), MetricBase)
 
 	def base_test_multi_runs(self, dl_list):
-		assert all(x.vocab_list == dl_list[0].vocab_list for x in dl_list)
+		assert all(x.all_vocab_list == dl_list[0].all_vocab_list for x in dl_list)
 
 @pytest.fixture
 def load_mscoco():
 	def _load_mscoco(invalid_vocab_times=0):
-		return MSCOCO("./tests/dataloader/dummy_mscoco#MSCOCO", invalid_vocab_times=invalid_vocab_times)
+		return MSCOCO("./tests/dataloader/dummy_mscoco#MSCOCO", min_rare_vocab_times=invalid_vocab_times)
 	return _load_mscoco
 
 class TestMSCOCO(TestLanguageGeneration):
