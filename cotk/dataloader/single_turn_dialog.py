@@ -33,7 +33,7 @@ class SingleTurnDialog(LanguageProcessing):
 	Arguments:{ARGUMENTS}
 	"""
 
-	_version = 1
+	_version = 2
 
 	ARGUMENTS = r'''
 			file_id (str): A string indicating the source of single turn dialog dataset. {FILE_ID_DEFAULT}

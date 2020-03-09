@@ -44,7 +44,7 @@ class LanguageGeneration(LanguageProcessing):
 	TOKENIZER_DEFAULT = ''
 	CONVERT_TO_LOWER_LETTER_DEFAULT = ''
 
-	_version = 1
+	_version = 2
 
 	@hooks.hook_dataloader
 	def __init__(self, file_id, *, tokenizer=None, \
