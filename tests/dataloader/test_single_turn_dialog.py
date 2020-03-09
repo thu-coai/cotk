@@ -5,7 +5,7 @@ from pytest_mock import mocker
 import random
 import operator
 
-from version_test_base import base_test_version
+from version_test_base_v2 import base_test_version
 
 from cotk.dataloader import SingleTurnDialog, Field, Vocab, Tokenizer, OpenSubtitles
 from cotk.metric import MetricBase

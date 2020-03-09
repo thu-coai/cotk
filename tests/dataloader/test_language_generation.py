@@ -4,7 +4,7 @@ import operator
 import pytest
 from pytest_mock import mocker
 
-from version_test_base import base_test_version
+from version_test_base_v2 import base_test_version
 
 from cotk.dataloader import LanguageProcessing, Field, Vocab, Tokenizer, LanguageGeneration, MSCOCO, Dataloader
 from cotk.metric import MetricBase
