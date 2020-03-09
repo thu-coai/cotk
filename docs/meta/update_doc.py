@@ -57,19 +57,19 @@ def render(text, macros):
             raise RuntimeError("Unknown tags %s" % args[1])
     return res
 
-def check(text, path):
-     
+def check(text, path, filename):
+
     realtext = open(path, 'r', encoding='utf-8').read().split("\n")
     if realtext[-1] != "" or len(text) + 1 != len(realtext):
-        print("Line number")
-        print("\t%s: %d" % (path, len(text)))
-        print("\t%s: %d" % (filename, len(realtext) - 1))
+        print("Different line numbers")
+        print("\t%s: %d" % (filename, len(text)))
+        print("\t%s: %d" % (path, len(realtext) - 1))
         return ValueError("It seems docs [%s] is not synced with metadocs [%s]. Please change metadocs and then run update_docs !" % (path, filename))
     for i, (t, rt) in enumerate(zip(text, realtext)):
         if t != rt:
-            print("At Line %d:" % i)
-            print("\t%s: %s" % (path, t))
-            print("\t%s: %s" % (filename, rt))
+            print("Unsynced at Line %d:" % i)
+            print("\t%s: %s" % (filename, t))
+            print("\t%s: %s" % (path, rt))
             return ValueError("It seems docs [%s] is not synced with metadocs [%s]. Please change metadocs and then run update_docs !" % (path, filename))
     return None
 
@@ -91,7 +91,6 @@ if __name__ == "__main__":
 
     defined_macros = cargs.define if cargs.define else []
 
-    
     for originpath in chain(Path(".").glob('**/*')):
         if originpath.is_dir():
             continue
@@ -114,7 +113,7 @@ if __name__ == "__main__":
             text = render(file, [key] + defined_macros)
 
             if path.is_file():
-                err = check(text, path)
+                err = check(text, path, originpath)
             else:
                 err = True
 

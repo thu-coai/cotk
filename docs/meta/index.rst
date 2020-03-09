@@ -30,7 +30,9 @@ your models fairly with baselines.
    :maxdepth: 2
    :caption: Package Reference
 
+!! ifdef internal
    _utils
+!! endif
    dataloader
    wordvector
    metric

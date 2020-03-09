@@ -3,16 +3,51 @@ Data Loader
 .. automodule:: cotk.dataloader
 
 
+How to Build Dataloader
+----------------------------------
+
+Dataloaders are essential components in ``CoTK`` to build models or do fair evaluation.
+Here we introduce methods of building a dataloader.
+
+Predefined Tasks
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``CoTK`` contains several predefined tasks, including
+
+* :class:`LanguageGeneration`,
+* :class:`SingleTurnDialog`
+* :class:`MultiTurnDialog`
+* :class:`SentenceClassification`.
+
+Choose a adequate class for your task, and it would be the simplest and best way to build a dataloader.
+
+Fast Initialization
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If the predefined classes do not satisfy your task, you can construct an instance of :class:`LanguageProcessing`
+using the fast initialization.
+
+>> dl = LanuageProcessing(file_id, OrderedDict([("post", "SentenceDefault"), ('resp', 'SentenceDefault')]))
+
+It means you will construct a dataloader with three set
+
+
+
+Initialization for Complex Tasks
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+
 .. _vocab_ref:
 
 Vocabulary
 ----------------------------------
 
-Vocabulary for LanguageProcessingBase
+Vocabulary for LanguageProcessing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Language generation and evaluation highly depend on vocabulary, 
-thus we introduce a common setting in ``cotk``. All tokens appeared 
+Language generation and evaluation highly depend on vocabulary,
+thus we introduce a common setting in ``cotk``. All tokens appeared
 in dataset (including the ones only appear in test set) are split into
 3 set.
 
