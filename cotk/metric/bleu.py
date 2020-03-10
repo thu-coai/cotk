@@ -227,7 +227,7 @@ class SelfBleuCorpusMetric(MetricBase):
 
 	Warning:
 		the calculation of ``hashvalue`` considers the actual sample size of hypotheses which
-			will be less than ``sample`` if the size of hypotheses is smaller than ``sample``
+		will be less than ``sample`` if the size of hypotheses is smaller than ``sample``.
 
 	Here is an example:
 
