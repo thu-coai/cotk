@@ -221,7 +221,7 @@ class SelfBleuCorpusMetric(MetricBase):
 		{MetricBase.NGRAM_ARGUMENTS}
 		{MetricBase.TOKENIZER_ARGUMENTS}
 		{MetricBase.GEN_KEY_ARGUMENTS}
-		{MetricBase.SAMPLE_ARGUMENTS}
+		{MetricBase.SAMPLE_ARGUMENTS_IN_BLEU}
 		{MetricBase.SEED_ARGUMENTS}
 		{MetricBase.CPU_COUNT_ARGUMENTS}
 
@@ -367,11 +367,11 @@ class FwBwBleuCorpusMetric(MetricBase):
 
 	Arguments:
 		{MetricBase.DATALOADER_ARGUMENTS}
-		reference_test_list (list): Reference sentences with :ref:`all vocabs <vocab_ref>` in test data.
+		{MetricBase.REFERENCE_TEST_LIST_ARGUMENTS}
 		{MetricBase.NGRAM_ARGUMENTS}
 		{MetricBase.TOKENIZER_ARGUMENTS}
 		{MetricBase.GEN_KEY_ARGUMENTS}
-		{MetricBase.SAMPLE_ARGUMENTS}
+		{MetricBase.SAMPLE_ARGUMENTS_IN_BLEU}
 		{MetricBase.SEED_ARGUMENTS}
 		{MetricBase.CPU_COUNT_ARGUMENTS}
 	Warning:
@@ -408,7 +408,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 			gen_key: str = "gen", \
 			sample: int = 1000, \
 			seed: int = 1229, \
-			cpu_count: int = None):
+			cpu_count: Optional[int] = None):
 		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
 		self.tokenizer = tokenizer
