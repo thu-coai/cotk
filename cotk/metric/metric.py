@@ -2,7 +2,7 @@
 ``cotk.metrics`` provides classes and functions evaluating results of models.
 It provides a fair metric for every model.
 """
-from typing import Any, List
+from typing import Any, List, Dict
 import hashlib
 
 from .._utils.unordered_hash import UnorderedSha256, dumps
@@ -15,17 +15,21 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 	DATALOADER_ARGUMENTS = \
 		"""dataloader (:class:`.dataloader.LanguageProcessing`): A language generation dataloader."""
 	NGRAM_ARGUMENTS = \
-		"""ngram (int, optional): Specifies using BLEU-ngram. Default: ``4``."""
+		"""ngram (int, optional): The order of ngram to calculate metrics like BLEU and Perplexity. Default: ``4``."""
 	TOKENIZER_ARGUMENTS = \
 		"""tokenizer (None, :class:`.dataloader.Tokenizer`, str, optional): Specifies the tokenizer used in \
 			the metric. Default: ``None``."""
 	IGNORE_SMOOTHING_ERROR_ARGUMENTS = \
 		"""ignore_smoothing_error (bool, optional): Specifies whether to ignore the smoothing error when calculating \
 			BLEU. Default: ``False``."""
-	SAMPLE_ARGUMENTS = \
+	SAMPLE_ARGUMENTS_IN_BLEU = \
 		"""sample (int, optional): Number of examples sampled from the generated sentences. Default: ``1000``."""
+	SAMPLE_ARGUMENTS_IN_PERPLEXITY = \
+		SAMPLE_ARGUMENTS_IN_BLEU.replace("Default: ``1000``.", "Default: ``10000``.")
 	SEED_ARGUMENTS = \
 		"""seed (int, optional): Random seed for sampling. Default: ``1229``."""
+	REFERENCE_TEST_LIST_ARGUMENTS = \
+		"""reference_test_list (list): Reference sentences with :ref:`all vocabs <vocab_ref>` in test data."""
 	REFERENCE_ALLVOCABS_KEY_ARGUMENTS = \
 		"""reference_allvocabs_key (str, optional): \
 			The key of reference sentences. Default: ``ref_allvocabs``."""
@@ -73,23 +77,23 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 				  where "~" means different sizes in this dimension is allowed."""
 	FORWARD_MULTI_TURN_REFERENCE_ALLVOCABS_ARGUMENTS_WITH_TORCH = \
 		FORWARD_MULTI_TURN_REFERENCE_ALLVOCABS_ARGUMENTS.replace("list, :class:`numpy.ndarray`", \
-			"list, :class:`numpy.ndarray` or :class:`torch.Tensor`")
+			"list, :class:`numpy.ndarray`, :class:`torch.Tensor`")
 
 	REFERENCE_LEN_KEY_ARGUMENTS = \
-		"""reference_len_key (str): \
+		"""reference_len_key (str, optional): \
 			The key of lengths of reference sentences. \
 			Default: ``ref_length``."""
 	FORWARD_REFERENCE_LEN_ARGUMENTS = \
-				"""* **data[reference_len_key]** (list or :class:`numpy.ndarray`): \
+				"""* **data[reference_len_key]** (list, :class:`numpy.ndarray`): \
 				  Length of reference sentences. Contains start token (eg:``<go>``) \
 				  and end token (eg:``<eos>``). Size: ``[batch_size]``."""
 
 	MULTI_TURN_REFERENCE_LEN_KEY_ARGUMENTS = \
-		"""multi_turn_reference_len_key (str): \
+		"""multi_turn_reference_len_key (str, optional): \
 			The key of lengths of reference sentences. \
 			Default: ``multi_turn_ref_length``."""
 	FORWARD_MULTI_TURN_REFERENCE_LEN_ARGUMENTS = \
-				"""* **data[multi_turn_reference_len_key]** (list or :class:`numpy.ndarray`): \
+				"""* **data[multi_turn_reference_len_key]** (list, :class:`numpy.ndarray`): \
 				  A 2-d jagged or padded array of int. **If padded, redundant position must be set to** ``0``. \
 				  Length of multi-turn reference sentences. Contains start token (eg:``<go>``) \
 				  and end token (eg:``<eos>``). Size: ``[batch_size, ~turn_length]``, \
@@ -98,6 +102,17 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 	GEN_KEY_ARGUMENTS = \
 		"""gen_key (str, optional): \
 			The key of generated sentences. Default: ``gen``."""
+	GEN_LOG_PROB_KEY_ARGUMENTS = \
+		"""gen_log_prob_key (str, optional): The key of **log** probability over words. \
+			Default: ``gen_log_prob``."""
+	GENERATE_RARE_VOCAB_ARGUMENTS = \
+		"""generate_rare_vocab (bool, optional): Whether ``gen_log_prob`` contains :ref:`invalid vocab <vocab_ref>`. \
+			Default: ``False``."""
+	FULL_CHECK_ARGUMENTS = \
+		"""full_check (bool, optional): Whether to perform a full check on ``gen_log_prob`` to make sure the sum
+			of probability is 1. Otherwise, a random check will be performed for efficiency.
+			If PyTorch is used, a full check is always performed and this argument will be ignored.
+			Default: ``False``."""
 	FORWARD_GEN_ARGUMENTS = \
 				"""* **data[gen_key]** (list, :class:`numpy.ndarray`): \
 				  A 2-d jagged or padded array of int. \
@@ -130,7 +145,7 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 			the environment variable ``CPU_COUNT`` will be used	when it is set, \
 			or all available cpu will be used otherwise."""
 
-	def __init__(self, name, version):
+	def __init__(self, name: str, version: int):
 		self.unordered_hash = UnorderedSha256()
 		self.ordered_hash = hashlib.sha256()
 		self.name = name
@@ -155,7 +170,7 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 		'''
 		return hashlib.sha256(dumps((self.ordered_hash.hexdigest(), self.unordered_hash.hexdigest()))).hexdigest()
 
-	def forward(self, data):
+	def forward(self, data: Dict[Any, Any]):
 		'''Processing a batch of data.
 
 		Arguments:
@@ -166,13 +181,10 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 		if not isinstance(data, dict):
 			raise TypeError("Data must be a dict.")
 
-	def close(self):
+	def close(self) -> Dict[Any, Any]:
 		'''
-		Close the metric and return results. Once the metric is closed,
+		Close the metric and return a dict containing results. Once the metric is closed,
 		any operation on the metric (e.g. forward or another close) will raise a ValueError.
-
-		Returns:
-			(dict) which contains results.
 		'''
 		if not self.closed:
 			self.closed = True
@@ -197,17 +209,17 @@ class MetricChain(MetricBase):
 		super().__init__(self._name, self._version)
 		self.metric_list = []
 
-	def add_metric(self, metric):
+	def add_metric(self, metric: "MetricBase"):
 		'''Add metric for processing.
 
 		Arguments:
-			metric (MetricBase): a metric class.
+			metric (:class:`.metric.MetricBase`): a metric class.
 		'''
 		if not isinstance(metric, MetricBase):
 			raise TypeError("Metric must be a subclass of MetricBase")
 		self.metric_list.append(metric)
 
-	def forward(self, data):
+	def forward(self, data: Dict[Any, Any]):
 		'''Processing a batch of data.
 
 		Arguments:
@@ -218,11 +230,8 @@ class MetricChain(MetricBase):
 		for metric in self.metric_list:
 			metric.forward(data)
 
-	def close(self):
-		r'''
-		Returns:
-			(dict): A dict which contains the items which all the
-			metric components returned.
+	def close(self) -> Dict[Any, Any]:
+		r'''Return a dict containing the items which all the metric components return.
 		'''
 		res = super().close()
 		for metric in self.metric_list:
