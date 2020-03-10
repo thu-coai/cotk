@@ -22,14 +22,14 @@ class TestLanguageProcessing():
 			for field_name, field in fields.items():
 				assert isinstance(field_name, str)
 				assert isinstance(field, Field)
-				
+
 		assert isinstance(lp.vocabs, list)
 		for vocab in lp.vocabs:
 			assert isinstance(vocab, Vocab)
 		assert isinstance(lp.tokenizers, list)
 		for toker in lp.tokenizers:
 			assert isinstance(toker, Tokenizer)
-			
+
 		assert lp.default_field_set_name is None
 		assert lp.default_field_name is None
 		for (_, data), (_, index) in zip(lp.data.items(), lp.index.items()):
@@ -45,7 +45,7 @@ class TestLanguageProcessing():
 		for _, batch_size in lp.batch_size.items():
 			assert batch_size is None
 			assert batch_size is None
-		
+
 	def base_test_set_default_field(self, lp: LanguageProcessing):
 		for set_name, data in lp.data.items():
 			with pytest.raises(KeyError):
@@ -65,7 +65,7 @@ class TestLanguageProcessing():
 					tmp_lp.get_default_field()
 				tmp_lp.set_default_field(set_name, field_name)
 				assert tmp_lp.get_default_field() == tmp_lp.fields[set_name][field_name]
-	
+
 	def base_test_get_default_vocab(self, lp: LanguageProcessing):
 		for set_name, data in lp.data.items():
 			for field_name, _ in data.items():
@@ -74,7 +74,7 @@ class TestLanguageProcessing():
 					tmp_lp.get_default_vocab()
 				tmp_lp.set_default_field(set_name, field_name)
 				assert tmp_lp.get_default_vocab() == tmp_lp.fields[set_name][field_name].get_vocab()
-	
+
 	def base_test_get_default_tokenizer(self, lp: LanguageProcessing):
 		for set_name, data in lp.data.items():
 			for field_name, _ in data.items():
@@ -83,12 +83,12 @@ class TestLanguageProcessing():
 					tmp_lp.get_default_tokenizer()
 				tmp_lp.set_default_field(set_name, field_name)
 				assert tmp_lp.get_default_tokenizer() == tmp_lp.fields[set_name][field_name].get_tokenizer()
-	
+
 	def base_test_get_field(self, lp: LanguageProcessing):
 		for set_name, data in lp.data.items():
 			for field_name, _ in data.items():
 				assert lp.get_field(set_name, field_name) == lp.fields[set_name][field_name]
-	
+
 	def base_test_restart(self, lp: LanguageProcessing):
 		with pytest.raises(ValueError):
 			lp.restart("unknown set")
@@ -109,7 +109,7 @@ class TestLanguageProcessing():
 			lp.restart(set_name, shuffle=False)
 			assert record_index == lp.index[set_name]
 			assert lp.batch_id[set_name] == 0
-	
+
 	def base_test_get_batch(self, lp: LanguageProcessing):
 		with pytest.raises(ValueError):
 			lp.get_batch("unknown set", [0, 1])
@@ -121,7 +121,7 @@ class TestLanguageProcessing():
 			batch = lp.get_batch(set_name, [0, 1])
 			for field_name, content in batch.items():
 				assert len(content) == 2
-	
+
 	def base_test_get_next_batch(self, lp: LanguageProcessing):
 		with pytest.raises(ValueError):
 			lp.get_next_batch("unknown set")
@@ -141,10 +141,10 @@ class TestLanguageProcessing():
 			for field_name, content in lp.data[set_name].items():
 				assert isinstance(content, dict)
 				assert sample_num + 7 >= len(content)
-	
+
 	def base_test_convert(self, lp: LanguageProcessing):
 		lp.set_default_field('train', 'sent')
-		
+
 		sent_id = [0, 1, 2]
 		sent = ["<pad>", "<unk>", "<go>"]
 		assert sent == lp.convert_ids_to_tokens(sent_id)
@@ -180,7 +180,6 @@ class TestLanguageProcessing():
 		assert sent == lp.convert_ids_to_tokens(sent_id, trim=False)
 		assert not lp.convert_ids_to_tokens(sent_id)
 
-@pytest.fixture
 def load_LanguageProcessing1(): # Dict[str, OrderedDict[str, Field]]
 	def _load_LanguageProcessing():
 		file_id = './tests/dataloader/dummy_mscoco#MSCOCO'
@@ -192,49 +191,6 @@ def load_LanguageProcessing1(): # Dict[str, OrderedDict[str, Field]]
 		return LanguageProcessing(file_id, fields)
 	return _load_LanguageProcessing
 
-class Test1(TestLanguageProcessing):
-	@pytest.mark.dependency()
-	def test_init(self, load_LanguageProcessing1):
-		super().base_test_init(load_LanguageProcessing1())
-		
-	@pytest.mark.dependency()
-	def test_set_default_field(self, load_LanguageProcessing1):
-		super().base_test_set_default_field(load_LanguageProcessing1())
-
-	@pytest.mark.dependency()
-	def test_get_default_field(self, load_LanguageProcessing1):
-		super().base_test_set_default_field(load_LanguageProcessing1())
-	
-	@pytest.mark.dependency()
-	def test_get_default_vocab(self, load_LanguageProcessing1):
-		super().base_test_get_default_vocab(load_LanguageProcessing1())
-	
-	@pytest.mark.dependency()
-	def test_get_default_tokenizer(self, load_LanguageProcessing1):
-		super().base_test_get_default_tokenizer(load_LanguageProcessing1())
-	
-	@pytest.mark.dependency()
-	def test_get_field(self, load_LanguageProcessing1):
-		super().base_test_get_field(load_LanguageProcessing1())
-	
-	@pytest.mark.dependency()
-	def test_restart(self, load_LanguageProcessing1):
-		super().base_test_restart(load_LanguageProcessing1())
-	
-	@pytest.mark.dependency()
-	def test_get_batch(self, load_LanguageProcessing1):
-		super().base_test_get_batch(load_LanguageProcessing1())
-	
-	@pytest.mark.dependency()
-	def test_get_next_batch(self, load_LanguageProcessing1):
-		super().base_test_get_next_batch(load_LanguageProcessing1())
-	
-	@pytest.mark.dependency()
-	def test_convert(self, load_LanguageProcessing1):
-		super().base_test_convert(load_LanguageProcessing1())
-
-
-@pytest.fixture
 def load_LanguageProcessing2(): # OrderedDict[str, Field]
 	def _load_LanguageProcessing():
 		file_id = './tests/dataloader/dummy_mscoco#MSCOCO'
@@ -245,49 +201,6 @@ def load_LanguageProcessing2(): # OrderedDict[str, Field]
 		return LanguageProcessing(file_id, fields)
 	return _load_LanguageProcessing
 
-class Test2(TestLanguageProcessing):
-	@pytest.mark.dependency()
-	def test_init(self, load_LanguageProcessing2):
-		super().base_test_init(load_LanguageProcessing2())
-		
-	@pytest.mark.dependency()
-	def test_set_default_field(self, load_LanguageProcessing2):
-		super().base_test_set_default_field(load_LanguageProcessing2())
-
-	@pytest.mark.dependency()
-	def test_get_default_field(self, load_LanguageProcessing2):
-		super().base_test_set_default_field(load_LanguageProcessing2())
-	
-	@pytest.mark.dependency()
-	def test_get_default_vocab(self, load_LanguageProcessing2):
-		super().base_test_get_default_vocab(load_LanguageProcessing2())
-	
-	@pytest.mark.dependency()
-	def test_get_default_tokenizer(self, load_LanguageProcessing2):
-		super().base_test_get_default_tokenizer(load_LanguageProcessing2())
-	
-	@pytest.mark.dependency()
-	def test_get_field(self, load_LanguageProcessing2):
-		super().base_test_get_field(load_LanguageProcessing2())
-	
-	@pytest.mark.dependency()
-	def test_restart(self, load_LanguageProcessing2):
-		super().base_test_restart(load_LanguageProcessing2())
-	
-	@pytest.mark.dependency()
-	def test_get_batch(self, load_LanguageProcessing2):
-		super().base_test_get_batch(load_LanguageProcessing2())
-	
-	@pytest.mark.dependency()
-	def test_get_next_batch(self, load_LanguageProcessing2):
-		super().base_test_get_next_batch(load_LanguageProcessing2())
-	
-	@pytest.mark.dependency()
-	def test_convert(self, load_LanguageProcessing2):
-		super().base_test_convert(load_LanguageProcessing2())
-		
-
-@pytest.fixture
 def load_LanguageProcessing3(): # OrderedDict[str, str]
 	def _load_LanguageProcessing():
 		file_id = './tests/dataloader/dummy_mscoco#MSCOCO'
@@ -297,48 +210,6 @@ def load_LanguageProcessing3(): # OrderedDict[str, str]
 				return LanguageProcessing(file_id, fields)
 	return _load_LanguageProcessing
 
-class Test3(TestLanguageProcessing):
-	@pytest.mark.dependency()
-	def test_init(self, load_LanguageProcessing3):
-		super().base_test_init(load_LanguageProcessing3())
-		
-	@pytest.mark.dependency()
-	def test_set_default_field(self, load_LanguageProcessing3):
-		super().base_test_set_default_field(load_LanguageProcessing3())
-
-	@pytest.mark.dependency()
-	def test_get_default_field(self, load_LanguageProcessing3):
-		super().base_test_set_default_field(load_LanguageProcessing3())
-	
-	@pytest.mark.dependency()
-	def test_get_default_vocab(self, load_LanguageProcessing3):
-		super().base_test_get_default_vocab(load_LanguageProcessing3())
-	
-	@pytest.mark.dependency()
-	def test_get_default_tokenizer(self, load_LanguageProcessing3):
-		super().base_test_get_default_tokenizer(load_LanguageProcessing3())
-	
-	@pytest.mark.dependency()
-	def test_get_field(self, load_LanguageProcessing3):
-		super().base_test_get_field(load_LanguageProcessing3())
-	
-	@pytest.mark.dependency()
-	def test_restart(self, load_LanguageProcessing3):
-		super().base_test_restart(load_LanguageProcessing3())
-	
-	@pytest.mark.dependency()
-	def test_get_batch(self, load_LanguageProcessing3):
-		super().base_test_get_batch(load_LanguageProcessing3())
-	
-	@pytest.mark.dependency()
-	def test_get_next_batch(self, load_LanguageProcessing3):
-		super().base_test_get_next_batch(load_LanguageProcessing3())
-	
-	@pytest.mark.dependency()
-	def test_convert(self, load_LanguageProcessing3):
-		super().base_test_convert(load_LanguageProcessing3())
-
-@pytest.fixture
 def load_LanguageProcessing4(): # Dict[str, OrderedDict[str, str]]
 	def _load_LanguageProcessing():
 		file_id = './tests/dataloader/dummy_mscoco#MSCOCO'
@@ -349,43 +220,46 @@ def load_LanguageProcessing4(): # Dict[str, OrderedDict[str, str]]
 				return LanguageProcessing(file_id, fields)
 	return _load_LanguageProcessing
 
-class Test4(TestLanguageProcessing):
-	@pytest.mark.dependency()
-	def test_init(self, load_LanguageProcessing4):
-		super().base_test_init(load_LanguageProcessing4())
-		
-	@pytest.mark.dependency()
-	def test_set_default_field(self, load_LanguageProcessing4):
-		super().base_test_set_default_field(load_LanguageProcessing4())
+all_load_dataloaders = [load_LanguageProcessing1(), load_LanguageProcessing2(), load_LanguageProcessing3(), load_LanguageProcessing4()]
 
-	@pytest.mark.dependency()
-	def test_get_default_field(self, load_LanguageProcessing4):
-		super().base_test_set_default_field(load_LanguageProcessing4())
-	
-	@pytest.mark.dependency()
-	def test_get_default_vocab(self, load_LanguageProcessing4):
-		super().base_test_get_default_vocab(load_LanguageProcessing4())
-	
-	@pytest.mark.dependency()
-	def test_get_default_tokenizer(self, load_LanguageProcessing4):
-		super().base_test_get_default_tokenizer(load_LanguageProcessing4())
-	
-	@pytest.mark.dependency()
-	def test_get_field(self, load_LanguageProcessing4):
-		super().base_test_get_field(load_LanguageProcessing4())
-	
-	@pytest.mark.dependency()
-	def test_restart(self, load_LanguageProcessing4):
-		super().base_test_restart(load_LanguageProcessing4())
-	
-	@pytest.mark.dependency()
-	def test_get_batch(self, load_LanguageProcessing4):
-		super().base_test_get_batch(load_LanguageProcessing4())
-	
-	@pytest.mark.dependency()
-	def test_get_next_batch(self, load_LanguageProcessing4):
-		super().base_test_get_next_batch(load_LanguageProcessing4())
-	
-	@pytest.mark.dependency()
-	def test_convert(self, load_LanguageProcessing4):
-		super().base_test_convert(load_LanguageProcessing4())
+class Test1(TestLanguageProcessing):
+
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_init(self, load_dataloader):
+		super().base_test_init(load_dataloader())
+
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_set_default_field(self, load_dataloader):
+		super().base_test_set_default_field(load_dataloader())
+
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_get_default_field(self, load_dataloader):
+		super().base_test_set_default_field(load_dataloader())
+
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_get_default_vocab(self, load_dataloader):
+		super().base_test_get_default_vocab(load_dataloader())
+
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_get_default_tokenizer(self, load_dataloader):
+		super().base_test_get_default_tokenizer(load_dataloader())
+
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_get_field(self, load_dataloader):
+		super().base_test_get_field(load_dataloader())
+
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_restart(self, load_dataloader):
+		super().base_test_restart(load_dataloader())
+
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_get_batch(self, load_dataloader):
+		super().base_test_get_batch(load_dataloader())
+
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_get_next_batch(self, load_dataloader):
+		super().base_test_get_next_batch(load_dataloader())
+
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_convert(self, load_dataloader):
+		super().base_test_convert(load_dataloader())

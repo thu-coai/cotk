@@ -28,14 +28,14 @@ class TestSingleTurnDialog():
 			for field_name, field in fields.items():
 				assert isinstance(field_name, str)
 				assert isinstance(field, Field)
-				
+
 		assert isinstance(dl.vocabs, list)
 		for vocab in dl.vocabs:
 			assert isinstance(vocab, Vocab)
 		assert isinstance(dl.tokenizers, list)
 		for toker in dl.tokenizers:
 			assert isinstance(toker, Tokenizer)
-			
+
 		for (_, data), (_, index) in zip(dl.data.items(), dl.index.items()):
 			assert isinstance(data, dict)
 			assert isinstance(index, list)
@@ -48,14 +48,14 @@ class TestSingleTurnDialog():
 			assert batch_id == 0
 		for _, batch_size in dl.batch_size.items():
 			assert batch_size is None
-			
+
 		assert isinstance(dl.frequent_vocab_list, list)
 		assert dl.frequent_vocab_size == len(dl.frequent_vocab_list)
 		assert isinstance(dl.all_vocab_list, list)
 		assert dl.all_vocab_size == len(dl.all_vocab_list)
 		assert dl.all_vocab_size > 4
 		assert dl.all_vocab_size > dl.frequent_vocab_size
-		
+
 		for _, data in dl.data.items():
 			post = data['post']
 			post_ids = post['id']
@@ -66,7 +66,7 @@ class TestSingleTurnDialog():
 			post_strs = post['str']
 			assert isinstance(post_strs, list)
 			assert isinstance(post_strs[0], str)
-			
+
 			resp = data['resp']
 			resp_ids = resp['id']
 			assert isinstance(resp_ids, list)
@@ -76,9 +76,9 @@ class TestSingleTurnDialog():
 			resp_strs = resp['str']
 			assert isinstance(resp_strs, list)
 			assert isinstance(resp_strs[0], str)
-			
+
 			assert len(post) == len(resp)
-			
+
 		with pytest.raises(TypeError):
 			SingleTurnDialog()
 
@@ -116,7 +116,7 @@ class TestSingleTurnDialog():
 				dl.get_batch(set_name, [length-1, length])
 			assert len(dl.index[set_name]) >= 2
 			batch = dl.get_batch(set_name, [0, 1])
-			
+
 			assert len(batch["post_length"]) == 2
 			assert len(batch["resp_length"]) == 2
 			assert batch["post"].shape[0] == 2
