@@ -486,8 +486,8 @@ class SentenceDefault(Sentence):
 		return ids
 
 	_GET_BATCH_DATA_DOCSTRING = '''data (Dict[str, Any]): the object returned by :meth:`_SentenceContent.get_data`.
- 		data['str'] is raw sentences.
- 		data['id'] is ids of tokenized sentences.
+ 				data['str'] is raw sentences.
+ 				data['id'] is ids of tokenized sentences.
 	'''
 	_GET_BATCH_RETURNS_DOCSTRING = '''The return value is a dict like this. 
 		{
