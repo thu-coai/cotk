@@ -3,7 +3,7 @@ Containing some classes and functions about perplexity evaluating results of mod
 """
 import random
 import numpy as np
-from typing import Union, List, Any, Optional
+from typing import Union, List, Any, Optional, Dict
 
 from .._utils.imports import LazyObject, LazyModule
 from ..dataloader import LanguageProcessing, Sentence
@@ -20,14 +20,9 @@ class PerplexityMetric(MetricBase):
 		{MetricBase.DATALOADER_ARGUMENTS}
 		{MetricBase.REFERENCE_ALLVOCABS_KEY_ARGUMENTS}
 		{MetricBase.REFERENCE_LEN_KEY_ARGUMENTS}
-		gen_log_prob_key (str): The key of **log** probability over words.
-			Default: ``gen_log_prob``.
-		generate_rare_vocab (bool): Whether ``gen_log_prob`` contains :ref:`invalid vocab <vocab_ref>`.
-			Default: ``False``.
-		full_check (bool): Whether perform a full check on ``gen_log_prob`` to make sure the sum
-			of probability is 1. Otherwise, a random check will be performed for efficiency.
-			If pytorch is used, a full check is always performed and this argument will be ignored.
-			Default: ``False``.
+		{MetricBase.GEN_LOG_PROB_KEY_ARGUMENTS}
+		{MetricBase.GENERATE_RARE_VOCAB_ARGUMENTS}
+		{MetricBase.FULL_CHECK_ARGUMENTS}
 
 	Here is an example:
 
@@ -56,11 +51,11 @@ class PerplexityMetric(MetricBase):
 
 	@hooks.hook_metric
 	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence"], \
-					   reference_allvocabs_key="ref_allvocabs", \
-					   reference_len_key="ref_length", \
-					   gen_log_prob_key="gen_log_prob", \
-					   generate_rare_vocab=False, \
-					   full_check=False \
+					   reference_allvocabs_key: str = "ref_allvocabs", \
+					   reference_len_key: str = "ref_length", \
+					   gen_log_prob_key: str = "gen_log_prob", \
+					   generate_rare_vocab: bool = False, \
+					   full_check: bool = False \
 			  ):
 		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
@@ -80,7 +75,7 @@ class PerplexityMetric(MetricBase):
 
 		self.have_unk = "unk" in self.dataloader.get_special_tokens_mapping()
 
-	def forward(self, data):
+	def forward(self, data: Dict[str, Any]):
 		'''Processing a batch of data. Smoothing will be performed for :ref:`invalid vocabs <vocab_ref>`.
 		:ref:`Unknowns vocabs <vocab_ref>` will be ignored.
 
@@ -89,7 +84,7 @@ class PerplexityMetric(MetricBase):
 
 				{MetricBase.FORWARD_REFERENCE_ALLVOCABS_ARGUMENTS_WITH_TORCH}
 				{MetricBase.FORWARD_REFERENCE_LEN_ARGUMENTS}
-				* **data[gen_log_prob_key]** (list or :class:`numpy.ndarray` or :class:`torch.Tensor`):
+				* **data[gen_log_prob_key]** (list, :class:`numpy.ndarray`, :class:`torch.Tensor`):
 				  The **log softmax** probability of the sentence generations model outputs.
 				  A 3-d jagged or padded array of float.
 				  Contains end token (eg:``<eos>``), but without start token (eg: ``<go>``).
@@ -309,10 +304,8 @@ class PerplexityMetric(MetricBase):
 		return word_loss, length_sum
 
 	@hooks.hook_metric_close
-	def close(self):
-		r'''
-		Returns:
-			(dict): Return a dict which contains
+	def close(self) -> Dict[str, Any]:
+		r'''Return a dict which contains
 
 			* **perplexity**: perplexity value.
 			* **perplexity hashvalue**: hash value for perplexity metric, same hash value stands
@@ -363,13 +356,9 @@ class MultiTurnPerplexityMetric(MetricBase):
 		{MetricBase.DATALOADER_ARGUMENTS}
 		{MetricBase.MULTI_TURN_REFERENCE_ALLVOCABS_KEY_ARGUMENTS}
 		{MetricBase.MULTI_TURN_REFERENCE_LEN_KEY_ARGUMENTS}
-		gen_log_prob_key (str): The key of **log** probability over words.
-			Default: ``multi_turn_gen_log_prob``.
-		generate_rare_vocab (bool): whether ``gen_log_prob`` contains :ref:`invalid vocab <vocab_ref>`.
-			Default: ``False``.
-		full_check (bool): whether perform full checks on ``gen_log_prob`` to make sure the sum
-			of probability is 1. Otherwise, a random check will be performed for efficiency.
-			Default: ``False``.
+		{MetricBase.GEN_LOG_PROB_KEY_ARGUMENTS}
+		{MetricBase.GENERATE_RARE_VOCAB_ARGUMENTS}
+		{MetricBase.FULL_CHECK_ARGUMENTS}
 
 	Here is an example:
 
@@ -400,11 +389,12 @@ class MultiTurnPerplexityMetric(MetricBase):
 	_version = 1
 
 	@hooks.hook_metric
-	def __init__(self, dataloader, multi_turn_reference_allvocabs_key="multi_turn_ref_allvocabs", \
-					   multi_turn_reference_len_key="multi_turn_ref_length", \
-					   multi_turn_gen_log_prob_key="multi_turn_gen_log_prob", \
-					   generate_rare_vocab=False, \
-					   full_check=False \
+	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence"], \
+					   multi_turn_reference_allvocabs_key: str = "multi_turn_ref_allvocabs", \
+					   multi_turn_reference_len_key: str = "multi_turn_ref_length", \
+					   multi_turn_gen_log_prob_key: str = "multi_turn_gen_log_prob", \
+					   generate_rare_vocab: bool = False, \
+					   full_check: bool = False \
 			  ):
 		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
@@ -419,7 +409,7 @@ class MultiTurnPerplexityMetric(MetricBase):
 				generate_rare_vocab=generate_rare_vocab, \
 				full_check=full_check)
 
-	def forward(self, data):
+	def forward(self, data: Dict[str, Any]):
 		'''Processing a batch of data.
 
 		Arguments:
@@ -427,7 +417,7 @@ class MultiTurnPerplexityMetric(MetricBase):
 
 				{MetricBase.FORWARD_MULTI_TURN_REFERENCE_ALLVOCABS_ARGUMENTS_WITH_TORCH}
 				{MetricBase.FORWARD_MULTI_TURN_REFERENCE_LEN_ARGUMENTS}
-				* **data[multi_turn_gen_log_prob_key]** (list or :class:`numpy.ndarray` or \
+				* **data[multi_turn_gen_log_prob_key]** (list, :class:`numpy.ndarray`, \
 					:class:`torch.Tensor`):
 				  The **log softmax** probability of the sentence generations model outputs.
 				  A 4-d jagged or padded array. **log softmax** probability.
@@ -479,10 +469,8 @@ class MultiTurnPerplexityMetric(MetricBase):
 					"gen_log_prob": gen_log_prob[i][:turn_length]})
 
 	@hooks.hook_metric_close
-	def close(self):
-		r'''
-		Returns:
-			(dict): Return a dict which contains
+	def close(self) -> Dict[str, Any]:
+		r'''Return a dict which contains
 
 			* **perplexity**: perplexity value.
 			* **perplexity hashvalue**: hash value for perplexity metric, same hash value stands
