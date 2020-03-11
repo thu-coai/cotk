@@ -1002,7 +1002,7 @@ class _SparseLabelContent(_FieldContent):
 		Each element in `dataset` represents a label.
 		Note that it may raise StopIteration.
 
-		Parameters:{_FieldContent._GET_NEXT_ARG}
+		Arguments:{_FieldContent._GET_NEXT_ARG}
 
 		Examples:
 			>>> dataset = iter(["Java\n", "Python\n", "Cpp\n", "Java\n"])
