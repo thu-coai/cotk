@@ -7,7 +7,7 @@ your model from one dataset to other datasets.
 
 from .tokenizer import Tokenizer, SimpleTokenizer, PretrainedTokenizer
 from .vocab import Vocab, GeneralVocab, PretrainedVocab
-from .field import Field, Sentence, SentenceDefault, SentenceGPT2, Session
+from .field import Field, Sentence, SentenceDefault, SentenceGPT2, Session, SessionDefault, DenseLabel, SparseLabel
 from .context import Context, FieldContext, VocabContext
 from .dataloader import Dataloader, LanguageProcessing
 from .language_generation import LanguageGeneration, MSCOCO
@@ -17,7 +17,7 @@ from .multi_turn_dialog import MultiTurnDialog, SwitchboardCorpus, UbuntuCorpus
 __all__ = [ \
 	'Tokenizer', 'SimpleTokenizer', 'PretrainedTokenizer', \
 	'Vocab', 'GeneralVocab', 'PretrainedVocab', \
-	'Field', 'Sentence', 'SentenceDefault', 'SentenceGPT2','Session', \
+	'Field', 'Sentence', 'SentenceDefault', 'SentenceGPT2','Session', 'SessionDefault', 'DenseLabel', 'SparseLabel', \
 	'Context', 'FieldContext', 'VocabContext', \
 	'Dataloader', 'LanguageProcessing', \
 	'LanguageGeneration', 'MSCOCO', \

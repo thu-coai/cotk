@@ -20,7 +20,7 @@ TokenizedSessionType = List[TokenizedSentenceType]
 
 class Field(LoadClassInterface, metaclass=DocStringInheritor):
 	'''A base class of data field, which specify the format of the dataset.
-	See :class:`LanguageProcessing` for the usage.
+	See :class:`LanguageProcessingBase` for the usage.
 
 	Notice :class:`Field` object may be shared between different fields, data sets or dataloader.
 	Thus it should contain only settings and not data. (Data can be stored by :class:`_FieldContent`.)
@@ -62,7 +62,7 @@ class Field(LoadClassInterface, metaclass=DocStringInheritor):
 		raise NotImplementedError
 
 	def _get_setting_hash(self, vocabs) -> str:
-		'''Get setting hash for the field. ``vocabs`` are provided by :class:`LanguageProcessing`.
+		'''Get setting hash for the field. ``vocabs`` are provided by :class:`LanguageProcessingBase`.
 		This function only encode index of vocab, and other settings. It only encode index because
 		encode the setting hash of vocabs cannot explain whether a :class:`Vocab` is shared between different vocabs or not.
 
@@ -352,7 +352,7 @@ class Sentence(Field):
 				only_frequent_word=only_frequent_word, cut=False)[0]
 
 	def add_special_to_ids(self, ids: List[int]) -> List[int]:
-		'''Add special ids, such as `go_id` or `eos_id` to the input `ids`.
+		'''Add special ids, such as `go_id` or `eos_id` to the input `ids'.
 
 		Arguments:
 			ids (List[int]): The input ids.
@@ -413,6 +413,7 @@ class Sentence(Field):
 		return sentences
 
 	_GET_BATCH_DATA_DOCSTRING = '''data (Any): the object returned by :meth:`_SentenceContent.get_data`'''
+	# _GET_BATCH_RETURNS_DOCSTRING = '''Dict[str, Any]: The dict of batch.'''
 	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
 		raise NotImplementedError
 
@@ -485,16 +486,16 @@ class SentenceDefault(Sentence):
 		return ids
 
 	_GET_BATCH_DATA_DOCSTRING = '''data (Dict[str, Any]): the object returned by :meth:`_SentenceContent.get_data`.
- 				data['str'] is raw sentences.
- 				data['id'] is ids of tokenized sentences.
+ 		data['str'] is raw sentences.
+ 		data['id'] is ids of tokenized sentences.
 	'''
 	_GET_BATCH_RETURNS_DOCSTRING = '''The return value is a dict like this. 
 		{
-			name + '_length': value0, # :class:`np.ndarray` object with shape == (batch size, ). Each element is the length of corresponding sentence.
-			name: value1, # :class:`np.ndarray` object with shape == (batch size, max sentence length).
+			name + '_length': value0, # np.ndarray object with shape == (batch size, ). Each element is the length of corresponding sentence.
+			name: value1, # np.ndarray object with shape == (batch size, max sentence length).
 						  # Each row is the ids of a sentence. Those sentences, whose length is less than max sentence length, are padded by 0.
 						  # If an id in the array is rare vocab, it will be replaced be `unk_id`.
-			name + '_allvocabs': value2, # :class:`np.ndarray` object with shape == (batch size, max sentence length). Each row is the ids of a sentence.
+			name + '_allvocabs': value2, # np.ndarray object with shape == (batch size, max sentence length). Each row is the ids of a sentence.
 			name + '_str': value3, # List[str]. Each element is the raw sentence, which has not been tokenized.
 		}
 	'''
@@ -560,13 +561,11 @@ class SentenceGPT2(Sentence):
 	_GET_BATCH_DATA_DOCSTRING = SentenceDefault._GET_BATCH_DATA_DOCSTRING
 	_GET_BATCH_RETURNS_DOCSTRING = '''The return value is a dict like this.
 		{
-			name + '_length': value0, # :class:`np.ndarray` object with shape == (batch size, ). Each element is the length of corresponding sentence.
-			name: value1, # :class:`np.ndarray` object with shape == (batch size, max sentence length).
-				# Each row is the ids of a sentence. Those sentences, whose length is less than max sentence length, are padded by `eos_id`.
-				# If an id in the array is rare vocab, it will be replaced be `unk_id`.
-						  
-			name + '_allvocabs': value2, # :class:`np.ndarray` object with shape == (batch size, max sentence length). Each row is the ids of a sentence.
-			
+			name + '_length': value0, # np.ndarray object with shape == (batch size, ). Each element is the length of corresponding sentence.
+			name: value1, # np.ndarray object with shape == (batch size, max sentence length).
+						  # Each row is the ids of a sentence. Those sentences, whose length is less than max sentence length, are padded by `eos_id`.
+						  # If an id in the array is rare vocab, it will be replaced be `unk_id`.
+			name + '_allvocabs': value2, # np.ndarray object with shape == (batch size, max sentence length). Each row is the ids of a sentence.
 			name + '_str': value3, # List[str]. Each element is the raw sentence, which has not been tokenized.
 		}
 	'''
@@ -754,16 +753,16 @@ class SessionDefault(Session):
 		.replace('sentences', 'sessions')
 	_GET_BATCH_RETURNS_DOCSTRING = '''The return value is a dict like this.
 			{
-				name + '_turn_length': value0, # :class:`np.ndarray` object with shape == (batch size, ). Each element is the length of corresponding sssion.
+				name + '_turn_length': value0, # np.ndarray object with shape == (batch size, ). Each element is the length of corresponding sssion.
 				name + '_sent_length': value1, # List[List[int]]. Each integer is the length of corresponding sentence.
-				name: value2, # :class:`np.ndarray` object with shape == (batch size, max turn length, max sentence length).
+				name: value2, # np.ndarray object with shape == (batch size, max turn length, max sentence length).
 							  # value2[i] is a session. value2[i, j] is a sentence. value2[i, j, k] is an id.
 							  # If `self.max_turn_length` is not None and j >= `self.max_turn_length`, 
 							  # or `self.max_sent_length` is not None and k >= `self.max_sent_length`,
 							  # value2[i, j, k] is 0.
 							  # If an id in the array is rare vocab, it will be replaced be `unk_id`.
 							  
-				name + '_allvocabs': value3, # :class:`np.ndarray` object with shape == (batch size, max turn length, max sentence length).
+				name + '_allvocabs': value3, # np.ndarray object with shape == (batch size, max turn length, max sentence length).
 				                             # It's the same with value2, except that rare vocabs won't be replaced by `unk_id`.
 				name + '_str': value4, # List[List[str]]. Each sublist is the raw session, which has not been tokenized.
 			}
