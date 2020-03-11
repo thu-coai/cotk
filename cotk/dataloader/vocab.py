@@ -482,7 +482,7 @@ class PretrainedVocab(Vocab):
 class SimpleVocab(Vocab):
 	"""A simple implementation of :class:Vocab. It doesn't us any special tokens and it doesn't care about frequency of tokens."""
 	def __init__(self):
-		super().___init__()
+		super().__init__()
 		self._setting_hash = hashlib.sha256(
 			dumps([self.__class__.__name__, "configs"])
 		).hexdigest()
