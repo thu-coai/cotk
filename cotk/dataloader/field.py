@@ -73,15 +73,16 @@ class Field(LoadClassInterface, metaclass=DocStringInheritor):
 		raise NotImplementedError
 
 	_GET_BATCH_DATA_DOCSTRING = '''data (Any): the object returned by :meth:`_FieldContent.get_data`'''
-	_GET_BATCH_RETURNS_DOCSTRING = ''
+	_GET_BATCH_EXAMPLE = ''
 	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
 		'''Invoked by :meth:`LanguageProcessing.get_batch`, return the batched data specified by this field.
-		{_GET_BATCH_RETURNS_DOCSTRING}
 
 		Arguments:
 			name (str): name of the field.
 			{_GET_BATCH_DATA_DOCSTRING}
 			indexes (List[int]): the indexes of the data in this batch
+
+{_GET_BATCH_EXAMPLE}
 		'''
 		raise NotImplementedError
 
@@ -488,16 +489,47 @@ class SentenceDefault(Sentence):
  				data['str'] is raw sentences.
  				data['id'] is ids of tokenized sentences.
 	'''
-	_GET_BATCH_RETURNS_DOCSTRING = '''The return value is a dict like this. 
-		{
-			name + '_length': value0, # :class:`np.ndarray` object with shape == (batch size, ). Each element is the length of corresponding sentence.
-			name: value1, # :class:`np.ndarray` object with shape == (batch size, max sentence length).
-						  # Each row is the ids of a sentence. Those sentences, whose length is less than max sentence length, are padded by 0.
-						  # If an id in the array is rare vocab, it will be replaced be `unk_id`.
-			name + '_allvocabs': value2, # :class:`np.ndarray` object with shape == (batch size, max sentence length). Each row is the ids of a sentence.
-			name + '_str': value3, # List[str]. Each element is the raw sentence, which has not been tokenized.
-		}
-	'''
+
+	_GET_BATCH_EXAMPLE = """
+		Examples:
+			>>> field = SentenceDefault('nltk', GeneralVocab())
+			>>> field_content = field._create('train')
+			>>> dataset = iter(['I love NLP.', 'Life is short.', 'I use Python.', 'PHP is th best language in the world.', 'Hello, world!'])
+			>>> while True:
+			... 	try:
+			... 		field_content.read_next(dataset)
+			... 	except StopIteration:
+			... 		break
+			>>> field_content.process_before_vocab()
+			>>> field.vocab.build_vocab()
+			>>> data = field_content.get_data()
+			>>> data
+			{'id': [[2, 5, 18, 12, 4, 3],
+			  [2, 11, 6, 19, 4, 3],
+			  [2, 5, 22, 14, 4, 3],
+			  [2, 13, 6, 20, 15, 17, 16, 21, 7, 4, 3],
+			  [2, 10, 9, 7, 8, 3]],
+			 'str': ['I love NLP.',
+			  'Life is short.',
+			  'I use Python.',
+			  'PHP is th best language in the world.',
+			  'Hello, world!']}
+			>>> # In the above lines, some import variables are defined. It shows how to get `data` and what `data` looks like.
+			>>> # When you use :class:`Dataloader`, **you needn't write these codes yourself**. Similar things have been done in :method`LanguageProcessing.__init__`
+			>>> field.get_batch('sent', data, [1, 3])
+			{'sent_length': array([ 6, 11]),  # Each element of it (`name` + '_length') is the length of a sentence, not including special id.
+ 			 'sent': array([[ 2, 11,  6, 19,  4,  3,  0,  0,  0,  0,  0],  # Each row is a sentence. If a sentence's length is less than max sentence length, it's padded by 0.
+ 			 		[ 2, 13,  6, 20, 15, 17, 16, 21,  7,  4,  3]]),
+ 			 'sent_allvocabs': array([[ 2, 11,  6, 19,  4,  3,  0,  0,  0,  0,  0], # `sent` shape == (batch size, max sentence length). Each row is the ids of a sentence.
+        			[ 2, 13,  6, 20, 15, 17, 16, 21,  7,  4,  3]]),
+ 			 'sent_str': ['Life is short.', 'PHP is th best language in the world.']}
+ 			 >>> # 'sent_length' (`name` + '_length') is a :class:`np.ndarray` object with shape == (batch size, ). Each element is the length of corresponding sentence, not including special ids.
+ 			 >>> # 'sent' (`name`) is a :class:`np.ndarray` object with shape == (batch size, max sentence length).
+ 			 >>> # 		Each row is the ids of a sentence. Those sentences, whose length is less than max sentence length, are padded by 0.
+ 			 >>> # 		If an id in the array is rare vocab, it will be replaced be `unk_id`.
+ 			 >>> # 'sent_allvocab' (`name` + '_allvocabs') is the same with 'sent', except that rare id won't be replaced by `unk_id`
+ 			 >>> # 'sent_str' (`name` + '_str') contains the raw sentences.
+	"""
 	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
 		if not isinstance(self.vocab, GeneralVocab):
 			raise RuntimeError("Subclass must override get_batch if self.vocab is not a GeneralVocab.")
@@ -558,18 +590,48 @@ class SentenceGPT2(Sentence):
 		return ids
 
 	_GET_BATCH_DATA_DOCSTRING = SentenceDefault._GET_BATCH_DATA_DOCSTRING
-	_GET_BATCH_RETURNS_DOCSTRING = '''The return value is a dict like this.
-		{
-			name + '_length': value0, # :class:`np.ndarray` object with shape == (batch size, ). Each element is the length of corresponding sentence.
-			name: value1, # :class:`np.ndarray` object with shape == (batch size, max sentence length).
-				# Each row is the ids of a sentence. Those sentences, whose length is less than max sentence length, are padded by `eos_id`.
-				# If an id in the array is rare vocab, it will be replaced be `unk_id`.
-						  
-			name + '_allvocabs': value2, # :class:`np.ndarray` object with shape == (batch size, max sentence length). Each row is the ids of a sentence.
-			
-			name + '_str': value3, # List[str]. Each element is the raw sentence, which has not been tokenized.
-		}
-	'''
+	# TODO: update return value of get_batch
+	_GET_BATCH_EXAMPLE = """
+		Examples:
+			>>> from transformers.tokenization_gpt2 import GPT2Tokenizer
+			>>> field = SentenceDefault('nltk', PretrainedVocab(GPT2Tokenizer.from_pretrained('gpt2')))
+			>>> field_content = field._create('train')
+			>>> dataset = iter(['I love NLP.', 'Life is short.', 'I use Python.', 'PHP is th best language in the world.', 'Hello, world!'])
+			>>> while True:
+			... 	try:
+			... 		field_content.read_next(dataset)
+			... 	except StopIteration:
+			... 		break
+			>>> field_content.process_before_vocab()
+			>>> field.vocab.build_vocab()
+			>>> data = field_content.get_data()
+			>>> data
+			{'id': [[2, 5, 18, 12, 4, 3],
+				[2, 11, 6, 19, 4, 3],
+				  [2, 5, 22, 14, 4, 3],
+				[2, 13, 6, 20, 15, 17, 16, 21, 7, 4, 3],
+				[2, 10, 9, 7, 8, 3]],
+			 'str': ['I love NLP.',
+				  'Life is short.',
+				  'I use Python.',
+				  'PHP is th best language in the world.',
+				  'Hello, world!']}
+			>>> # In the above lines, some import variables are defined. It shows how to get `data` and what `data` looks like.
+			>>> # When you use :class:`Dataloader`, **you needn't write these codes yourself**. Similar things have been done in :method`LanguageProcessing.__init__`
+			>>> field.get_batch('sent', data, [1, 3])
+			{'sent_length': array([ 6, 11]),
+			  'sent': array([[ 2, 11,  6, 19,  4,  3,  0,  0,  0,  0,  0],
+					 [ 2, 13,  6, 20, 15, 17, 16, 21,  7,  4,  3]]),
+			  'sent_allvocabs': array([[ 2, 11,  6, 19,  4,  3,  0,  0,  0,  0,  0],
+					[ 2, 13,  6, 20, 15, 17, 16, 21,  7,  4,  3]]),
+			  'sent_str': ['Life is short.', 'PHP is th best language in the world.']}
+			 >>> # 'sent_length' (`name` + '_length') is a :class:`np.ndarray` object with shape == (batch size, ). Each element is the length of corresponding sentence, not including special ids.
+			 >>> # 'sent' (`name`) is a :class:`np.ndarray` object with shape == (batch size, max sentence length).
+			 >>> # 		Each row is the ids of a sentence. Those sentences, whose length is less than max sentence length, are padded by 0.
+			 >>> # 		If an id in the array is rare vocab, it will be replaced be `unk_id`.
+			 >>> # 'sent_allvocab' (`name` + '_allvocabs') is the same with 'sent', except that rare id won't be replaced by `unk_id`
+			 >>> # 'sent_str' (`name` + '_str') contains the raw sentences.
+		"""
 	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
 		res: Dict[str, Any] = {}
 		data_id, data_str = data["id"], data["str"]
@@ -752,23 +814,45 @@ class SessionDefault(Session):
 	_GET_BATCH_DATA_DOCSTRING = SentenceDefault._GET_BATCH_DATA_DOCSTRING\
 		.replace(_SentenceContent.__name__, _SessionContent.__name__)\
 		.replace('sentences', 'sessions')
-	_GET_BATCH_RETURNS_DOCSTRING = '''The return value is a dict like this.
-			{
-				name + '_turn_length': value0, # :class:`np.ndarray` object with shape == (batch size, ). Each element is the length of corresponding sssion.
-				name + '_sent_length': value1, # List[List[int]]. Each integer is the length of corresponding sentence.
-				name: value2, # :class:`np.ndarray` object with shape == (batch size, max turn length, max sentence length).
-							  # value2[i] is a session. value2[i, j] is a sentence. value2[i, j, k] is an id.
-							  # If `self.max_turn_length` is not None and j >= `self.max_turn_length`, 
-							  # or `self.max_sent_length` is not None and k >= `self.max_sent_length`,
-							  # value2[i, j, k] is 0.
-							  # If an id in the array is rare vocab, it will be replaced be `unk_id`.
-							  
-				name + '_allvocabs': value3, # :class:`np.ndarray` object with shape == (batch size, max turn length, max sentence length).
-				                             # It's the same with value2, except that rare vocabs won't be replaced by `unk_id`.
-				name + '_str': value4, # List[List[str]]. Each sublist is the raw session, which has not been tokenized.
-			}
-		'''
 
+	_GET_BATCH_EXAMPLE = """
+	Examples:
+		>>> field = SessionDefault('nltk', GeneralVocab())
+		>>> field_content = field._create('train')
+		>>> dataset = iter(['How are you?\n', "I'm fine. Thank you! And you?\n", "I'm fine, too.\n", "\n", "How to install CoTk?\n", "pip install cotk.\n", "\n"])
+		>>> while True:
+		... 	try:
+		... 		field_content.read_next(dataset)
+		... 	except StopIteration:
+		... 		break
+		>>> field_content.process_before_vocab()
+		>>> field.vocab.build_vocab()
+		>>> data = field_content.get_data()
+		>>> data
+		{'id': [[[2, 8, 18, 6, 5, 3],
+				[2, 9, 7, 12, 10, 4, 17, 6, 13, 15, 6, 5, 3],
+				[2, 9, 7, 12, 10, 14, 22, 4, 3]],
+			   [[2, 8, 21, 11, 16, 5, 3], [2, 20, 11, 19, 4, 3]]],
+		  'str': [['How are you?', "I'm fine. Thank you! And you?", "I'm fine, too."],
+			  ['How to install CoTk?', 'pip install cotk.']]}
+		>>> batch_data = field.get_batch('session', data, [1])
+		>>> batch_data
+		{'session_turn_length': array([2]),
+		  'session_sent_length': [[7, 6]],
+		  'session': array([[[ 2,  8, 21, 11, 16,  5,  3],
+						 [ 2, 20, 11, 19,  4,  3,  0]]]),
+		  'session_allvocabs': array([[[ 2,  8, 21, 11, 16,  5,  3],
+						 [ 2, 20, 11, 19,  4,  3,  0]]]),
+		  'session_str': [['How to install CoTk?', 'pip install cotk.']]}
+		>>> # 'session_turn_length' (`name` + '_turn_length') is a :class:`np.ndarray` object with shape == (batch size, ). Each element is the length of corresponding sssion.
+		>>> # 'session_sent_length' (`name` + '_sent_length') is List[List[int]]. Each integer is the length of corresponding sentence.
+		>>> # 'session' (`name`) is a :class:`np.ndarray` object with shape == (batch size, max turn length, max sentence length).
+		>>>				# batch_data['session'][i, j] is a sentence. batch_data['session'][i, j, k] is an id.
+		>>>				# If `self.max_turn_length` is not None and j >= `self.max_turn_length` or `self.max_sent_length` is not None and k >= `self.max_sent_length`,
+		>>>				# batch_data['session'][i, j, k] is 0.
+		>>>				# If an id in the batch_data['session'] is a rare vocab, it will be replaced by `unk_id`.
+		>>> # 'session_allvocabs' (`name` + '_allvocabs') is the same with 'session', except that rare vocabs won't be replaced by `unk_id`.
+	"""
 	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
 		if not isinstance(self.vocab, GeneralVocab):
 			raise RuntimeError("Subclass must override get_batch if self.vocab is not a GeneralVocab.")
@@ -797,11 +881,25 @@ class DenseLabel(Field):
 	def _get_setting_hash(self, vocabs) -> str:
 		return hashlib.sha256(dumps([self.__class__.__name__])).hexdigest()
 
-	_GET_BATCH_RETURNS_DOCSTRING = """The return value is a dict like this.
-			{
-				name: [0, 1, 2, ...]  # A list of integers. Each element of it, is a label. 
-			}
-	"""
+	_GET_BATCH_EXAMPLE = """
+		Examples:
+			>>> field = DenseLabel()
+			>>> field_content = field._create('train')
+			>>> dataset = iter(["1\n", "0\n"])
+			>>> while True:
+			... 	try:
+			... 		field_content.read_next(dataset)
+			... 	except StopIteration:
+			... 		break
+			>>> field_content.process_before_vocab()
+			>>> data = field_content.get_data()
+			>>> data
+			{'label': [1, 0]}
+			>>> field.get_batch('label', data, [1])
+			{'label': array([0])}  # 'label' (`name`) is a :class:`np.ndarray` object. Each element of it, is a label. 
+		"""
+
+
 	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
 		ids = [data['label'][i] for i in indexes]
 		ids = np.array(ids, dtype=int)
@@ -856,16 +954,34 @@ class SparseLabel(Field):
 		super().__init__()
 		self.vocab = vocab if vocab is not None else SimpleVocab()
 
+	def get_vocab(self) -> Optional[Vocab]:
+		return self.vocab
+
 	_GET_BATCH_DATA_DOCSTRING = '''data (Dict[str, Any]): the object returned by :meth:`_SparseLabelContent.get_data`.
 	 	data['str'] is raw labels.
 		data['id'] is ids of labels.
 	'''
-	_GET_BATCH_RETURNS_DOCSTRING = '''The return value is a dict like this.
-		{
-			name + '_id': value0, # np.ndarray object with shape == (batch size, ). Each element is the id of corresponding label.
-			name + '_str': value1, # List[str]. Each element is the raw label.
-		}
-	'''
+	_GET_BATCH_EXAMPLE = """
+		Examples:
+			>>> field = SparseLabel()
+			>>> field_content = field._create('train')
+			>>> dataset = iter(["Java\n", "Python\n", "Cpp\n", "Java\n"])
+			>>> while True:
+			... 	try:
+			... 		field_content.read_next(dataset)
+			... 	except StopIteration:
+			... 		break
+			>>> field_content.process_before_vocab()
+			>>> field.vocab.build_vocab()
+			>>> data = field_content.get_data()
+			>>> data
+			{'id': [0, 2, 1, 0], 'str': ['Java', 'Python', 'Cpp', 'Java']}
+			>>> field.get_batch('label', data, [1])
+			{
+			 'label_id': array([2]),  # `name` + '_id' is :class`np.ndarray` object with shape == (batch size, ). Each element is the id of corresponding label.
+			 'label_str': ['Python']}  # `name` + '_str' is List[str]. Each element is the raw label.
+
+	"""
 	def get_batch(self, name: str, data, indexes: List[int]) -> Dict[str, Any]:
 		ids = [data['id'][i] for i in indexes]
 		ids = np.array(ids, dtype=int)
