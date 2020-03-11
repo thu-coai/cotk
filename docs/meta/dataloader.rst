@@ -374,6 +374,23 @@ Session
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: Session
 
+SessionDefault
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autoclass:: SessionDefault
+
+    .. automethod:: get_batch
+
+DenseLabel
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autoclass:: DenseLabel
+
+    .. automethod:: get_batch
+
+SparseLabel
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autoclass:: SparseLabel
+
+    .. automethod:: get_batch
 
 Dataloader
 ------------------------------------

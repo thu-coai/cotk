@@ -166,7 +166,7 @@ class _SentenceContent(_FieldContent):
 		"""read the next sentence and returns a 2-tuple (the sentence and number of elements it reads from `dataset`).
 		Note that it may raise StopIteration.
 
-		Args:{_FieldContent._GET_NEXT_ARG}
+		Arguments:{_FieldContent._GET_NEXT_ARG}
 
 		Examples:
 			>>> dataset = iter(["I love NLP.\\n", "Yes I do\\n", "I love deep learning\\n"])
@@ -485,10 +485,7 @@ class SentenceDefault(Sentence):
 			ids = self._remove_special_in_ids(ids, self.vocab.go_id, self.vocab.eos_id)
 		return ids
 
-	_GET_BATCH_DATA_DOCSTRING = '''data (Dict[str, Any]): the object returned by :meth:`_SentenceContent.get_data`.
- 				data['str'] is raw sentences.
- 				data['id'] is ids of tokenized sentences.
-	'''
+	_GET_BATCH_DATA_DOCSTRING = '''data (Dict[str, Any]): the object returned by :meth:`_SentenceContent.get_data`. data['str'] is raw sentences. data['id'] is ids of tokenized sentences.'''
 
 	_GET_BATCH_EXAMPLE = """
 		Examples:
@@ -674,7 +671,7 @@ class _SessionContent(_FieldContent):
 		The first element must not be empty string or '\\n'.
 		Note that it may raise StopIteration.
 
-		Args:
+		Arguments:
 			{_FieldContent._GET_NEXT_ARG}
 		Examples:
 			>>> dataset = iter(["a\n", "b\n", "\n", "c\n", "d\e", "e\n", '\n'])
@@ -811,11 +808,8 @@ class SessionDefault(Session):
 	remove_special_to_ids = SentenceDefault.remove_special_in_ids
 	trim_in_ids = SentenceDefault.trim_in_ids
 
-	_GET_BATCH_DATA_DOCSTRING = SentenceDefault._GET_BATCH_DATA_DOCSTRING\
-		.replace(_SentenceContent.__name__, _SessionContent.__name__)\
-		.replace('sentences', 'sessions')
-
-	_GET_BATCH_EXAMPLE = """
+	_GET_BATCH_DATA_DOCSTRING = SentenceDefault._GET_BATCH_DATA_DOCSTRING.replace(_SentenceContent.__name__, _SessionContent.__name__).replace('sentences', 'sessions')
+	_GET_BATCH_EXAMPLE = r"""
 	Examples:
 		>>> field = SessionDefault('nltk', GeneralVocab())
 		>>> field_content = field._create('train')
@@ -881,7 +875,7 @@ class DenseLabel(Field):
 	def _get_setting_hash(self, vocabs) -> str:
 		return hashlib.sha256(dumps([self.__class__.__name__])).hexdigest()
 
-	_GET_BATCH_EXAMPLE = """
+	_GET_BATCH_EXAMPLE = r"""
 		Examples:
 			>>> field = DenseLabel()
 			>>> field_content = field._create('train')
@@ -916,7 +910,7 @@ class _DenseLabelContent(_FieldContent):
 		Each element in `dataset` represents a label.
 		Note that it may raise StopIteration.
 
-		Args:{_FieldContent._GET_NEXT_ARG}
+		Arguments:{_FieldContent._GET_NEXT_ARG}
 
 		Examples:
 			>>> dataset = iter(["1\n", "0\n"])
@@ -947,7 +941,7 @@ class _DenseLabelContent(_FieldContent):
 class SparseLabel(Field):
 	"""A field for sparse label. A sparse label is a token.
 
-	Args:
+	Arguments:
 		vocab (SimpleVocab, optional): If it's None, a SimpleVocab object is automatically created.
 	"""
 	def __init__(self, vocab: Optional[SimpleVocab] = None):
@@ -961,7 +955,7 @@ class SparseLabel(Field):
 	 	data['str'] is raw labels.
 		data['id'] is ids of labels.
 	'''
-	_GET_BATCH_EXAMPLE = """
+	_GET_BATCH_EXAMPLE = r"""
 		Examples:
 			>>> field = SparseLabel()
 			>>> field_content = field._create('train')
@@ -1008,7 +1002,7 @@ class _SparseLabelContent(_FieldContent):
 		Each element in `dataset` represents a label.
 		Note that it may raise StopIteration.
 
-		Args:{_FieldContent._GET_NEXT_ARG}
+		Parameters:{_FieldContent._GET_NEXT_ARG}
 
 		Examples:
 			>>> dataset = iter(["Java\n", "Python\n", "Cpp\n", "Java\n"])
