@@ -2,19 +2,18 @@ language: python
 
 python:
   - 3.6
-  - 3.5
 
 cache: pip
 
 install:
   - pip install --upgrade pip
   - pip install -e .[develop] --progress-bar off
-  - pip install sphinx==1.8.5
+  - pip install sphinx==2.4.4
   - pip install m2r
 
 script:
   - python setup.py test
-  - cd docs && make html && mv ./build/html ./build/docs && rm -r ./build/doctrees && cd ..
+  - cd docs && make public && mv ./build/html ./build/docs && rm -r ./build/doctrees && cd ..
   - cd docs/meta && python update_doc.py --check && cd ../..
 
 deploy:

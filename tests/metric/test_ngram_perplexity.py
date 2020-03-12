@@ -9,6 +9,7 @@ from cotk.models.ngram_language_model import KneserNeyInterpolated
 
 from metric_base import *
 
+pytestmark = pytest.mark.skip("all tests still WIP")
 
 class TestNgramLM():
 	@pytest.mark.parametrize('order', [1, 2, 3, 4])

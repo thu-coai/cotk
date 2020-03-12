@@ -13,6 +13,8 @@ def setup_module():
 	random.seed(0)
 	np.random.seed(0)
 
+pytestmark = pytest.mark.skip("all tests still WIP")
+
 single_turn_dialog_recorder_test_parameter = generate_testcase(\
 	(zip(test_argument), "add"),
 	(zip(test_shape, test_type), "multi"),

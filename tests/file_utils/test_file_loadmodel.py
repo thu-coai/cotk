@@ -4,8 +4,8 @@ import requests_mock
 import shutil
 import os
 
-from cotk._utils.file_utils import _get_file_sha256
-from cotk.downloader import load_file_from_url
+from cotk.file_utils.file_utils import _get_file_sha256
+from cotk.file_utils import load_file_from_url
 
 @pytest.fixture
 def r_mock():
@@ -14,8 +14,8 @@ def r_mock():
 
 class TestFileUtils():
 	def test_MSCOCO_resource(self):
-		cache_dir = './tests/_utils/dataset_cache'
-		data_dir = './tests/_utils/data'
+		cache_dir = './tests/file_utils/dataset_cache'
+		data_dir = './tests/file_utils/data'
 		res_path = load_file_from_url('https://cotk-data.s3-ap-northeast-1.amazonaws.com/test.zip', cache_dir=cache_dir)
 
 		res_path2 = load_file_from_url('https://cotk-data.s3-ap-northeast-1.amazonaws.com/test.zip', cache_dir=cache_dir)

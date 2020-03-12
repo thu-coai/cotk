@@ -40,9 +40,10 @@ class TestScripts():
 	def test_config(self):
 		dispatch('config', ["set", 'token', "123"])
 
+	@pytest.mark.skip("WIP")
 	def test_import_local_resources(self):
-		shutil.copyfile('./tests/_utils/dummy_coai/test.json', './cotk/resource_config/test.json')
+		shutil.copyfile('./tests/file_utils/dummy_coai/test.json', './cotk/resource_config/test.json')
 
-		dispatch('import', ['resources://test', './tests/_utils/data/test.zip'])
+		dispatch('import', ['resources://test', './tests/file_utils/data/test.zip'])
 
 		os.remove('./cotk/resource_config/test.json')
