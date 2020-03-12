@@ -16,6 +16,8 @@ def setup_module():
 	import numpy as np
 	np.random.seed(0)
 
+pytestmark = pytest.mark.skip("all tests still WIP")
+
 class TestMultiTurnDialog():
 	def base_test_init(self, dl):
 		assert isinstance(dl, MultiTurnDialog)
@@ -310,5 +312,5 @@ class TestSwitchboardCorpus(TestMultiTurnDialog):
 		super().base_test_multi_runs([load_switchboardcorpus() for i in range(3)])
 
 
-base_test_version(UbuntuCorpus)
-base_test_version(SwitchboardCorpus)
+#base_test_version(UbuntuCorpus)
+#base_test_version(SwitchboardCorpus)
