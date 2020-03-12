@@ -18,6 +18,8 @@ def setup_module():
 	random.seed(0)
 	np.random.seed(0)
 
+pytestmark = pytest.mark.skip("all tests still WIP")
+
 @pytest.mark.skip()
 def test_bleu_bug():
 	ref = [[[1, 3], [3], [4]]]
