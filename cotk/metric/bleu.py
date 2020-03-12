@@ -1,7 +1,7 @@
 r"""
 Containing some classes and functions about bleu evaluating results of models.
 """
-from typing import Union, List, Any, Optional, Iterable
+from typing import Union, List, Any, Optional, Iterable, Dict
 import random
 import os
 import multiprocessing
@@ -36,10 +36,14 @@ class BleuCorpusMetric(MetricBase):
 
 	Arguments:
 		{MetricBase.DATALOADER_ARGUMENTS}
+		{MetricBase.NGRAM_ARGUMENTS}
+		{MetricBase.TOKENIZER_ARGUMENTS}
+		reference_num (int, None, optional): The number of references used to calculate BLEU. If ``None``, the number of references \
+		is uncertain and will be determined by the argument of :meth:`.forward`. Default: ``1``.
+		{MetricBase.IGNORE_SMOOTHING_ERROR_ARGUMENTS}
 		{MetricBase.REFERENCE_ALLVOCABS_KEY_ARGUMENTS}
 		{MetricBase.GEN_KEY_ARGUMENTS}
-
-		reference_num can be none, which means uncertain multiple reference number, it will be determined by the argument of forward
+		reference_str_key (str, optional): The key of reference sentences in the string form. Default: ``ref_str``.
 
 	Here is an example:
 
@@ -67,10 +71,10 @@ class BleuCorpusMetric(MetricBase):
 	_version = 1
 
 	@hooks.hook_metric
-	def __init__(self, dataloader: "LanguageProcessing", ngram=4, *, tokenizer: Union[None, Tokenizer, str] = None, \
-			reference_num=1, ignore_smoothing_error=False,\
-			reference_allvocabs_key="ref_allvocabs", gen_key="gen", \
-			reference_str_key="ref_str"):
+	def __init__(self, dataloader: "LanguageProcessing", ngram: int =4, *, tokenizer: Union[None, Tokenizer, str] = None, \
+			reference_num: Optional[int] = 1, ignore_smoothing_error: bool = False,\
+			reference_allvocabs_key: str = "ref_allvocabs", gen_key: str = "gen", \
+			reference_str_key: str = "ref_str"):
 		super().__init__(self._name, self._version)
 		#self._hash_ordered_data(self.ngram)
 		self.dataloader = dataloader
@@ -84,7 +88,7 @@ class BleuCorpusMetric(MetricBase):
 		self.hyps: List[Any] = []
 		self.refs: List[List[Any]] = []
 
-	def forward(self, data):
+	def forward(self, data: Dict[str, Any]):
 		'''Processing a batch of data.
 
 		Arguments:
@@ -108,7 +112,7 @@ class BleuCorpusMetric(MetricBase):
 		else:
 			self._re_tokenize_forward(data)
 
-	def _direct_forward(self, data):
+	def _direct_forward(self, data: Dict[str, Any]):
 		gen = data[self.gen_key]
 		resp = data[self.reference_allvocabs_key]
 
@@ -134,7 +138,7 @@ class BleuCorpusMetric(MetricBase):
 			relevant_data.append(refs)
 		self._hash_unordered_list(relevant_data)
 
-	def _re_tokenize_forward(self, data):
+	def _re_tokenize_forward(self, data: Dict[str, Any]):
 		gen = data[self.gen_key]
 		resp = data.get(self.reference_allvocabs_key, None)
 		resp_str = data.get(self.reference_str_key, None)
@@ -166,10 +170,8 @@ class BleuCorpusMetric(MetricBase):
 		self._hash_unordered_list(relevant_data)
 
 	@hooks.hook_metric_close
-	def close(self):
-		'''
-		Returns:
-			(dict): Return a dict which contains
+	def close(self) -> Dict[str, Any]:
+		'''Return a dict which contains
 
 			* **bleu**: bleu value.
 			* **bleu hashvalue**: hash value for bleu metric, same hash value stands
@@ -216,14 +218,16 @@ class SelfBleuCorpusMetric(MetricBase):
 
 	Arguments:
 		{MetricBase.DATALOADER_ARGUMENTS}
+		{MetricBase.NGRAM_ARGUMENTS}
+		{MetricBase.TOKENIZER_ARGUMENTS}
 		{MetricBase.GEN_KEY_ARGUMENTS}
-		sample (int): Number of examples sampled from the generated sentences. Default: ``1000``.
-		seed (int): Random seed for sampling. Default: ``1229``.
+		{MetricBase.SAMPLE_ARGUMENTS_IN_BLEU}
+		{MetricBase.SEED_ARGUMENTS}
 		{MetricBase.CPU_COUNT_ARGUMENTS}
 
 	Warning:
 		the calculation of ``hashvalue`` considers the actual sample size of hypotheses which
-			will be less than ``sample`` if the size of hypotheses is smaller than ``sample``
+		will be less than ``sample`` if the size of hypotheses is smaller than ``sample``.
 
 	Here is an example:
 
@@ -244,12 +248,12 @@ class SelfBleuCorpusMetric(MetricBase):
 	_version = 1
 
 	@hooks.hook_metric
-	def __init__(self, dataloader: "LanguageProcessing", ngram=4, *, \
+	def __init__(self, dataloader: "LanguageProcessing", ngram: int = 4, *, \
 		tokenizer: Union[None, Tokenizer, str] = None, \
-		gen_key="gen", \
-		sample=1000, \
-		seed=1229, \
-		cpu_count=None):
+		gen_key: str = "gen", \
+		sample: int = 1000, \
+		seed: int = 1229, \
+		cpu_count: Optional[int] = None):
 		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
 		self.ngram = ngram
@@ -265,7 +269,7 @@ class SelfBleuCorpusMetric(MetricBase):
 		else:
 			self.cpu_count = multiprocessing.cpu_count()
 
-	def forward(self, data):
+	def forward(self, data: Dict[str, Any]):
 		'''Processing a batch of data.
 
 		Arguments:
@@ -290,10 +294,8 @@ class SelfBleuCorpusMetric(MetricBase):
 		self.hyps.extend(gen)
 
 	@hooks.hook_metric_close
-	def close(self):
-		'''
-		Returns:
-			(dict): Return a dict which contains
+	def close(self) -> Dict[str, Any]:
+		'''Return a dict which contains
 
 			* **self-bleu**: self-bleu value.
 		'''
@@ -365,10 +367,12 @@ class FwBwBleuCorpusMetric(MetricBase):
 
 	Arguments:
 		{MetricBase.DATALOADER_ARGUMENTS}
-		reference_test_list (list): Reference sentences with :ref:`all vocabs <vocab_ref>` in test data.
+		{MetricBase.REFERENCE_TEST_LIST_ARGUMENTS}
+		{MetricBase.NGRAM_ARGUMENTS}
+		{MetricBase.TOKENIZER_ARGUMENTS}
 		{MetricBase.GEN_KEY_ARGUMENTS}
-		sample (int): Number of examples sampled from the generated sentences. Default: ``1000``.
-		seed (int): random seed for sampling. Default: ``1229``.
+		{MetricBase.SAMPLE_ARGUMENTS_IN_BLEU}
+		{MetricBase.SEED_ARGUMENTS}
 		{MetricBase.CPU_COUNT_ARGUMENTS}
 	Warning:
 		The calculation of ``hashvalue`` considers the actual sample size of hypotheses and
@@ -398,13 +402,13 @@ class FwBwBleuCorpusMetric(MetricBase):
 	_version = 1
 
 	@hooks.hook_metric
-	def __init__(self, dataloader, \
-			reference_test_list, ngram=4, *, \
+	def __init__(self, dataloader: "LanguageProcessing", \
+			reference_test_list: List[Any], ngram: int = 4, *, \
 			tokenizer: Union[None, Tokenizer, str] = None, \
-			gen_key="gen", \
-			sample=1000, \
-			seed=1229, \
-			cpu_count=None):
+			gen_key: str = "gen", \
+			sample: int = 1000, \
+			seed: int = 1229, \
+			cpu_count: Optional[int] = None):
 		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
 		self.tokenizer = tokenizer
@@ -421,7 +425,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 			self.cpu_count = multiprocessing.cpu_count()
 		self.hyps: List[Any] = []
 
-	def forward(self, data):
+	def forward(self, data: Dict[str, Any]):
 		'''Processing a batch of data.
 
 		Arguments:
@@ -446,10 +450,8 @@ class FwBwBleuCorpusMetric(MetricBase):
 			self.hyps.append(list(self.dataloader.trim_in_ids(gen_sen)))
 
 	@hooks.hook_metric_close
-	def close(self):
-		'''
-		Returns:
-			(dict): Return a dict which contains
+	def close(self) -> Dict[str, Any]:
+		'''Return a dict which contains
 
 			* **fwbwbleu**: fw/bw bleu value.
 			* **fw-bw-bleu hashvalue**: hash value for fwbwbleu metric, same hash value stands
@@ -561,11 +563,12 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 
 	Arguments:
 		{MetricBase.DATALOADER_ARGUMENTS}
+		{MetricBase.IGNORE_SMOOTHING_ERROR_ARGUMENTS}
 		{MetricBase.MULTI_TURN_REFERENCE_ALLVOCABS_KEY_ARGUMENTS}
 		{MetricBase.MULTI_TURN_GEN_KEY_ARGUMENTS}
 		{MetricBase.MULTI_TURN_LENGTH_KEY_ARGUMENTS}
 
-	Here is an exmaple:
+	Here is an example:
 
 		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
 		>>> multi_turn_reference_allvocabs_key = "reference_allvocabs"
@@ -597,10 +600,10 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 	_version = 1
 
 	@hooks.hook_metric
-	def __init__(self, dataloader, ignore_smoothing_error=False,\
-					multi_turn_reference_allvocabs_key="reference_allvocabs", \
-					multi_turn_gen_key="multi_turn_gen", \
-					turn_len_key="turn_length" \
+	def __init__(self, dataloader: "LanguageProcessing", ignore_smoothing_error: bool = False,\
+					multi_turn_reference_allvocabs_key: str = "reference_allvocabs", \
+					multi_turn_gen_key: str = "multi_turn_gen", \
+					turn_len_key: str = "turn_length" \
 			  ):
 		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
@@ -611,7 +614,7 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 		self.refs = []
 		self.hyps = []
 
-	def forward(self, data):
+	def forward(self, data: Dict[str, Any]):
 		'''Processing a batch of data.
 
 		Arguments:
@@ -654,10 +657,8 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 				self.refs.append([list(self.dataloader.trim(ref_session[j])[1:])])
 
 	@hooks.hook_metric_close
-	def close(self):
-		'''
-		Returns:
-			(dict): Return a dict which contains
+	def close(self) -> Dict[str, Any]:
+		'''Return a dict which contains
 
 			* **bleu**: bleu value.
 			* **bleu hashvalue**: hash value for bleu metric, same hash value stands

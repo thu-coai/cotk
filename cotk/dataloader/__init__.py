@@ -19,7 +19,7 @@ __all__ = [ \
 	'Vocab', 'GeneralVocab', 'PretrainedVocab', \
 	'Field', 'Sentence', 'SentenceDefault', 'SentenceGPT2','Session', 'SessionDefault', 'DenseLabel', 'SparseLabel', \
 	'Context', 'FieldContext', 'VocabContext', \
-	'Dataloader', 'LanguageProcessingBase', \
+	'Dataloader', 'LanguageProcessing', \
 	'LanguageGeneration', 'MSCOCO', \
 	'SingleTurnDialog', 'OpenSubtitles', \
 ]

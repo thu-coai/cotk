@@ -156,9 +156,8 @@ class GeneralVocab(Vocab):
 			appear in the data. If None, it will be ``False``.
 	'''
 
-	SPECIAL_TOKEN_DOCS_WITH_DEFAULT = Vocab.SPECIAL_TOKEN_DOCS + ''' \
-			If None, it will be ``OrderedDict([("pad", "<pad>"), ("unk", "<unk>"),\
-			("go", "<go>"), ("eos", "<eos>")])``.'''
+	SPECIAL_TOKEN_DOCS_WITH_DEFAULT = Vocab.SPECIAL_TOKEN_DOCS + \
+			''' If None, it will be ``OrderedDict([("pad", "<pad>"), ("unk", "<unk>"), ("go", "<go>"), ("eos", "<eos>")])``.'''
 
 	def __init__(self, min_frequent_vocab_times: Optional[int] = None, \
 			min_rare_vocab_times: Optional[int] = None, \

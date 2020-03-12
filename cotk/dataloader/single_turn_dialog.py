@@ -31,29 +31,29 @@ class SingleTurnDialog(LanguageProcessing):
 	Arguments:{ARGUMENTS}
 	"""
 
-	_version = 1
+	_version = 2
 
 	ARGUMENTS = r'''
 			file_id (str): A string indicating the source of single turn dialog dataset. {FILE_ID_DEFAULT}
-			frequent_vocab_times (int): A cut-off threshold of valid tokens. All tokens appear
-				not less than ``min_vocab_times`` in **training set** will be marked as valid words.
-				{VALID_VOCAB_TIMES_DEFAULT}
+			min_frequent_vocab_times (int): A cut-off threshold of valid tokens. All tokens appear
+				not less than ``min_frequent_vocab_times`` in **training set** will be marked as valid words.
+				{MIN_FREQUENT_VOCAB_TIMES_DEFAULT}
 			max_sent_length (int): All sentences longer than ``max_sent_length`` will be shortened
 				to first ``max_sent_length`` tokens. {MAX_SENT_LENGTH}
-			rare_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
-				not less than ``rare_vocab_times`` in the **whole dataset** (except valid words) will be
+			min_rare_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
+				not less than ``min_rare_vocab_times`` in the **whole dataset** (except valid words) will be
 				marked as invalid words. Otherwise, they are unknown words, which are ignored both for
-				model or metrics. {rare_vocab_TIMES_DEFAULT}
+				model or metrics. {MIN_RARE_VOCAB_TIMES_DEFAULT}
 			tokenizer (str): How to tokenize sentence. ``nltk.tokenize.WordPunctTokenizer`` is used if ``nltk`` is specified,
 				python built-in ``str.split`` is used if ``space`` is specified. {TOKENIZER_DEFAULT}
-			remains_capital(bool): Whether remaining capital letter in data or converting them to lower case. {REMAINS_CAPITAL_DEFAULT}
+			remains_capital(bool): Whether remaining capital letter in data or converting them to lower case. {CONVERT_TO_LOWER_LETTER_DEFAULT}
 		'''
 	FILE_ID_DEFAULT = ''
-	VALID_VOCAB_TIMES_DEFAULT = ''
+	MIN_FREQUENT_VOCAB_TIMES_DEFAULT = ''
 	MAX_SENT_LENGTH = ''
-	RARE_VOCAB_TIMES_DEFAULT = ''
+	MIN_RARE_VOCAB_TIMES_DEFAULT = ''
 	TOKENIZER_DEFAULT = ''
-	REMAINS_CAPITAL_DEFAULT = ''
+	CONVERT_TO_LOWER_LETTER_DEFAULT = ''
 
 	@hooks.hook_dataloader
 	def __init__(self, file_id, *, tokenizer=None, \

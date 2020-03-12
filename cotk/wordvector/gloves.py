@@ -6,6 +6,7 @@ import numpy as np
 
 from .wordvector import WordVector
 from ..file_utils import get_resource_file_path
+from typing import Dict, List, Union, Optional, Any
 
 class Glove(WordVector):
 	r'''GloVe is pre-trained word vector named `Global Vectors for Word Representation`.
@@ -20,7 +21,7 @@ class Glove(WordVector):
 			it can be a directory contains 'glove.txt' or just a text file.
 			Default: ``resources://Glove300d``.	A 300d glove is downloaded and cached.
 	'''
-	def __init__(self, file_id="resources://Glove300d"):
+	def __init__(self, file_id: str="resources://Glove300d"):
 		super().__init__()
 		if file_id is not None:
 			self.file_id = file_id
@@ -28,7 +29,9 @@ class Glove(WordVector):
 		else:
 			self.file_id = self.file_path = None
 
-	def _load_raw_word2vec(self):
+	def _load_raw_word2vec(self) -> Dict[str, str]:
+		'''Load raw word vectors from file.
+		'''
 		raw_word2vec = {}
 		if self.file_path:
 			file_path = self.file_path
@@ -41,9 +44,9 @@ class Glove(WordVector):
 				raw_word2vec[word] = vec
 		return raw_word2vec
 
-	def load_matrix(self, n_dims, vocab_list, mean=0, std=0.1, default_embeddings=None):
+	def load_matrix(self, n_dims: int, vocab_list: List[str], mean: float=0, std: float=0.1, default_embeddings: Optional[Union[List, np.ndarray]]=None) -> np.ndarray:
 		r'''
-		Refer to :meth:`.WordVector.load`.
+		Refer to :meth:`.WordVector.load_matrix`.
 		'''
 		if default_embeddings is not None:
 			if isinstance(default_embeddings, list):
@@ -81,9 +84,9 @@ class Glove(WordVector):
 		print("wordvec cannot cover %f vocab" % (float(oov_cnt)/len(vocab_list)))
 		return default_embeddings
 
-	def load_dict(self, vocab_list):
+	def load_dict(self, vocab_list: List[str]) -> Dict[str, np.ndarray]:
 		r'''
-		Refer to :meth:`.WordVector.load_pretrain_embed`.
+		Refer to :meth:`.WordVector.load_dict`.
 		'''
 		raw_word2vec = self._load_raw_word2vec()
 

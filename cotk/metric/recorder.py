@@ -1,6 +1,7 @@
 """
 Containing some recorders.
 """
+from typing import List, Dict, Any
 import numpy as np
 from .metric import MetricBase
 
@@ -9,9 +10,9 @@ class SingleTurnDialogRecorder(MetricBase):
 
 	Arguments:
 		{MetricBase.DATALOADER_ARGUMENTS}
-		post_allvocabs_key (str): The key of dialog posts with :ref:`allvocabs <vocab_ref>`.
+		post_allvocabs_key (str, optional): The key of dialog posts with :ref:`allvocabs <vocab_ref>`.
 			Default: ``post_allvocabs``.
-		resp_allvocabs_key (str): The key of dialog responses with :ref:`allvocabs <vocab_ref>`.
+		resp_allvocabs_key (str, optional): The key of dialog responses with :ref:`allvocabs <vocab_ref>`.
 			Default: ``resp_allvocabs``.
 		{MetricBase.GEN_KEY_ARGUMENTS}
 
@@ -45,8 +46,8 @@ class SingleTurnDialogRecorder(MetricBase):
 
 	_name = 'SingleTurnDialogRecorder'
 	_version = 1
-	def __init__(self, dataloader, post_allvocabs_key="post_allvocabs", \
-			resp_allvocabs_key="resp_allvocabs", gen_key="gen"):
+	def __init__(self, dataloader: "LanguageProcessing", post_allvocabs_key: str = "post_allvocabs", \
+			resp_allvocabs_key: str = "resp_allvocabs", gen_key: str = "gen"):
 		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
 		self.post_allvocabs_key = post_allvocabs_key
@@ -56,7 +57,7 @@ class SingleTurnDialogRecorder(MetricBase):
 		self.resp_list = []
 		self.gen_list = []
 
-	def forward(self, data):
+	def forward(self, data: Dict[str, Any]):
 		'''Processing a batch of data.
 
 		Arguments:
@@ -95,10 +96,8 @@ class SingleTurnDialogRecorder(MetricBase):
 			self.resp_list.append(self.dataloader.convert_ids_to_tokens(resp_allvocabs[i][1:]))
 			self.gen_list.append(self.dataloader.convert_ids_to_tokens(gen[i]))
 
-	def close(self):
-		'''
-		Returns:
-			(dict): Return a dict which contains
+	def close(self) -> Dict[str, Any]:
+		'''Return a dict which contains
 
 			* **post**: a list of post sentences. A jagged 2-d array of int.
 			  Size:``[batch_size, ~sent_length]``, where "~" means different
@@ -119,7 +118,7 @@ class MultiTurnDialogRecorder(MetricBase):
 
 	Arguments:
 		{MetricBase.DATALOADER_ARGUMENTS}
-		multi_turn_reference_allvocabs_key (str): The key of dialog references with
+		multi_turn_reference_allvocabs_key (str, optional): The key of dialog references with \
 			:ref:`allvocabs <vocab_ref>`. Default: ``multi_turn_ref_allvocabs``.
 		{MetricBase.MULTI_TURN_GEN_KEY_ARGUMENTS}
 		{MetricBase.MULTI_TURN_LENGTH_KEY_ARGUMENTS}
@@ -157,10 +156,10 @@ class MultiTurnDialogRecorder(MetricBase):
 	'''
 	_name = 'MultiTurnDialogRecorder'
 	_version = 1
-	def __init__(self, dataloader,
-			multi_turn_reference_allvocabs_key="multi_turn_ref_allvocabs", \
-			multi_turn_gen_key="multi_turn_gen", \
-			turn_len_key="turn_length"):
+	def __init__(self, dataloader: "LanguageProcessing",
+			multi_turn_reference_allvocabs_key: str = "multi_turn_ref_allvocabs", \
+			multi_turn_gen_key: str = "multi_turn_gen", \
+			turn_len_key: str = "turn_length"):
 		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
 		self.multi_turn_reference_allvocabs_key = multi_turn_reference_allvocabs_key
@@ -170,7 +169,7 @@ class MultiTurnDialogRecorder(MetricBase):
 		self.reference_list = []
 		self.gen_list = []
 
-	def forward(self, data):
+	def forward(self, data: Dict[str, Any]):
 		'''Processing a batch of data.
 
 		Arguments:
@@ -217,10 +216,8 @@ class MultiTurnDialogRecorder(MetricBase):
 				raise ValueError("Reference turn num %d != gen turn num %d." % \
 						(len(self.reference_list[-1]), len(self.gen_list[-1])))
 
-	def close(self):
-		'''
-		Returns:
-			(dict): Return a dict which contains
+	def close(self) -> Dict[str, Any]:
+		'''Return a dict which contains
 
 			* **reference**: a list of response sentences. A jagged 3-d array of int.
 			  Size:``[batch_size, ~turn_length, ~sent_length]``, where "~" means different
@@ -255,13 +252,13 @@ class LanguageGenerationRecorder(MetricBase):
 	'''
 	_name = 'LanguageGenerationRecorder'
 	_version = 1
-	def __init__(self, dataloader, gen_key="gen"):
+	def __init__(self, dataloader: "LanguageProcessing", gen_key: str = "gen"):
 		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
 		self.gen_key = gen_key
 		self.gen_list = []
 
-	def forward(self, data):
+	def forward(self, data: Dict[str, Any]):
 		'''Processing a batch of data.
 
 		Arguments:
@@ -286,10 +283,8 @@ class LanguageGenerationRecorder(MetricBase):
 		for sen in gen:
 			self.gen_list.append(self.dataloader.convert_ids_to_tokens(sen))
 
-	def close(self):
-		'''
-		Returns:
-			(dict): Return a dict which contains
+	def close(self) -> Dict[str, Any]:
+		'''Return a dict which contains
 
 			* **gen**: a list of generated sentences. A jagged 2-d array of int.
 			  Size:``[batch_size, ~sent_length]``, where "~" means different
