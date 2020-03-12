@@ -14,7 +14,7 @@ import textwrap
 
 import requests
 from . import _utils, main
-from .._utils import start_recorder, close_recorder
+from ..hooks import start_recorder, close_recorder
 
 LOGGER = main.LOGGER
 DASHBOARD_URL = main.DASHBOARD_URL
