@@ -11,6 +11,8 @@ def setup_module():
 	random.seed(0)
 	np.random.seed(0)
 
+pytestmark = pytest.mark.skip("all tests still WIP")
+
 bleu_precision_recall_test_parameter = generate_testcase(\
 	(zip(test_argument), "add"),
 	(zip(test_shape, test_type), "multi"),

@@ -4,7 +4,6 @@ A command library help user upload their results to dashboard.
 #!/usr/bin/env python
 import json
 import argparse
-from .._utils import file_utils
 from . import main
 
 def load_config():

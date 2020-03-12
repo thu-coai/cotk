@@ -4,7 +4,7 @@ A command library help user upload their results to dashboard.
 #!/usr/bin/env python
 import json
 import argparse
-from .._utils import file_utils
+from ..file_utils import import_local_resources
 from . import main
 
 def import_local_resources(args):
@@ -15,5 +15,5 @@ def import_local_resources(args):
 	parser.add_argument("file_path", type=str, help="Path to resource")
 	cargs = parser.parse_args(args)
 
-	file_utils.import_local_resources(cargs.file_id, cargs.file_path)
+	import_local_resources(cargs.file_id, cargs.file_path)
 	main.LOGGER.info("Successfully import local resource {}.".format(cargs.file_id))

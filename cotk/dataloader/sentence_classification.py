@@ -110,7 +110,7 @@ class SST(SentenceClassification):
 		[2] Lin T Y, Maire M, Belongie S, et al. Microsoft COCO: Common Objects in Context. ECCV 2014.
 
 	'''
-	ARF_TOKENIZER = Sentence.ARG_TOKENIZER
+	ARG_TOKENIZER = Sentence.ARG_TOKENIZER
 
 	@hooks.hook_dataloader
 	def __init__(self, file_id, min_frequent_vocab_times=10, \

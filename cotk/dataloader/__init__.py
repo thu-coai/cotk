@@ -13,6 +13,7 @@ from .dataloader import Dataloader, LanguageProcessing
 from .language_generation import LanguageGeneration, MSCOCO
 from .single_turn_dialog import SingleTurnDialog, OpenSubtitles
 from .multi_turn_dialog import MultiTurnDialog, SwitchboardCorpus, UbuntuCorpus
+from .sentence_classification import SentenceClassification, SST
 
 __all__ = [ \
 	'Tokenizer', 'SimpleTokenizer', 'PretrainedTokenizer', \
@@ -22,4 +23,5 @@ __all__ = [ \
 	'Dataloader', 'LanguageProcessing', \
 	'LanguageGeneration', 'MSCOCO', \
 	'SingleTurnDialog', 'OpenSubtitles', \
+	'SentenceClassification', 'SST'
 ]

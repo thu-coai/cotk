@@ -32,7 +32,7 @@ jobs:
       run: |
         conda install pytorch>=1.0.0 -q
         pip install -e .[develop] --progress-bar off
-        pip install sphinx==1.8.5
+        pip install sphinx==2.4.4
         pip install m2r
         git config --global credential.interactive never
         git config --global credential.modalprompt false

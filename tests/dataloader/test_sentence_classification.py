@@ -9,6 +9,7 @@ from cotk.metric import MetricBase
 
 from version_test_base import base_test_version
 
+pytestmark = pytest.mark.skip("all tests still WIP")
 
 def setup_module():
 	import random
@@ -214,4 +215,4 @@ class TestSST(TestSentenceClassification):
 		super().base_test_multi_runs([load_sst() for i in range(3)])
 
 
-base_test_version(SST)
+# base_test_version(SST)
