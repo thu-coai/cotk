@@ -22,6 +22,9 @@ class TestWordVector():
 		WordVector.get_all_subclasses()
 		assert WordVector.load_class('Glove') == Glove
 		assert WordVector.load_class('not_subclass') == None
+		# initialize with none
+		wv = Glove(None)
+		assert wv.file_id == wv.file_path == None
 
 	def base_test_load(self, dl):
 		# test WordVector.load_matrix
@@ -41,6 +44,21 @@ class TestWordVector():
 		assert wordvec.shape == (len(vocab_list), n_dims)
 		assert wordvec[0][0] == 0.04656
 
+		# test WordVector.load_matrix default_embeddings argument
+		default_emb_array = np.random.randn(2, 300)
+		default_emb_list = list(default_emb_array)
+		default_emb_others = tuple(default_emb_list)
+		default_emb_array_wrong_dim = np.random.randn(2,200)
+		dl.load_matrix(n_dims, vocab_list, default_embeddings=default_emb_array)
+		dl.load_matrix(n_dims, vocab_list, default_embeddings=default_emb_list)
+		with pytest.raises(Exception):
+			dl.load_matrix(n_dims, vocab_list, default_embeddings=default_emb_array_wrong_dim)
+		with pytest.raises(Exception):
+			dl.load_matrix(n_dims, vocab_list, default_embeddings=default_emb_others)
+		dl.load_matrix(200, vocab_list)
+		dl.load_matrix(400, vocab_list)
+
+
 		# test WordVector.load_dict
 		oov_list = ['oov', 'unk', '']
 		for vocab_list in (['the', 'and'], ['the', 'of'], ['the', 'oov'], ['oov'], ['of', 'unk', ''], []):
@@ -59,7 +77,14 @@ class TestWordVector():
 			if 'and' in wordvec:
 				assert (wordvec['and'][-2:] == [0.011807, 0.059703]).all()
 			if 'of' in wordvec:
-				assert (wordvec['of'][-2:] == [-0.29183, -0.046533]).all()		
+				assert (wordvec['of'][-2:] == [-0.29183, -0.046533]).all()	
+
+		wv = WordVector()
+		with pytest.raises(Exception):
+			wv.load_matrix(n_dims, vocab_list)
+		
+		with pytest.raises(Exception):
+			wv.load_dict(vocab_list)
 
 
 @pytest.fixture

@@ -1,6 +1,7 @@
 import random
 import numpy as np
 import json
+import pytest
 from metric_base import *
 from cotk.metric import AccuracyMetric
 from cotk.dataloader import UbuntuCorpus, LanguageProcessing
@@ -39,6 +40,15 @@ class TestAccuracyMetric:
 		metric.forward(data)
 		res2 = metric.close()
 		assert(res2 == res)
+		metric = AccuracyMetric(dl, label_key, prediction_key)
+		data = {label_key:[1, 2, 2, 1], prediction_key: [1, 2, 1]}
+		with pytest.raises(Exception):
+			metric.forward(data)
+		metric = AccuracyMetric(dl, label_key, prediction_key)
+		with pytest.raises(Exception):
+			metric.close()
+		
+
 
 	def test_version(self):
 		version_test(AccuracyMetric, dataloader=None)
