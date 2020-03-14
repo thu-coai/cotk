@@ -14,12 +14,9 @@ class Context(metaclass=DocStringInheritor):
 	'''A base class for Context. This class is used for setting parameters
 	for :class:`Field` or :class:`Vocab`, without directly
 	passing parameters to ``__init__`` of the object.
-
 	When initialized, the object write the list of parameters stored in the class.
 	The old parameters are restored when :meth:`.close` or :meth:`.__exit__` is called.
-
 	TODO: add an example for context manager, use ``with``.
-
 	Arguments:
 		parameter_dict (Dict[str, Any]): Key-value dict for changed parameters.
 		weak (bool, optional): Overwrite existing parameters. Default: False.
@@ -53,7 +50,6 @@ class Context(metaclass=DocStringInheritor):
 		'''Get the value of parameter named ``key`` stored in this class.
 		If ``key`` is not set, return ``default``.
 		When ``no_default`` is ``True``, raise a KeyError if ``key`` is not set.
-
 		Arguments:
 			key (str): name of the parameter
 			default (Any, optional): Default value if ``key`` is not set. Defaults: None.
@@ -72,7 +68,6 @@ class Context(metaclass=DocStringInheritor):
 		'''Set the parameter named ``key`` to ``value``, stored in this class.
 		If weak is ``True``, do not overwrite if ``key`` is already set.
 		Return the old value.
-
 		Arguments:
 			key (str): The name of the changed parameter.
 			value (Any): The new value of changed parameter. If None, do nothing.
@@ -116,7 +111,6 @@ class Context(metaclass=DocStringInheritor):
 
 class FieldContext(Context):
 	'''Bases: :class:`.dataloader.Context`
-
 	A context class for setting parameters for :class:`.Field`.
 	'''
 
@@ -136,7 +130,6 @@ class FieldContext(Context):
 			weak=False) -> "FieldContext":
 		'''Set a Context for initialization of :class:`Field`.
 		See the example at TODO: write an example for how to use field context.
-
 		Arguments:
 			TODO: fill the parameters from Field classes.
 		'''
@@ -145,7 +138,6 @@ class FieldContext(Context):
 
 class VocabContext(Context):
 	'''Bases: :class:`.dataloader.Context`
-
 	A context class for setting parameters for :class:`.Vocab`.
 	'''
 
@@ -163,7 +155,6 @@ class VocabContext(Context):
 			weak=False) -> "VocabContext":
 		'''Set a Context for initialization of :class:`Vocab`.
 		See the example at TODO: write an example for how to use field context.
-
 		Arguments:
 			TODO: fill the parameters from Vocab classes.
 		'''
