@@ -7,7 +7,7 @@ import operator
 
 from version_test_base import base_test_version
 
-from cotk.dataloader import SingleTurnDialog, Field, Vocab, Tokenizer, OpenSubtitles
+from cotk.dataloader import PretrainedTokenizer, SingleTurnDialog, Field, Vocab, Tokenizer, OpenSubtitles
 from cotk.metric import MetricBase
 
 
@@ -19,6 +19,11 @@ def setup_module():
 
 class TestSingleTurnDialog():
 	def base_test_init(self, dl):
+		with pytest.raises(ValueError):
+			SingleTurnDialog("./tests/dataloader/dummy_opensubtitles#OpenSubtitles", pretrained='none')
+		with pytest.raises(ValueError):
+			SingleTurnDialog("./tests/dataloader/dummy_opensubtitles#OpenSubtitles", pretrained='gpt2')
+			
 		assert isinstance(dl, SingleTurnDialog)
 		assert isinstance(dl.file_id, str)
 		assert isinstance(dl.file_path, str)
@@ -53,8 +58,7 @@ class TestSingleTurnDialog():
 		assert dl.frequent_vocab_size == len(dl.frequent_vocab_list)
 		assert isinstance(dl.all_vocab_list, list)
 		assert dl.all_vocab_size == len(dl.all_vocab_list)
-		assert dl.all_vocab_size > 4
-		assert dl.all_vocab_size > dl.frequent_vocab_size
+		assert dl.all_vocab_size >= dl.frequent_vocab_size
 
 		for _, data in dl.data.items():
 			post = data['post']
@@ -128,20 +132,21 @@ class TestSingleTurnDialog():
 						assert batch[sent][idx][batch[length][idx]-1] == dl.eos_id
 					assert batch[sent][idx][0] == dl.go_id
 
-		# this is true, only when there is no unknown words in dl
-		# (Only valid & invalid words)
-		flag = False
-		for set_name in dl.data.keys():
-			length = len(dl.data[set_name]['post'])
-			for i in range(length):
-				batch = dl.get_batch(set_name, [i])
-				assert dl.unk_id not in batch["post_allvocabs"]
-				assert dl.unk_id not in batch["resp_allvocabs"]
-				batch = dl.get_batch(set_name, [i])
-				if dl.unk_id in batch["post"] or \
-					dl.unk_id in batch["resp"]:
-					flag = True
-		assert flag
+		if not dl._pretrained: # test only when not pretrained tokenizer
+			# this is true, only when there is no unknown words in dl
+			# (Only valid & invalid words)
+			flag = False
+			for set_name in dl.data.keys():
+				length = len(dl.data[set_name]['post'])
+				for i in range(length):
+					batch = dl.get_batch(set_name, [i])
+					assert dl.unk_id not in batch["post_allvocabs"]
+					assert dl.unk_id not in batch["resp_allvocabs"]
+					batch = dl.get_batch(set_name, [i])
+					if dl.unk_id in batch["post"] or \
+						dl.unk_id in batch["resp"]:
+						flag = True
+			assert flag
 
 	def base_test_get_next_batch(self, dl):
 		with pytest.raises(ValueError):
@@ -175,7 +180,7 @@ class TestSingleTurnDialog():
 					break
 			assert sample_num == len(dl.data[set_name]["post"]['id'])
 
-	def base_test_convert(self, dl):
+	def base_test_convert(self, dl): # test only when not pretrained tokenizer
 		sent_id = [0, 1, 2]
 		sent = ["<pad>", "<unk>", "<go>"]
 		assert sent == dl.convert_ids_to_tokens(sent_id)
@@ -221,42 +226,54 @@ class TestSingleTurnDialog():
 	def base_test_multi_runs(self, dl_list):
 		assert all(x.all_vocab_list == dl_list[0].all_vocab_list for x in dl_list)
 
-@pytest.fixture
 def load_opensubtitles():
 	def _load_opensubtitles(invalid_vocab_times=0):
 		return OpenSubtitles("./tests/dataloader/dummy_opensubtitles#OpenSubtitles", min_rare_vocab_times=invalid_vocab_times)
 	return _load_opensubtitles
 
+def load_opensubtitles_pretrain():
+	def _load_opensubtitles(invalid_vocab_times=0):
+		from transformers import GPT2Tokenizer
+		toker = PretrainedTokenizer(GPT2Tokenizer('./tests/dataloader/dummy_gpt2vocab/vocab.json', './tests/dataloader/dummy_gpt2vocab/merges.txt'))
+		return OpenSubtitles("./tests/dataloader/dummy_opensubtitles#OpenSubtitles", tokenizer=toker, pretrained='gpt2', min_rare_vocab_times=invalid_vocab_times)
+	return _load_opensubtitles
+
+all_load_dataloaders = [load_opensubtitles(), load_opensubtitles_pretrain()]
+
 class TestOpenSubtitles(TestSingleTurnDialog):
 
-	@pytest.mark.dependency()
-	def test_init(self, load_opensubtitles):
-		super().base_test_init(load_opensubtitles())
-		super().base_test_all_unknown(load_opensubtitles(10000))
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_init(self, load_dataloader):
+		super().base_test_init(load_dataloader())
+		super().base_test_all_unknown(load_dataloader(10000))
+	
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_restart(self, load_dataloader):
+		super().base_test_restart(load_dataloader())
 
-	def test_restart(self, load_opensubtitles):
-		super().base_test_restart(load_opensubtitles())
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_get_batch(self, load_dataloader):
+		super().base_test_get_batch(load_dataloader())
 
-	@pytest.mark.dependency(depends=["TestOpenSubtitles::test_init"])
-	def test_get_batch(self, load_opensubtitles):
-		super().base_test_get_batch(load_opensubtitles())
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_get_next_batch(self, load_dataloader):
+		super().base_test_get_next_batch(load_dataloader())
 
-	@pytest.mark.dependency(depends=["TestOpenSubtitles::test_init"])
-	def test_get_next_batch(self, load_opensubtitles):
-		super().base_test_get_next_batch(load_opensubtitles())
-
-	@pytest.mark.dependency(depends=["TestOpenSubtitles::test_init"])
-	def test_convert(self, load_opensubtitles):
-		super().base_test_convert(load_opensubtitles())
-
-	def test_teacher_forcing_metric(self, load_opensubtitles):
-		super().base_test_teacher_forcing_metric(load_opensubtitles())
-
-	def test_teacher_inference_metric(self, load_opensubtitles):
-		super().base_test_teacher_inference_metric(load_opensubtitles())
-
-	def test_init_multi_runs(self, load_opensubtitles):
-		super().base_test_multi_runs([load_opensubtitles() for i in range(3)])
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders[:1])
+	def test_convert(self, load_dataloader):
+		super().base_test_convert(load_dataloader())
+	
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_teacher_forcing_metric(self, load_dataloader):
+		super().base_test_teacher_forcing_metric(load_dataloader())
+	
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_teacher_inference_metric(self, load_dataloader):
+		super().base_test_teacher_inference_metric(load_dataloader())
+	
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_init_multi_runs(self, load_dataloader):
+		super().base_test_multi_runs([load_dataloader() for _ in range(3)])
 
 
 base_test_version(OpenSubtitles)

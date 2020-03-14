@@ -14,6 +14,25 @@ from cotk.dataloader import GeneralVocab, SimpleTokenizer, SentenceDefault, Lang
 
 class TestLanguageProcessing():
 	def base_test_init(self, lp: LanguageProcessing):
+		with pytest.raises(TypeError):
+			file_id = './tests/dataloader/dummy_languageprocessing'
+			fields = []
+			LanguageProcessing.simple_create(file_id, fields, tokenizer='space', min_frequent_vocab_times=3)
+		with pytest.raises(TypeError):
+			LanguageProcessing('./tests/dataloader/dummy_languageprocessing', [])
+			
+		with pytest.raises(TypeError):
+			file_id = './tests/dataloader/dummy_languageprocessing'
+			fields = OrderedDict({'sent': 0})
+			LanguageProcessing.simple_create(file_id, fields, tokenizer='space', min_frequent_vocab_times=3)
+		with pytest.raises(TypeError):
+			LanguageProcessing('./tests/dataloader/dummy_languageprocessing', OrderedDict({'sent': 0}))
+		
+		with pytest.raises(RuntimeError):
+			file_id = './tests/dataloader/dummy_languageprocessing'
+			fields = OrderedDict({'post': 'SentenceDefault', 'resp': 'SentenceDefault'})
+			LanguageProcessing.simple_create(file_id, fields, tokenizer='space', min_frequent_vocab_times=3)
+		
 		assert isinstance(lp.file_id, str)
 		assert isinstance(lp.file_path, str)
 		for set_name, fields in lp.fields.items():
@@ -142,6 +161,25 @@ class TestLanguageProcessing():
 				assert isinstance(content, dict)
 				assert sample_num + 7 >= len(content)
 
+	def base_test_get_batches(self, lp: LanguageProcessing):
+		lp_cp = copy.deepcopy(lp)
+		for set_name in lp.data.keys():
+			#rng_state = random.getstate()
+			lp_batches = iter(lp.get_batches(set_name, 3, False))
+			#random.setstate(rng_state)
+			lp_cp.restart(set_name, 3, False)
+			while True:
+				res_cp = lp_cp.get_next_batch(set_name)
+				if res_cp is None:
+					break
+				res = next(lp_batches)
+				assert sorted(res_cp.keys()) == sorted(res.keys())
+				for key in res_cp.keys():
+					if isinstance(res_cp[key], np.ndarray):
+						assert (res_cp[key] == res[key]).all()
+					else:
+						assert res_cp[key] == res[key]
+
 	def base_test_convert(self, lp: LanguageProcessing):
 		lp.set_default_field('train', 'sent')
 
@@ -181,48 +219,59 @@ class TestLanguageProcessing():
 		assert not lp.convert_ids_to_tokens(sent_id)
 
 def load_LanguageProcessing1(): # Dict[str, OrderedDict[str, Field]]
+	file_id = './tests/dataloader/dummy_languageprocessing'
+	set_names = ['train', 'dev', 'test']
+	vocab = GeneralVocab(3)
+	toker = SimpleTokenizer('space', ['<pad>', '<unk>', '<go>', '<eos>'])
+	sent = SentenceDefault(toker, vocab, convert_to_lower_letter=True)
+	fields = {set_name: OrderedDict({'sent': sent}) for set_name in set_names}
 	def _load_LanguageProcessing():
-		file_id = './tests/dataloader/dummy_mscoco#MSCOCO'
-		set_names = ['train', 'dev', 'test']
-		vocab = GeneralVocab(3)
-		toker = SimpleTokenizer('space', ['<pad>', '<unk>', '<go>', '<eos>'])
-		sent = SentenceDefault(toker, vocab, convert_to_lower_letter=True)
-		fields = {set_name: OrderedDict({'sent': sent}) for set_name in set_names}
 		return LanguageProcessing(file_id, fields)
-	return _load_LanguageProcessing
+	def _simple_create_LanguageProcessing():
+		return LanguageProcessing.simple_create(file_id, fields)
+	return _load_LanguageProcessing, _simple_create_LanguageProcessing
 
 def load_LanguageProcessing2(): # OrderedDict[str, Field]
+	file_id = './tests/dataloader/dummy_languageprocessing'
+	vocab = GeneralVocab(3)
+	toker = SimpleTokenizer('space', ['<pad>', '<unk>', '<go>', '<eos>'])
+	sent = SentenceDefault(toker, vocab, convert_to_lower_letter=True)
+	fields = OrderedDict({'sent': sent})
 	def _load_LanguageProcessing():
-		file_id = './tests/dataloader/dummy_mscoco#MSCOCO'
-		vocab = GeneralVocab(3)
-		toker = SimpleTokenizer('space', ['<pad>', '<unk>', '<go>', '<eos>'])
-		sent = SentenceDefault(toker, vocab, convert_to_lower_letter=True)
-		fields = OrderedDict({'sent': sent})
 		return LanguageProcessing(file_id, fields)
-	return _load_LanguageProcessing
+	def _simple_create_LanguageProcessing():
+		return LanguageProcessing.simple_create(file_id, fields)
+	return _load_LanguageProcessing, _simple_create_LanguageProcessing
 
 def load_LanguageProcessing3(): # OrderedDict[str, str]
+	file_id = './tests/dataloader/dummy_languageprocessing'
+	fields = OrderedDict({'sent': 'SentenceDefault'})
 	def _load_LanguageProcessing():
-		file_id = './tests/dataloader/dummy_mscoco#MSCOCO'
-		fields = OrderedDict({'sent': 'SentenceDefault'})
 		with VocabContext.set_parameters(min_frequent_vocab_times=3):
 			with FieldContext.set_parameters(tokenizer='space'):
 				return LanguageProcessing(file_id, fields)
-	return _load_LanguageProcessing
+	def _simple_create_LanguageProcessing():
+		return LanguageProcessing.simple_create(file_id, fields, tokenizer='space', min_frequent_vocab_times=3)
+	return _load_LanguageProcessing, _simple_create_LanguageProcessing
 
 def load_LanguageProcessing4(): # Dict[str, OrderedDict[str, str]]
+	file_id = './tests/dataloader/dummy_languageprocessing'
+	set_names = ['train', 'dev', 'test']
+	fields = {set_name: OrderedDict({'sent': 'SentenceDefault'}) for set_name in set_names}
 	def _load_LanguageProcessing():
-		file_id = './tests/dataloader/dummy_mscoco#MSCOCO'
-		set_names = ['train', 'dev', 'test']
-		fields = {set_name: OrderedDict({'sent': 'SentenceDefault'}) for set_name in set_names}
 		with VocabContext.set_parameters(min_frequent_vocab_times=3):
 			with FieldContext.set_parameters(tokenizer='space'):
 				return LanguageProcessing(file_id, fields)
-	return _load_LanguageProcessing
+	def _simple_create_LanguageProcessing():
+		return LanguageProcessing.simple_create(file_id, fields, tokenizer='space', min_frequent_vocab_times=3)
+	return _load_LanguageProcessing, _simple_create_LanguageProcessing
 
-all_load_dataloaders = [load_LanguageProcessing1(), load_LanguageProcessing2(), load_LanguageProcessing3(), load_LanguageProcessing4()]
+all_load_dataloaders = [load_LanguageProcessing1()[0], load_LanguageProcessing1()[1],
+						load_LanguageProcessing2()[0], load_LanguageProcessing2()[1],
+						load_LanguageProcessing3()[0], load_LanguageProcessing3()[1],
+						load_LanguageProcessing4()[0], load_LanguageProcessing4()[1]]
 
-class Test1(TestLanguageProcessing):
+class TestAllLanguageProcessing(TestLanguageProcessing):
 
 	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
 	def test_init(self, load_dataloader):
@@ -259,6 +308,10 @@ class Test1(TestLanguageProcessing):
 	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
 	def test_get_next_batch(self, load_dataloader):
 		super().base_test_get_next_batch(load_dataloader())
+
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_get_batches(self, load_dataloader):
+		super().base_test_get_batches(load_dataloader())
 
 	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
 	def test_convert(self, load_dataloader):

@@ -16,6 +16,16 @@ def setup_module():
 	np.random.seed(0)
 
 class TestTokenizer():
+	def base_test_init(self):
+		with pytest.raises(NotImplementedError):
+			Tokenizer().tokenize('')
+		
+		with pytest.raises(NotImplementedError):
+			Tokenizer().convert_tokens_to_sentence([''])
+		
+		with pytest.raises(NotImplementedError):
+			Tokenizer().get_setting_hash()
+	
 	def base_test_tokenize_sentences(self, toker: Tokenizer, sentences: List[str]):
 		tokenized_sentences = toker.tokenize_sentences(sentences)
 		assert isinstance(tokenized_sentences, list)
@@ -58,14 +68,26 @@ class TestSimpleTokenizer(TestTokenizer):
 			sentences[:],
 			sentences[:] + sentences[:1],
 		]
+		
+		super().base_test_init()
+		
+		with pytest.raises(ValueError):
+			load_SimpleTokenizer('unknown_method')
+			
 		super().base_test_tokenize_sentences(load_SimpleTokenizer('space'), sentences)
 		super().base_test_tokenize_sessions(load_SimpleTokenizer('nltk'), sessions)
 
 	@pytest.mark.dependency(depends=["TestSimpleTokenizer::test_init"])
 	def test_convert_tokens_to_sentence(self, load_SimpleTokenizer):
-		tokens = ['i', '\'ve', 'been', 'to', 'John', '\'s', 'home', '!']
+		tokens = ['A', 'beautiful', 'dessert', 'waiting', 'to', 'be', 'shared', 'by', 'two', 'people', '.']
+		
+		with pytest.raises(RuntimeError):
+			toker = load_SimpleTokenizer('space')
+			toker.method = 'unknown_method'
+			toker.convert_tokens_to_sentence(tokens)
+		
 		nltk = load_SimpleTokenizer('nltk')
-		nltk_res = "i've been to John's home!"
+		nltk_res = "A beautiful dessert waiting to be shared by two people."
 		assert nltk.convert_tokens_to_sentence(tokens) == nltk_res
 		space = load_SimpleTokenizer('space')
 		space_res = ' '.join(tokens)
@@ -99,15 +121,23 @@ class TestPretrainedTokenizer(TestTokenizer):
 	@pytest.mark.dependency()
 	def test_init(self, load_PretrainedTokenizer):
 		sentences = [
-			'<|endoftext|> hello ! I am <|endoftext|> <|endoftext|>',
-			'why are <|endoftext|> here ?'
+			'you know how in some movies . they have a dream sequence , only they dontteii you its a dream ?',
+			'Two women waiting at a bench next to a street .'
 		]
 		sessions = [
 			sentences[:],
 			sentences[:] + sentences[:1],
 		]
+		super().base_test_init()
 		super().base_test_tokenize_sentences(load_PretrainedTokenizer(), sentences)
 		super().base_test_tokenize_sessions(load_PretrainedTokenizer(), sessions)
+		
+	@pytest.mark.dependency(depends=["TestPretrainedTokenizer::test_init"])
+	def test_convert_tokens_to_sentence(self, load_PretrainedTokenizer):
+		tokens = ['A', 'Ġbeautiful', 'Ġdessert', 'Ġwaiting', 'Ġto', 'Ġbe', 'Ġshared', 'Ġby', 'Ġtwo', 'Ġpeople', '.']
+		toker = load_PretrainedTokenizer()
+		res = 'A beautiful dessert waiting to be shared by two people.'
+		assert toker.convert_tokens_to_sentence(tokens) == res
 
 	@pytest.mark.dependency(depends=["TestPretrainedTokenizer::test_init"])
 	def test_get_setting_hash(self, load_PretrainedTokenizer):
@@ -116,3 +146,7 @@ class TestPretrainedTokenizer(TestTokenizer):
 		toker3 = load_PretrainedTokenizer(unk_token='<unk>')
 		assert toker1.get_setting_hash() == toker2.get_setting_hash()
 		assert toker1.get_setting_hash() != toker3.get_setting_hash()
+	
+	@pytest.mark.dependency(depends=["TestPretrainedTokenizer::test_init"])
+	def test_get_tokenizer_class(self, load_PretrainedTokenizer):
+		assert load_PretrainedTokenizer().get_tokenizer_class() == 'GPT2Tokenizer'

@@ -6,7 +6,7 @@ from pytest_mock import mocker
 
 from version_test_base import base_test_version
 
-from cotk.dataloader import LanguageProcessing, Field, Vocab, Tokenizer, LanguageGeneration, MSCOCO, Dataloader
+from cotk.dataloader import PretrainedTokenizer, Field, Vocab, Tokenizer, LanguageGeneration, MSCOCO, Dataloader
 from cotk.metric import MetricBase
 
 
@@ -18,6 +18,11 @@ def setup_module():
 
 class TestLanguageGeneration():
 	def base_test_init(self, dl):
+		with pytest.raises(ValueError):
+			LanguageGeneration("./tests/dataloader/dummy_mscoco#MSCOCO", pretrained='none')
+		with pytest.raises(ValueError):
+			LanguageGeneration("./tests/dataloader/dummy_mscoco#MSCOCO", pretrained='gpt2')
+		
 		assert isinstance(dl, LanguageGeneration)
 		assert isinstance(dl.file_id, str)
 		assert isinstance(dl.file_path, str)
@@ -52,8 +57,7 @@ class TestLanguageGeneration():
 		assert dl.frequent_vocab_size == len(dl.frequent_vocab_list)
 		assert isinstance(dl.all_vocab_list, list)
 		assert dl.all_vocab_size == len(dl.all_vocab_list)
-		assert dl.all_vocab_size > 4
-		assert dl.all_vocab_size > dl.frequent_vocab_size
+		assert dl.all_vocab_size >= dl.frequent_vocab_size
 
 		for _, data in dl.data.items():
 			sent = data['sent']
@@ -113,18 +117,19 @@ class TestLanguageGeneration():
 				assert batch["sent"][1][batch["sent_length"][1]-1] == dl.eos_id
 			assert batch["sent"][1][0] == dl.go_id
 
-		# this is true, only when there is no unknown words in dl
-		# (Only valid & invalid words)
-		flag = False
-		for set_name in dl.data.keys():
-			length = len(dl.data[set_name]['sent'])
-			for i in range(length):
-				batch = dl.get_batch(set_name, [i])
-				assert dl.unk_id not in batch["sent_allvocabs"]
-				batch = dl.get_batch(set_name, [i])
-				if dl.unk_id in batch["sent"]:
-					flag = True
-		assert flag
+		if not dl._pretrained: # test only when not pretrained tokenizer
+			# this is true, only when there is no unknown words in dl
+			# (Only valid & invalid words)
+			flag = False
+			for set_name in dl.data.keys():
+				length = len(dl.data[set_name]['sent'])
+				for i in range(length):
+					batch = dl.get_batch(set_name, [i])
+					assert dl.unk_id not in batch["sent_allvocabs"]
+					batch = dl.get_batch(set_name, [i])
+					if dl.unk_id in batch["sent"]:
+						flag = True
+			assert flag
 
 	def base_test_get_next_batch(self, dl):
 		with pytest.raises(ValueError):
@@ -157,7 +162,7 @@ class TestLanguageGeneration():
 					break
 			assert sample_num == len(dl.data[set_name]['sent']['id'])
 
-	def base_test_convert(self, dl):
+	def base_test_convert(self, dl): # test only when not pretrained tokenizer
 		sent_id = [0, 1, 2]
 		sent = ["<pad>", "<unk>", "<go>"]
 		assert sent == dl.convert_ids_to_tokens(sent_id)
@@ -202,42 +207,54 @@ class TestLanguageGeneration():
 	def base_test_multi_runs(self, dl_list):
 		assert all(x.all_vocab_list == dl_list[0].all_vocab_list for x in dl_list)
 
-@pytest.fixture
 def load_mscoco():
 	def _load_mscoco(invalid_vocab_times=0):
 		return MSCOCO("./tests/dataloader/dummy_mscoco#MSCOCO", min_rare_vocab_times=invalid_vocab_times)
 	return _load_mscoco
 
+def load_mscoco_pretrain():
+	def _load_mscoco(invalid_vocab_times=0):
+		from transformers import GPT2Tokenizer
+		toker = PretrainedTokenizer(GPT2Tokenizer('./tests/dataloader/dummy_gpt2vocab/vocab.json', './tests/dataloader/dummy_gpt2vocab/merges.txt'))
+		return MSCOCO("./tests/dataloader/dummy_mscoco#MSCOCO", tokenizer=toker, pretrained='gpt2', min_rare_vocab_times=invalid_vocab_times)
+	return _load_mscoco
+
+all_load_dataloaders = [load_mscoco(), load_mscoco_pretrain()]
+
 class TestMSCOCO(TestLanguageGeneration):
 
-	@pytest.mark.dependency()
-	def test_init(self, load_mscoco):
-		super().base_test_init(load_mscoco())
-		super().base_test_all_unknown(load_mscoco(10000))
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_init(self, load_dataloader):
+		super().base_test_init(load_dataloader())
+		super().base_test_all_unknown(load_dataloader(10000))
+	
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_restart(self, load_dataloader):
+		super().base_test_restart(load_dataloader())
+	
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_get_batch(self, load_dataloader):
+		super().base_test_get_batch(load_dataloader())
 
-	def test_restart(self, load_mscoco):
-		super().base_test_restart(load_mscoco())
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_get_next_batch(self, load_dataloader):
+		super().base_test_get_next_batch(load_dataloader())
 
-	@pytest.mark.dependency(depends=["TestMSCOCO::test_init"])
-	def test_get_batch(self, load_mscoco):
-		super().base_test_get_batch(load_mscoco())
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders[:1])
+	def test_convert(self, load_dataloader):
+		super().base_test_convert(load_dataloader())
 
-	@pytest.mark.dependency(depends=["TestMSCOCO::test_init"])
-	def test_get_next_batch(self, load_mscoco):
-		super().base_test_get_next_batch(load_mscoco())
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_teacher_forcing_metric(self, load_dataloader):
+		super().base_test_teacher_forcing_metric(load_dataloader())
+	
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_teacher_inference_metric(self, load_dataloader):
+		super().base_test_teacher_inference_metric(load_dataloader())
 
-	@pytest.mark.dependency(depends=["TestMSCOCO::test_init"])
-	def test_convert(self, load_mscoco):
-		super().base_test_convert(load_mscoco())
-
-	def test_teacher_forcing_metric(self, load_mscoco):
-		super().base_test_teacher_forcing_metric(load_mscoco())
-
-	def test_teacher_inference_metric(self, load_mscoco):
-		super().base_test_teacher_inference_metric(load_mscoco())
-
-	def test_init_multi_runs(self, load_mscoco):
-		super().base_test_multi_runs([load_mscoco() for i in range(3)])
+	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
+	def test_init_multi_runs(self, load_dataloader):
+		super().base_test_multi_runs([load_dataloader() for _ in range(3)])
 
 
 base_test_version(MSCOCO)
