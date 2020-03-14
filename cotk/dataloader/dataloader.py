@@ -61,37 +61,35 @@ class LanguageProcessing(Dataloader):
 		self.file_id = file_id
 		self.file_path = get_resource_file_path(file_id)
 
-		field_context = FieldContext.set_parameters(vocab=GeneralVocab(), weak=True)
+		with FieldContext.set_parameters(vocab=GeneralVocab(), weak=True) as field_context:
 
-		fieldcontents: Dict[str, OrderedDictType[str, _FieldContent]] = {}
-		self.fields: Dict[str, OrderedDictType[str, Field]] = {}
-		if isinstance(fields, OrderedDict):
-			fields = {set_name: fields for set_name in ["train", "dev", "test"]}
-		if isinstance(fields, dict):
-			for set_name, fields_in_one_set in fields.items():
-				one_fields, one_fieldcontents = self._fill_field_and_create_content(set_name, fields_in_one_set)
-				self.fields[set_name] = one_fields
-				fieldcontents[set_name] = one_fieldcontents
-		else:
-			raise TypeError("Unknown type for fields")
+			fieldcontents: Dict[str, OrderedDictType[str, _FieldContent]] = {}
+			self.fields: Dict[str, OrderedDictType[str, Field]] = {}
+			if isinstance(fields, OrderedDict):
+				fields = {set_name: fields for set_name in ["train", "dev", "test"]}
+			if isinstance(fields, dict):
+				for set_name, fields_in_one_set in fields.items():
+					one_fields, one_fieldcontents = self._fill_field_and_create_content(set_name, fields_in_one_set)
+					self.fields[set_name] = one_fields
+					fieldcontents[set_name] = one_fieldcontents
+			else:
+				raise TypeError("Unknown type for fields")
 
-		self._load_data(fieldcontents)
+			self._load_data(fieldcontents)
 
-		self.vocabs = self._collect_vocabs_from_fields(self.fields)
-		# self.default_vocab_id = 0 if len(self.vocabs) == 1 else None
-		self.tokenizers = self._collect_tokenizers_from_fields(self.fields)
-		# self.default_tokenizer_id = 0 if len(self.tokenizers) == 1 else None
-		self.default_field_set_name: Optional[str] = None
-		self.default_field_name: Optional[str] = None
-		self._build_vocabs()
+			self.vocabs = self._collect_vocabs_from_fields(self.fields)
+			# self.default_vocab_id = 0 if len(self.vocabs) == 1 else None
+			self.tokenizers = self._collect_tokenizers_from_fields(self.fields)
+			# self.default_tokenizer_id = 0 if len(self.tokenizers) == 1 else None
+			self.default_field_set_name: Optional[str] = None
+			self.default_field_name: Optional[str] = None
+			self._build_vocabs()
 
-		self._setting_hash = self._create_setting_hash()
-		self._vocab_hash = self._create_vocab_hash()
-		self.data = self._get_data(fieldcontents)
-		self._raw_data_hash, self._data_hash = self._create_data_hash(fieldcontents)
-		self.index, self.batch_id, self.batch_size = self._init_batch(fieldcontents)
-
-		field_context.close()
+			self._setting_hash = self._create_setting_hash()
+			self._vocab_hash = self._create_vocab_hash()
+			self.data = self._get_data(fieldcontents)
+			self._raw_data_hash, self._data_hash = self._create_data_hash(fieldcontents)
+			self.index, self.batch_id, self.batch_size = self._init_batch(fieldcontents)
 
 	@staticmethod
 	def simple_create(file_id: str, \

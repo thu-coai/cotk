@@ -26,10 +26,16 @@ class Context(metaclass=DocStringInheritor):
 	'''
 
 	context_dict: Dict[str, Any] = {}
+	corrupted = False
 
 	def __init__(self, parameter_dict: Dict[str, Any], weak=False):
+		if self.__class__.corrupted:
+			raise RuntimeError("A context object do not close before becoming invalid. Use ``with`` statement, " \
+				"or make sure of calling close.")
+
 		self._parameter_keys = list(parameter_dict)
 		self._old_parameters = self._set_parameters(parameter_dict, weak=weak)
+		self._closed = False
 
 	@classmethod
 	def _set_parameters(cls, parameter_dict: Dict[str, Any], weak=False) -> List[Any]:
@@ -100,6 +106,13 @@ class Context(metaclass=DocStringInheritor):
 	def close(self):
 		'''Restore the old parameter.'''
 		self._restore(self._parameter_keys, self._old_parameters)
+		self._closed = True
+
+	def __del__(self):
+		if hasattr(self, "_closed") and not self._closed:
+			self.__class__.corrupted = True
+			raise RuntimeError("A context object do not close before becoming invalid. Use ``with`` statement, " \
+				"or make sure of calling close.")
 
 class FieldContext(Context):
 	'''Bases: :class:`.dataloader.Context`
@@ -109,6 +122,7 @@ class FieldContext(Context):
 
 	PARAMETER_LIST = ["tokenizer", "vocab", "vocab_from", "max_sent_length", "max_turn_length", "convert_to_lower_letter"]
 	context_dict = {key: None for key in PARAMETER_LIST}
+	corrupted = False
 
 	# pylint: disable=unused-argument
 	@classmethod
@@ -137,6 +151,7 @@ class VocabContext(Context):
 
 	PARAMETER_LIST = ["min_frequent_vocab_times", "min_rare_vocab_times", "special_tokens_mapping", "special_appeared_in_data"]
 	context_dict = {key: None for key in PARAMETER_LIST}
+	corrupted = False
 
 	# pylint: disable=unused-argument
 	@classmethod
