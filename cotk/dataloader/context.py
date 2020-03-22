@@ -2,13 +2,13 @@
 from typing import List, Any, Dict, Union, Optional
 
 from .._utils.metaclass import DocStringInheritor
-from .._utils.typehint import OrderedDictType
 
 # For type checking
 if False: #pylint: disable=using-constant-test
 	#pylint: disable=unused-import
 	from .vocab import Vocab
 	from .tokenizer import Tokenizer
+	from collections import OrderedDict
 
 class Context(metaclass=DocStringInheritor):
 	'''A base class for Context. This class is used for setting parameters
@@ -17,6 +17,7 @@ class Context(metaclass=DocStringInheritor):
 	When initialized, the object write the list of parameters stored in the class.
 	The old parameters are restored when :meth:`.close` or :meth:`.__exit__` is called.
 	TODO: add an example for context manager, use ``with``.
+
 	Arguments:
 		parameter_dict (Dict[str, Any]): Key-value dict for changed parameters.
 		weak (bool, optional): Overwrite existing parameters. Default: False.
@@ -50,6 +51,7 @@ class Context(metaclass=DocStringInheritor):
 		'''Get the value of parameter named ``key`` stored in this class.
 		If ``key`` is not set, return ``default``.
 		When ``no_default`` is ``True``, raise a KeyError if ``key`` is not set.
+
 		Arguments:
 			key (str): name of the parameter
 			default (Any, optional): Default value if ``key`` is not set. Defaults: None.
@@ -68,6 +70,7 @@ class Context(metaclass=DocStringInheritor):
 		'''Set the parameter named ``key`` to ``value``, stored in this class.
 		If weak is ``True``, do not overwrite if ``key`` is already set.
 		Return the old value.
+
 		Arguments:
 			key (str): The name of the changed parameter.
 			value (Any): The new value of changed parameter. If None, do nothing.
@@ -150,7 +153,7 @@ class VocabContext(Context):
 	def set_parameters(cls, *, \
 			min_frequent_vocab_times: Optional[int] = None, \
 			min_rare_vocab_times: Optional[int] = None, \
-			special_tokens_mapping: Optional[OrderedDictType[str, str]] = None, \
+			special_tokens_mapping: "Optional[OrderedDict[str, str]]" = None, \
 			special_appeared_in_data: Optional[bool] = None, \
 			weak=False) -> "VocabContext":
 		'''Set a Context for initialization of :class:`Vocab`.

@@ -28,9 +28,10 @@ class LanguageProcessing(Dataloader):
 	During the initialization of the dataloader, :class:`Vocab` or :class:`Field` may be created.
 	To specifiy the parameters of these created object, please use :class:`VocabContext`
 	and :class:`FieldContext`, or just use :meth:`.simple_create`.
-	See the examples for how to create a dataloader. #TODO: write the example
+	See the examples for how to create a dataloader.
+
 	Arguments:{ARGUMENTS}
-	
+
 	Examples:
 			>>> from cotk.dataloader import GeneralVocab, SimpleTokenizer, SentenceDefault, LanguageProcessing
 			>>> file_id = './tests/dataloader/dummy_mscoco#MSCOCO'
@@ -45,12 +46,19 @@ class LanguageProcessing(Dataloader):
 	ARGUMENTS = r"""
 			file_id (str): A string indicating the dataset. It can be local path ("./data"), a resource name
 				(resources://dataset), or an url (http://test.com/dataset.zip).
-			fields (OrderedDict[str, Union[str, Field]], Dict[str, OrderedDict[str, Union[str, Field]]]):
-				If ``OrderDict``, it describes the data format of the "train", "dev", "test" set.
-				If ``Dict``, ``fields[key]`` describes the data format of the set named ``key``.
-				The data format is an ordered dictionary, where ``key`` is the name of a field,
-				``value`` is either a string indicating a Field or a :class:`Field` object.
-				See the examples for how to specify the data format. #TODO: write the example"""
+				See :meth:`.file_utils.get_resource_file_path` for further details.
+			fields (List, OrderedDict, Dict):
+
+				If ``OrderDict`` or ``List``, it describes ``data format`` of the "train", "dev", "test" set.
+
+				If ``Dict``, ``fields[key]`` describes ``data format`` of the set named ``key``.
+
+				A ``data format`` should be an ``OrderedDict`` or a ``List[Tuple]`` can be converted to ``OrderedDict``.
+
+				The ``key`` of ``data format`` is the name of a Field (used by :meth:`.get_batch`),
+				and the ``value`` is either a string indicating a Field or a :class:`Field` object.
+
+				See  :ref:`the examples<fast_dataloader>` for examples of the ``data format``."""
 
 	def __init__(self, file_id: str, \
 				 fields: Union[OrderedDictType[str, Union[str, Field]],\
@@ -335,9 +343,9 @@ class LanguageProcessing(Dataloader):
 		'''Set the default :class:`Field` in this dataloader. In the meanwhile,
 		the default :class:`Vocab` and :class:`Tokenizer` is also set according
 		to the field (if the field have vocab and tokenizer).
-		
+
 		The default field will affect the action in the following methods:
-		
+
 		* :meth:`get_default_field`
 		* :meth:`tokenize`
 		* :meth:`tokenize_sentences`
@@ -353,8 +361,7 @@ class LanguageProcessing(Dataloader):
 		* :meth:`get_special_tokens_mapping`
 		* :meth:`get_special_tokens_id`
 		* :meth:`get_default_tokenizer`
-		
-		TODO: find the related function.
+
 		Arguments:
 			{SET_NAME_DESCRIPTION}
 			{FIELD_NAME_DESCRIPTION}
@@ -375,6 +382,7 @@ class LanguageProcessing(Dataloader):
 
 	def get_field(self, set_name: str, field_name: str) -> Field:
 		'''Get :class:`Field` according to name of set and field.
+
 		Arguments:
 			{SET_NAME_DESCRIPTION}
 			{FIELD_NAME_DESCRIPTION}
@@ -420,6 +428,7 @@ class LanguageProcessing(Dataloader):
 	def restart(self, set_name, batch_size=None, shuffle=True):
 		'''Initialize batches. This function be called before :func:`get_next_batch`
 		or an epoch is end.
+
 		Arguments:
 			{SET_NAME_DESCRIPTION}
 			batch_size (int): the number of sample in a batch.
@@ -449,11 +458,13 @@ class LanguageProcessing(Dataloader):
 	def get_batch(self, set_name: str, indexes: List[int]) -> Dict[str, Any]:
 		'''Get a batch of data with specified `indexes`.
 		{_GET_BATCH_MORE_DOC}
+
 		See :meth:`get_next_batch`, :meth:`get_batches`, :meth:`get_all_batch` for other way to get data.
+
 		Arguments:
 			{SET_NAME_DESCRIPTION}
 			indexes (list): a list of specified indexes of batched data.
-		{_GET_BATCH_EXAMPLE}
+			{_GET_BATCH_EXAMPLE}
 		'''
 		if set_name not in self.fields:
 			raise ValueError("No set named %s." % set_name)
@@ -465,6 +476,7 @@ class LanguageProcessing(Dataloader):
 	def get_next_batch(self, set_name, ignore_left_samples=False) -> Optional[Dict[str, Any]]:
 		'''Get next batch. It can be called only after Initializing batches (:func:`restart`).
 		Return a dict like :func:`get_batch`, or None if the epoch is end.
+
 		Arguments:
 			{SET_NAME_DESCRIPTION}
 			ignore_left_samples (bool): If the number of left samples is not equal to
@@ -494,6 +506,7 @@ class LanguageProcessing(Dataloader):
 			ignore_left_samples=False) -> Iterable[Dict[str, Any]]:
 		'''An iterator over batches. It first call :func:`restart`, and then :func:`get_next_batch`
 		until no more data is available. Returns an iterator where each element is like :func:`get_batch`.
+
 		Arguments:
 			{SET_NAME_DESCRIPTION}
 			batch_size (int, optional): default: ``None``.  Use ``batch_size`` by default.
@@ -515,6 +528,7 @@ class LanguageProcessing(Dataloader):
 		and their type will be converted to list.
 		Exactly, this function called :func:`get_batch` where ``len(indexes)==1`` multiple times
 		and concatenate all the values in the returned dicts.
+
 		Arguments:
 			{SET_NAME_DESCRIPTION}
 		'''
