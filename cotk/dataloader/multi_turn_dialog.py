@@ -29,7 +29,7 @@ class MultiTurnDialog(LanguageProcessing):
 		 and a :class:`Session` field must be set as default field.
 	"""
 
-	_version = 1
+	_version = 2
 
 	# TODO: fill ATTRIBUTES
 	ATTRIBUTES = ''

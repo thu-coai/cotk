@@ -222,6 +222,11 @@ def load_mscoco_pretrain():
 all_load_dataloaders = [load_mscoco(), load_mscoco_pretrain()]
 
 class TestMSCOCO(TestLanguageGeneration):
+	def test_version(self):
+		base_test_version(MSCOCO)
+
+	def test_init_multi_runs(self, load_mscoco):
+		super().base_test_multi_runs([load_mscoco() for i in range(3)])
 
 	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
 	def test_init(self, load_dataloader):
@@ -255,6 +260,3 @@ class TestMSCOCO(TestLanguageGeneration):
 	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
 	def test_init_multi_runs(self, load_dataloader):
 		super().base_test_multi_runs([load_dataloader() for _ in range(3)])
-
-
-base_test_version(MSCOCO)
