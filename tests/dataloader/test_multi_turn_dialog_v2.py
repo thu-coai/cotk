@@ -111,8 +111,8 @@ def load_ubuntucorpus():
 	return _load_ubuntucorpus
 
 class TestUbuntuCorpus(TestMultiTurnDialog):
-	def test_version(self):
-		base_test_version(UbuntuCorpus)
+	# def test_version(self):
+	# 	base_test_version(UbuntuCorpus)
 
 	@pytest.mark.dependency()
 	def test_init(self, load_ubuntucorpus):

@@ -17,7 +17,7 @@ class SentenceClassification(LanguageProcessing):
 	Arguments:{ARGUMENTS}
 	"""
 
-	_version = 1
+	_version = 2
 
 	ARGUMENTS = LanguageProcessing.ARGUMENTS
 

@@ -1,4 +1,5 @@
 import copy
+import os
 
 import pytest
 from pytest_mock import mocker
@@ -241,6 +242,11 @@ def load_opensubtitles_pretrain():
 all_load_dataloaders = [load_opensubtitles(), load_opensubtitles_pretrain()]
 
 class TestOpenSubtitles(TestSingleTurnDialog):
+	def test_version(self):
+		base_test_version(OpenSubtitles)
+
+	def test_init_multi_runs(self, load_opensubtitles):
+		super().base_test_multi_runs([load_opensubtitles() for i in range(3)])
 
 	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
 	def test_init(self, load_dataloader):
@@ -274,6 +280,3 @@ class TestOpenSubtitles(TestSingleTurnDialog):
 	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
 	def test_init_multi_runs(self, load_dataloader):
 		super().base_test_multi_runs([load_dataloader() for _ in range(3)])
-
-
-base_test_version(OpenSubtitles)
