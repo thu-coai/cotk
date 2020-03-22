@@ -10,6 +10,7 @@ if "%SPHINXBUILD%" == "" (
 set SOURCEDIR=source
 set BUILDDIR=build
 set SPHINXPROJ=cotk
+set SPHINXOPTS=-W
 
 if "%1" == "" goto help
 

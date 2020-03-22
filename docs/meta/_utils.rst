@@ -1,3 +1,5 @@
+:orphan:
+
 _utils
 ===================================
 .. automodule:: cotk._utils

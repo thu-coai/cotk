@@ -19,7 +19,9 @@ Predefined Tasks
 * :class:`MultiTurnDialog`
 * :class:`SentenceClassification`.
 
-Choose a adequate class for your task, and it would be the simplest and best way to build a dataloader.
+Choose an adequate class for your task, and it would be the simplest and best way to build a dataloader.
+
+.. _fast_dataloader:
 
 Fast Initialization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -27,9 +29,15 @@ Fast Initialization
 If the predefined classes do not satisfy your task, you can construct an instance of :class:`LanguageProcessing`
 using the fast initialization.
 
->> dl = LanuageProcessing(file_id, OrderedDict([("post", "SentenceDefault"), ('resp', 'SentenceDefault')]))
+>>> dl = LanuageProcessing(file_id, {
+>>>          "train": [("post", "SentenceDefault"), ('resp', 'SentenceDefault')],
+>>>          "test": [("post", "SentenceDefault"), ('resp', 'SentenceDefault'), ('label', 'DenseLabel')]
+>>>      })
 
-It means you will construct a dataloader with three set
+In the file path (``file_id``), there should be two text file named ``train.txt`` and ``test.txt``, which stand for
+two data set, ``train`` and ``test``,  respectively.
+
+It means you will construct a dataloader with three set (named )
 
 
 
