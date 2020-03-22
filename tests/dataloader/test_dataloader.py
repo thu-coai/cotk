@@ -12,7 +12,8 @@ import numpy as np
 from cotk.dataloader import GeneralVocab, SimpleTokenizer, SentenceDefault, LanguageProcessing, \
 	Field, Vocab, Tokenizer, FieldContext, VocabContext
 
-class TestLanguageProcessing():
+class BaseTestLanguageProcessing:
+	"""Test :class:`LanguageProcessing` or it's subclass."""
 	def base_test_init(self, lp: LanguageProcessing):
 		with pytest.raises(TypeError):
 			file_id = './tests/dataloader/dummy_languageprocessing'
@@ -49,8 +50,6 @@ class TestLanguageProcessing():
 		for toker in lp.tokenizers:
 			assert isinstance(toker, Tokenizer)
 
-		assert lp.default_field_set_name is None
-		assert lp.default_field_name is None
 		for (_, data), (_, index) in zip(lp.data.items(), lp.index.items()):
 			assert isinstance(data, dict)
 			assert isinstance(index, list)
@@ -62,7 +61,6 @@ class TestLanguageProcessing():
 		for _, batch_id in lp.batch_id.items():
 			assert batch_id == 0
 		for _, batch_size in lp.batch_size.items():
-			assert batch_size is None
 			assert batch_size is None
 
 	def base_test_set_default_field(self, lp: LanguageProcessing):
@@ -181,8 +179,6 @@ class TestLanguageProcessing():
 						assert res_cp[key] == res[key]
 
 	def base_test_convert(self, lp: LanguageProcessing):
-		lp.set_default_field('train', 'sent')
-
 		sent_id = [0, 1, 2]
 		sent = ["<pad>", "<unk>", "<go>"]
 		assert sent == lp.convert_ids_to_tokens(sent_id)
@@ -217,6 +213,14 @@ class TestLanguageProcessing():
 		sent = ["<pad>", "<pad>", "<pad>"]
 		assert sent == lp.convert_ids_to_tokens(sent_id, trim=False)
 		assert not lp.convert_ids_to_tokens(sent_id)
+
+class TestLanguageProcessing(BaseTestLanguageProcessing):
+	"""Test :class:`LanguageProcessing`"""
+	def base_test_init(self, lp: LanguageProcessing):
+		super().base_test_init(lp)
+		assert lp.default_field_set_name is None
+		assert lp.default_field_name is None
+
 
 def load_LanguageProcessing1(): # Dict[str, OrderedDict[str, Field]]
 	file_id = './tests/dataloader/dummy_languageprocessing'
@@ -315,4 +319,6 @@ class TestAllLanguageProcessing(TestLanguageProcessing):
 
 	@pytest.mark.parametrize('load_dataloader', all_load_dataloaders)
 	def test_convert(self, load_dataloader):
-		super().base_test_convert(load_dataloader())
+		lp = load_dataloader()
+		lp.set_default_field('train', 'sent')
+		super().base_test_convert(lp)

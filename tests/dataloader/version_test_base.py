@@ -35,7 +35,11 @@ class PatchDataloader:
 		self.__version_info.append({
 			'args': copy.deepcopy(bound.args),
 			'kwargs': copy.deepcopy(bound.kwargs),
-			'hash_value': dl.hash_value
+			'setting_hash': dl.get_setting_hash(),
+			'vocab_hash': dl.get_vocab_hash(),
+			"raw_data_hash": dl.get_raw_data_hash(),
+			"data_hash": dl.get_data_hash(),
+			"general_hash": dl.get_general_hash()
 		})
 		return dl
 

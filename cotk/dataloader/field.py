@@ -805,7 +805,7 @@ class Session(Sentence):
 
 class SessionDefault(Session):
 	add_special_to_ids = SentenceDefault.add_special_to_ids
-	remove_special_to_ids = SentenceDefault.remove_special_in_ids
+	remove_special_in_ids = SentenceDefault.remove_special_in_ids
 	trim_in_ids = SentenceDefault.trim_in_ids
 
 	_GET_BATCH_DATA_DOCSTRING = SentenceDefault._GET_BATCH_DATA_DOCSTRING.replace(_SentenceContent.__name__, _SessionContent.__name__).replace('sentences', 'sessions')
