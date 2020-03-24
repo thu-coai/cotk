@@ -84,9 +84,9 @@ turn the sentences into index representation.
 .. note ::
     You may find ``data`` contains similiar key ``sent`` and ``sent_allvocabs``.
     The difference between them is that ``sent`` only contains
-    :ref:`valid vocabularies <vocab_ref>` and
-    ``sent_allvocabs`` contains both :ref:`valid vocabularies <vocab_ref>` and
-    :ref:`invalid vocabularies <vocab_ref>`.
+    :ref:`valid vocabularies <vocabulary_ref>` and
+    ``sent_allvocabs`` contains both :ref:`valid vocabularies <vocabulary_ref>` and
+    :ref:`invalid vocabularies <vocabulary_ref>`.
 
 Training models
 -----------------------------------------

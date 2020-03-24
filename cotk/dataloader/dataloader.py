@@ -58,11 +58,11 @@ class LanguageProcessing(Dataloader):
 				The ``key`` of ``data format`` is the name of a Field (used by :meth:`.get_batch`),
 				and the ``value`` is either a string indicating a Field or a :class:`Field` object.
 
-				See  :ref:`the examples<fast_dataloader>` for examples of the ``data format``."""
+				See  :ref:`the examples<customized_tasks_ref>` for examples of the ``data format``."""
 
 	def __init__(self, file_id: str, \
-				 fields: Union[OrderedDictType[str, Union[str, Field]],\
-					 		   Dict[str, OrderedDictType[str, Union[str, Field]]]], \
+				 fields: Union["OrderedDict[str, Union[str, Field]]",\
+					 		   Dict[str, "OrderedDict[str, Union[str, Field]]"]], \
 				 ):
 		self.file_id = file_id
 		self.file_path = get_resource_file_path(file_id)

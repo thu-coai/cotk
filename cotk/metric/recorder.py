@@ -10,9 +10,9 @@ class SingleTurnDialogRecorder(MetricBase):
 
 	Arguments:
 		{MetricBase.DATALOADER_ARGUMENTS}
-		post_allvocabs_key (str, optional): The key of dialog posts with :ref:`allvocabs <vocab_ref>`.
+		post_allvocabs_key (str, optional): The key of dialog posts with :ref:`allvocabs <vocabulary_ref>`.
 			Default: ``post_allvocabs``.
-		resp_allvocabs_key (str, optional): The key of dialog responses with :ref:`allvocabs <vocab_ref>`.
+		resp_allvocabs_key (str, optional): The key of dialog responses with :ref:`allvocabs <vocabulary_ref>`.
 			Default: ``resp_allvocabs``.
 		{MetricBase.GEN_KEY_ARGUMENTS}
 
@@ -119,7 +119,7 @@ class MultiTurnDialogRecorder(MetricBase):
 	Arguments:
 		{MetricBase.DATALOADER_ARGUMENTS}
 		multi_turn_reference_allvocabs_key (str, optional): The key of dialog references with \
-			:ref:`allvocabs <vocab_ref>`. Default: ``multi_turn_ref_allvocabs``.
+			:ref:`allvocabs <vocabulary_ref>`. Default: ``multi_turn_ref_allvocabs``.
 		{MetricBase.MULTI_TURN_GEN_KEY_ARGUMENTS}
 		{MetricBase.MULTI_TURN_LENGTH_KEY_ARGUMENTS}
 

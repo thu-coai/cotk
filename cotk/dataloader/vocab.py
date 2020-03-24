@@ -128,19 +128,22 @@ class Vocab(LoadClassInterface, metaclass=DocStringInheritor):
 
 	def get_setting_hash(self) -> str:
 		'''Get setting hash for the Vocabulary instance.
-		See :ref:`here <dataloader_hash>` for the explaination of ``setting hash``.
+		See :ref:`here <dataloader_hash_ref>` for the explaination of ``setting hash``.
 		'''
 		assert self._setting_hash is not None
 		return self._setting_hash
 
 	def get_vocab_hash(self) -> str:
 		'''Get vocab hash for the Vocabulary instance.
-		See :ref:`here <dataloader_hash>` for the explaination of ``vocab hash``.
+		See :ref:`here <dataloader_hash_ref>` for the explaination of ``vocab hash``.
 		'''
 		raise NotImplementedError
 
 class GeneralVocab(Vocab):
-	'''A vocabulary class for general use.	If any argument is not specified,
+	'''Bases: :class:`.dataloader.Vocab`
+	A vocabulary class for general use.
+
+	If any argument is not specified,
 	the value will be first retrieved from :class:`VocabContext`. If still ``None``, default
 	value will be used.
 
