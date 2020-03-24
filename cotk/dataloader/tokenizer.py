@@ -64,7 +64,7 @@ class Tokenizer(metaclass=DocStringInheritor):
 
 	def get_setting_hash(self) -> str:
 		'''Return the setting hash of this tokenizer instance.
-		See :ref:`here <dataloader_hash>` for the explaination of ``setting hash``.
+		See :ref:`here <dataloader_hash_ref>` for the explaination of ``setting hash``.
 
 		Returns:
 			str: the setting hash.

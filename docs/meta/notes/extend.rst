@@ -192,11 +192,11 @@ sentences.
 
 There is some regulations to design an metric.
 
-* Using :ref:`allvocabs <vocab_ref>` for reference.
+* Using :ref:`allvocabs <vocabulary_ref>` for reference.
 * Dealing with ``<unk>``, which should be regarded as error or
   using some methods to do smoothing. Pay atention the difference
   between ``<unk>`` and
-  :ref:`unknown vocabularies <vocab_ref>`.
+  :ref:`unknown vocabularies <vocabulary_ref>`.
 * Record hash value. Hash value equal if and only if the metric is tested
   under the same settings. (In the example, there is no hash value
   because we don't have input and the setting is always the same)

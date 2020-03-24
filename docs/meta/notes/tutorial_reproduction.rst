@@ -133,7 +133,7 @@ Publish your model to dashboard
 The command line ``cotk run`` help publish your model to the `dashboard <http://coai.cs.tsinghua.edu.cn/dashboard/>`__.
 Besides showing evaluation results of models, this dashboard also tells
 whether models refer to the same data, which aims at fair comparisons
-(Refer to :ref:`Metric <hash_ref>` for more details).
+(Refer to :ref:`Metric <metric_hashvalue_ref>` for more details).
 
 - Same with `Publish your model to github`_, you have to initialize a git repository under a directory named ``PROJECT``.
 

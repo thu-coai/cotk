@@ -76,8 +76,7 @@ class PerplexityMetric(MetricBase):
 		self.have_unk = "unk" in self.dataloader.get_special_tokens_mapping()
 
 	def forward(self, data: Dict[str, Any]):
-		'''Processing a batch of data. Smoothing will be performed for :ref:`invalid vocabs <vocab_ref>`.
-		:ref:`Unknowns vocabs <vocab_ref>` will be ignored.
+		'''Processing a batch of data. Smoothing will be performed for :ref:`rare vocabs <vocabulary_ref>`.
 
 		Arguments:
 			data (dict): A dict at least contains the following keys:

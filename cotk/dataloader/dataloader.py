@@ -22,47 +22,64 @@ class Dataloader(LoadClassInterface, metaclass=DocStringInheritor):
 	'''Base class of Dataloader.
 	'''
 
+
+
 class LanguageProcessing(Dataloader):
 	"""Bases: :class:`.dataloader.Dataloader`
+
 	Base class for all language processing tasks. This is an abstract class.
-	During the initialization of the dataloader, :class:`Vocab` or :class:`Field` may be created.
-	To specifiy the parameters of these created object, please use :class:`VocabContext`
-	and :class:`FieldContext`, or just use :meth:`.simple_create`.
-	See the examples for how to create a dataloader.
 
-	Arguments:{ARGUMENTS}
+	During the initialization of a dataloader, :class:`Vocab`, :class:`Tokenizer` or :class:`Field` may be created.
+	See :ref:`how to create a dataloader<customized_tasks_ref>`.
 
-	Examples:
-			>>> from cotk.dataloader import GeneralVocab, SimpleTokenizer, SentenceDefault, LanguageProcessing
-			>>> file_id = './tests/dataloader/dummy_mscoco#MSCOCO'
-			>>> set_names = ['train', 'dev', 'test']
-			>>> vocab = GeneralVocab(1)
-			>>> toker = SimpleTokenizer('space', ['<pad>', '<unk>', '<go>', '<eos>'])
-			>>> sent = SentenceDefault(toker, vocab, convert_to_lower_letter=True)
-			>>> fields = {set_name: {'sent': sent} for set_name in set_names}
-			>>> lp = LanguageProcessing(file_id, fields)
+	Arguments:{ARGUMENTS}{FIELD_DETAILS}
+
 	"""
 
 	ARGUMENTS = r"""
 			file_id (str): A string indicating the dataset. It can be local path ("./data"), a resource name
 				(resources://dataset), or an url (http://test.com/dataset.zip).
-				See :meth:`.file_utils.get_resource_file_path` for further details.
+				See :meth:`cotk.file_utils.get_resource_file_path` for further details."""
+
+	FIELD_DETAILS = r"""
 			fields (List, OrderedDict, Dict):
+				This arguments supports multiple input types:
 
-				If ``OrderDict`` or ``List``, it describes ``data format`` of the "train", "dev", "test" set.
+				* If ``OrderDict`` or ``List``, it specify ``data format`` of the ``"train"``, ``"dev"``, ``"test"`` set.
 
-				If ``Dict``, ``fields[key]`` describes ``data format`` of the set named ``key``.
+						* A ``data format`` should be an ``OrderedDict`` or a ``List[Tuple]`` can be converted to ``OrderedDict``.
+						* The ``key`` of ``data format`` is the name of a Field (used by :meth:`.get_batch`),
+						  and the ``value`` is either a class name of a Field or a :class:`Field` object.
+						* Examples:
 
-				A ``data format`` should be an ``OrderedDict`` or a ``List[Tuple]`` can be converted to ``OrderedDict``.
+							>>> postField = SentenceDefault(...)
+							>>> respField = SentenceDefault(...)
+							>>> data_format = [("post", postField), ("resp", respField)]
 
-				The ``key`` of ``data format`` is the name of a Field (used by :meth:`.get_batch`),
-				and the ``value`` is either a string indicating a Field or a :class:`Field` object.
+						  or
 
-				See  :ref:`the examples<fast_dataloader>` for examples of the ``data format``."""
+							>>> data_format = [("post", "SentenceDefault"), ("resp", "SentenceDefault")]
+						* Examples:
+
+							>>> fields = data_format
+
+						  equals to
+
+							>>> fields = {"train": data_format, "dev": data_format, "test": data_format}
+
+				* If ``Dict``, ``fields[key]`` describes ``data format`` of the set named ``key``. Examples:
+
+					>>> fields = {"train": data_format, "extra": data_format}
+
+				* See :ref:`how to create a dataloader<customized_tasks_ref>`.
+				"""
+
+	FIELD_REF = r"""
+			fields (List, OrderedDict, Dict): See initialization of :class:`LanguageProcessing` for explanation. """
 
 	def __init__(self, file_id: str, \
-				 fields: Union[OrderedDictType[str, Union[str, Field]],\
-					 		   Dict[str, OrderedDictType[str, Union[str, Field]]]], \
+				 fields: Union["OrderedDict[str, Union[str, Field]]", List[Tuple[str, Union[str, Field]]],\
+					 		   Dict[str, Union["OrderedDict[str, Union[str, Field]]", List[Tuple[str, Union[str, Field]]]]]], \
 				 ):
 		self.file_id = file_id
 		self.file_path = get_resource_file_path(file_id)
@@ -71,7 +88,7 @@ class LanguageProcessing(Dataloader):
 
 			fieldcontents: Dict[str, OrderedDictType[str, _FieldContent]] = {}
 			self.fields: Dict[str, OrderedDictType[str, Field]] = {}
-			if isinstance(fields, OrderedDict):
+			if isinstance(fields, OrderedDict) or isinstance(fields, list):
 				fields = {set_name: fields for set_name in ["train", "dev", "test"]}
 			if isinstance(fields, dict):
 				for set_name, fields_in_one_set in fields.items():
@@ -101,34 +118,15 @@ class LanguageProcessing(Dataloader):
 	def simple_create(file_id: str, \
 				fields: Union[OrderedDictType[str, Union[str, Field]],\
 					 		   Dict[str, OrderedDictType[str, Union[str, Field]]]], \
-				*,\
-				tokenizer: Union[Tokenizer, str, None] = None, \
-				vocab: Optional[Vocab] = None, \
-				vocab_from: Optional[Dict[str, str]] = None, \
-				max_sent_length: Optional[int] = None, \
-				max_turn_length: Optional[int] = None, \
-				convert_to_lower_letter: Optional[bool] = None, \
-				min_frequent_vocab_times: Optional[int] = None, \
-				min_rare_vocab_times: Optional[int] = None, \
-				special_tokens_mapping: Optional[OrderedDictType[str, str]] = None, \
-				special_appeared_in_data: Optional[bool] = None) -> "LanguageProcessing":
+				**kwargs) -> "LanguageProcessing":
 		'''A simple way to create a dataloader. Instead of using :class:`VocabContext`
 		and :class:`FieldContext`, specifying all the possible parameters here.
-		Arguments:{ARGUMENTS}
-		TODO: more arguments from VocabContext, FieldContext
+
+		Arguments:{ARGUMENTS}{FIELD_REF}
+			**kwargs: can be any arguments that will be passed to :class:`Vocab` and :class`Field`.
 		'''
-		with VocabContext.set_parameters(\
-				min_frequent_vocab_times=min_frequent_vocab_times,\
-				min_rare_vocab_times=min_rare_vocab_times, \
-				special_tokens_mapping=special_tokens_mapping, \
-				special_appeared_in_data=special_appeared_in_data):
-			with FieldContext.set_parameters(\
-					tokenizer=tokenizer, \
-					vocab=vocab, \
-					vocab_from=vocab_from, \
-					max_sent_length=max_sent_length, \
-					max_turn_length=max_turn_length, \
-					convert_to_lower_letter=convert_to_lower_letter):
+		with VocabContext.set_parameters(**kwargs):
+			with FieldContext.set_parameters(**kwargs):
 				with FieldContext.set_parameters(tokenizer="space", weak=True):
 					return LanguageProcessing(file_id, fields)
 
@@ -138,6 +136,8 @@ class LanguageProcessing(Dataloader):
 			fieldcontents (Dict[str, OrderedDictType[str, _FieldContent]]): fieldcontents for each set
 		'''
 		for set_name, fieldcontents_in_one_set in fieldcontents.items():
+			if not fieldcontents_in_one_set:
+				raise RuntimeError("no field specified")
 			with open("%s/%s.txt" % (self.file_path, set_name), encoding='utf-8') as f_file:
 				line_cnt = 0
 				file_iterator = iter(f_file)
@@ -230,7 +230,7 @@ class LanguageProcessing(Dataloader):
 		return tokenizers
 
 	def _fill_field_and_create_content(self, set_name: str, fields: \
-				OrderedDictType[str, Union[str, Field]], \
+				Union[OrderedDictType[str, Union[str, Field]], List[Tuple[str, Union[str, Field]]]], \
 				) -> \
 					Tuple[OrderedDictType[str, Field], OrderedDictType[str, _FieldContent]]:
 		'''Create and return fields and field contexts.
@@ -242,7 +242,15 @@ class LanguageProcessing(Dataloader):
 		fieldcontents: OrderedDictType[str, _FieldContent] = OrderedDict()
 		new_fields: OrderedDictType[str, Field] = OrderedDict()
 
-		for name, field_name in fields.items():
+		fields_iter: Iterable[Tuple[str, Union[str, Field]]]
+		if isinstance(fields, OrderedDict):
+			fields_iter = fields.items()
+		elif isinstance(fields, list):
+			fields_iter = fields
+		else:
+			raise TypeError("Unexpected Type for fields")
+
+		for name, field_name in fields_iter:
 			if isinstance(field_name, str):
 				field = Field.load_class(field_name)()
 			elif isinstance(field_name, Field):

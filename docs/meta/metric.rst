@@ -3,13 +3,13 @@ Metric
 .. automodule:: cotk.metric
 
 
-.. _hash_ref:
+.. _metric_hashvalue_ref:
 
 Hash Value
 --------------------------------
 :meth:`.MetricBase.close` will return a dict containing hash value,
 which can validate whether two models used the same test data and the
-same setting. Only two models using the same metric with the same hash 
+same setting. Only two models using the same metric with the same hash
 value returned, can compare with each other.
 
 .. _metric_ref:

@@ -37,11 +37,13 @@ def render(text, macros):
 
     in_flag = [True]
     for line in lines:
-        if not line.startswith(start_symbol):
+        if not line.startswith(start_symbol + " "):
             if in_flag[-1]:
                 res.append(line)
             continue
         args = line.split()
+        if len(args) < 2:
+            raise RuntimeError("Unknown tags when parsing %s" % line)
         if args[1] == "location":
             continue
         elif args[1] == "ifdef":
@@ -54,7 +56,7 @@ def render(text, macros):
             if in_flag[-1]:
                 res.extend(render(open(args[2], 'r', encoding='utf-8').read(), macros))
         else:
-            raise RuntimeError("Unknown tags %s" % args[1])
+            raise RuntimeError("Unknown tags %s when parsing %s" % (args[1], line))
     return res
 
 def check(text, path, filename):

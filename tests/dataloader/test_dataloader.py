@@ -15,25 +15,25 @@ from cotk.dataloader import GeneralVocab, SimpleTokenizer, SentenceDefault, Lang
 class BaseTestLanguageProcessing:
 	"""Test :class:`LanguageProcessing` or it's subclass."""
 	def base_test_init(self, lp: LanguageProcessing):
-		with pytest.raises(TypeError):
+		with pytest.raises(RuntimeError):
 			file_id = './tests/dataloader/dummy_languageprocessing'
 			fields = []
 			LanguageProcessing.simple_create(file_id, fields, tokenizer='space', min_frequent_vocab_times=3)
-		with pytest.raises(TypeError):
+		with pytest.raises(RuntimeError):
 			LanguageProcessing('./tests/dataloader/dummy_languageprocessing', [])
-			
+
 		with pytest.raises(TypeError):
 			file_id = './tests/dataloader/dummy_languageprocessing'
 			fields = OrderedDict({'sent': 0})
 			LanguageProcessing.simple_create(file_id, fields, tokenizer='space', min_frequent_vocab_times=3)
 		with pytest.raises(TypeError):
 			LanguageProcessing('./tests/dataloader/dummy_languageprocessing', OrderedDict({'sent': 0}))
-		
+
 		with pytest.raises(RuntimeError):
 			file_id = './tests/dataloader/dummy_languageprocessing'
 			fields = OrderedDict({'post': 'SentenceDefault', 'resp': 'SentenceDefault'})
 			LanguageProcessing.simple_create(file_id, fields, tokenizer='space', min_frequent_vocab_times=3)
-		
+
 		assert isinstance(lp.file_id, str)
 		assert isinstance(lp.file_path, str)
 		for set_name, fields in lp.fields.items():
