@@ -118,38 +118,15 @@ class LanguageProcessing(Dataloader):
 	def simple_create(file_id: str, \
 				fields: Union[OrderedDictType[str, Union[str, Field]],\
 					 		   Dict[str, OrderedDictType[str, Union[str, Field]]]], \
-				*,\
-				tokenizer: Union[Tokenizer, str, None] = None, \
-				vocab: Optional[Vocab] = None, \
-				vocab_from: Optional[Dict[str, str]] = None, \
-				max_sent_length: Optional[int] = None, \
-				max_turn_length: Optional[int] = None, \
-				convert_to_lower_letter: Optional[bool] = None, \
-				min_frequent_vocab_times: Optional[int] = None, \
-				min_rare_vocab_times: Optional[int] = None, \
-				special_tokens_mapping: Optional[OrderedDictType[str, str]] = None, \
-				special_appeared_in_data: Optional[bool] = None) -> "LanguageProcessing":
+				**kwargs) -> "LanguageProcessing":
 		'''A simple way to create a dataloader. Instead of using :class:`VocabContext`
 		and :class:`FieldContext`, specifying all the possible parameters here.
 
 		Arguments:{ARGUMENTS}{FIELD_REF}
-
-			See :class:`Vocab` and :class`Field` for more arguments.
-
-		TODO: more arguments from VocabContext, FieldContext
+			**kwargs: can be any arguments that will be passed to :class:`Vocab` and :class`Field`.
 		'''
-		with VocabContext.set_parameters(\
-				min_frequent_vocab_times=min_frequent_vocab_times,\
-				min_rare_vocab_times=min_rare_vocab_times, \
-				special_tokens_mapping=special_tokens_mapping, \
-				special_appeared_in_data=special_appeared_in_data):
-			with FieldContext.set_parameters(\
-					tokenizer=tokenizer, \
-					vocab=vocab, \
-					vocab_from=vocab_from, \
-					max_sent_length=max_sent_length, \
-					max_turn_length=max_turn_length, \
-					convert_to_lower_letter=convert_to_lower_letter):
+		with VocabContext.set_parameters(**kwargs):
+			with FieldContext.set_parameters(**kwargs):
 				with FieldContext.set_parameters(tokenizer="space", weak=True):
 					return LanguageProcessing(file_id, fields)
 
@@ -159,6 +136,8 @@ class LanguageProcessing(Dataloader):
 			fieldcontents (Dict[str, OrderedDictType[str, _FieldContent]]): fieldcontents for each set
 		'''
 		for set_name, fieldcontents_in_one_set in fieldcontents.items():
+			if not fieldcontents_in_one_set:
+				raise RuntimeError("no field specified")
 			with open("%s/%s.txt" % (self.file_path, set_name), encoding='utf-8') as f_file:
 				line_cnt = 0
 				file_iterator = iter(f_file)
