@@ -2,26 +2,27 @@ File Utilities
 
 file_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: cotk.file_utils.file_utils
+.. automodule:: cotk.file_utils
 
-.. autofunction:: _url_to_filename
-.. autofunction:: _get_config
-.. autofunction:: _http_get
-.. autofunction:: _get_file_sha256
-.. autofunction:: _get_hashtag
-.. autofunction:: _parse_file_id
-.. autofunction:: _get_resource
-.. autofunction:: _download_data
-.. autofunction:: _load_local_data
+.. .. autofunction:: _url_to_filename
+.. .. autofunction:: _get_config
+.. .. autofunction:: _http_get
+.. .. autofunction:: _get_file_sha256
+.. .. autofunction:: _get_hashtag
+.. .. autofunction:: _parse_file_id
+.. .. autofunction:: _get_resource
+.. .. autofunction:: _download_data
+.. .. autofunction:: _load_local_data
+
 .. autofunction:: get_resource_file_path
 .. autofunction:: import_local_resources
 .. autofunction:: load_file_from_url
 
 resources_processor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automodule:: cotk.file_utils.resource_processor
+.. .. automodule:: cotk.file_utils
 
-.. autofunction:: unzip_file
+.. .. autofunction:: unzip_file
 
 .. autoclass:: ResourceProcessor
   :members:

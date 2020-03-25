@@ -107,7 +107,10 @@ class DocStringInheritor(type):
 		# modify attribute docstring
 		for attr, attribute in clsdict.items():
 
-			doc = attribute.__doc__
+			if isinstance(attribute, staticmethod):
+				doc = attribute.__func__.__doc__
+			else:
+				doc = attribute.__doc__
 			# first, inherit docstring from bases
 			if not doc:
 				for mro_cls in (mro_cls for base in bases for mro_cls in base.mro()
@@ -140,13 +143,19 @@ class DocStringInheritor(type):
 			# set all doc
 			if not doc:
 				doc = None
-			if doc == attribute.__doc__:
-				continue
-			elif isinstance(attribute, property):
-				clsdict[attr] = property(
-						attribute.fget, attribute.fset, attribute.fdel, doc) # type: ignore
+			if isinstance(attribute, staticmethod):
+				if doc == attribute.__func__.__doc__:
+					continue
+				else:
+					attribute.__func__.__doc__ = doc
 			else:
-				attribute.__doc__ = doc
+				if doc == attribute.__doc__:
+					continue
+				elif isinstance(attribute, property):
+					clsdict[attr] = property(
+							attribute.fget, attribute.fset, attribute.fdel, doc) # type: ignore
+				else:
+					attribute.__doc__ = doc
 
 		return type.__new__(cls, name, bases, clsdict)
 

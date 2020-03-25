@@ -2,12 +2,26 @@ Data Loader
 ===================================
 .. automodule:: cotk.dataloader
 
-
-Building a Dataloader
-----------------------------------
+Overview
+-------------------------------------
 
 Dataloaders are essential components in ``CoTK`` to build models or do fair evaluation.
-Here we introduce methods of building a dataloader.
+Here we give an overview of what makes a dataloader.
+
+.. image:: dataloader_structure.png
+
+* Dataloader describes :ref:`the format of the dataset<customized_tasks_ref>`, including how the data is split (``train``, ``dev``, ``test``)
+  and how a sample is composed of one or more data fields.
+* Each data field in dataloader can share a :class:`Field` instances, or use different :class:`Field` instances.
+* :class:`Field` defines the way that the dataloader reads, process, and output the data.
+  (But it doesn't store the data, the data is stored in dataloader.)
+* :class:`Field` works with :class:`Tokenizer` and :class:`Vocab`.
+* :class:`Tokenizer` defines the methods to tokenize a sentence.
+* :class:`Vocab` defines the vocabulary. A instance of :class:`Vocab` can be shared between multiple :class:`Field`, where the data
+  from multiple :class:`Field` will be used to construct the vocabulary.
+
+Building a Dataloader
+############################################
 
 Predefined Tasks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -25,6 +39,7 @@ Predefined Tasks
    * :class:`SST`
 
 Choose an adequate class for your task, and it would be the simplest and best way to build a dataloader.
+Each class will explain how the dataloader is composed of.
 
 .. _customized_tasks_ref:
 
@@ -33,7 +48,7 @@ Customized Tasks
 
 If the predefined classes do not satisfy your need, you can construct an instance of :class:`LanguageProcessing`.
 
-To specify the data format of the customized tasks, :func:`LanguageProcessing.__init__` receives an argument named ``fields``.
+To specify the data format of the customized tasks, the initialization of :class:`LanguageProcessing` receives an argument named ``fields``.
 The full description of ``fields`` should be like the example below.
 
 >>> postField = SentenceDefault(...)
@@ -76,13 +91,13 @@ An valid input example:
       Terrible.
       0
 
-The data fields objects defines how dataloaders read the file, process the data, and provide the data to networks.
-See :ref:`data fields<field_ref>` for further details.
+The :class:`Field` instances define how dataloaders read the file, process the data, and provide the data to networks.
+See :ref:`fields<field_ref>` for further details.
 
 **Omit Set Names**
 
 If you have three sets named ``"train"``, ``"dev"``, ``"test"``, and the data format is the same, you can
-specify the ``fields`` argument in :func:`LanguageProcessing.__init__` by the following code:
+specify the ``fields`` argument in initialization of :class:`LanguageProcessing` by the following code:
 
 >>> fields = [("post", postField), ("resp", respField)]
 
@@ -97,7 +112,7 @@ equals to
 **Use Simple Create**
 
 You can use :func:`LanguageProcessing.simple_create` to initialize a dataloder, using the class name of :class:`Field`
-instead of instances. The method receives arguments for initializing the common :class:`Field`.
+instead of instances. The method receives arguments for initializing subclasses of :class:`Vocab` and :class:`Field`.
 
 >>> fields = {
 >>>    "train": [("post", "SentenceDefault"), ("resp", "SentenceDefault")],
@@ -105,9 +120,13 @@ instead of instances. The method receives arguments for initializing the common 
 >>>    "test": [("post", "SentenceDefault"), ("resp", "SentenceDefault")],
 >>> }
 >>> #or fields = [("post", "SentenceDefault"), ("resp", "SentenceDefault")]
->>> dataloader = LanguageProcessing.simple_create("/path/to/dataset", fields, max_sent_length=10, min_frequent_vocab_times=10)
+>>> dataloader = LanguageProcessing.simple_create("/path/to/dataset", fields, \
+>>>     max_sent_length=10, tokenizer="space", min_frequent_vocab_times=10)
 
-In this example, ``max_sent_length=10`` and ``min_frequent_vocab_times=10`` will be used to initialize the :class:`SentenceDefault` objects.
+In this example, it will first create an :class:`GeneralVocab` instances with ``min_frequent_vocab_times=10``.
+Then it initialize :class:`SentenceDefault` objects with ``max_sent_length=10, tokenizer="space"`` and the created :class:`Vocab`.
+
+.. _dataloader_context_ref:
 
 **Use Context Manager**
 
@@ -115,8 +134,8 @@ There is another way to use the class name of :class:`Field` instead of instance
 in the context of :class:`FieldContext` and :class:`VocabContext`.
 
 >>> fields = [("post", "SentenceDefault"), ("resp", "SentenceDefault")]
->>> with FieldContext(max_sent_length=10):
->>>     with VocabContext(min_frequent_vocab_times=10):
+>>> with FieldContext.set_parameters(max_sent_length=10, tokenizer="space"):
+>>>     with VocabContext.set_parameters(min_frequent_vocab_times=10):
 >>>         dataloader = LanguageProcessing("/path/to/dataset", fields)
 
 equals to
@@ -130,7 +149,7 @@ See :ref:`Context<context_ref>` for further details.
 .. _field_ref:
 
 Field
-----------------------------------
+############################################
 
 :class:`Field` indicates data fields, which defines how dataloaders read the file, process the data, and provide the data to networks.
 
@@ -144,6 +163,8 @@ Field
    * :class:`SessionGPT2`
 * :class:`DenseLabel`
 * :class:`SparseLabel`
+
+Note :class:`Field` never stores data, because the instance can be shared between different data fields in dataloader.
 
 Read the File
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -181,7 +202,7 @@ See :meth:`LanguageProcessing.set_default_field` for details.
 Provide the Data to Networks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Each subclass of :class:`Field` defines :meth:`Field.get_batch`, which is invoked by :meth:`LanguageProcessing.get_batch`.
+Each subclass of :class:`Field` defines :meth:`Field.get_batch`.
 This method defines the data format when training the networks.
 
 For example, if an instance of :class:`SentenceDefault` is named with ``"sent"``, it returns a dict when :meth:`SentenceDefault.get_batch` called:
@@ -204,16 +225,28 @@ Relatively, a dataloader with two :class:`SentenceDefault` fields named ``"post"
 
 This is the merge of two returned dicts by :meth:`SentenceDefault.get_batch`.
 
+.. _tokenizer_ref:
+
+Tokenizer
+############################################
+
+:class:`Tokenizer` defines the method to tokenize a sentence, which is used by :class:`Field`.
+
+``CoTK`` provides several tokenizers, including
+
+* :class:`SimpleTokenizer`: A simple tokenizer for general use in ``CoTK``, supporting ``space`` or ``nltk`` tokenization.
+* :class:`PretrainedTokenizer`: A pretrained Tokenizer from the ``transformers`` package. For example, tokenizer for ``GPT2``.
+
 .. _vocabulary_ref:
 
 Vocabulary
-----------------------------------
+############################################
 
-:class:`Vocab` defines the , which is used by :class:`Field` and :class:`LanguageProcessing`.
+:class:`Vocab` defines the vocabulary, which is used by :class:`Field`.
 
 ``CoTK`` provides several vocabularies, including
 
-* :class:`GeneralVocab`: A vocabulary for general use in ``CoTK``
+* :class:`GeneralVocab`: A vocabulary for general use in ``CoTK``.
 * :class:`PretrainedVocab`: A pretrained vocabulary from the ``transformers`` package. For example, vocabulary for ``GPT2``.
 
 Type of Tokens
@@ -253,7 +286,7 @@ There is also some other terms for vocabularies.
         * Special tokens are counted as valid vocabularies.
 
     Unknown tokens (``<unk>``)
-        * ``<unk>`` means "Out of Vocabularies", but we the meaning of ``<unk>`` may varies from situations.
+        * ``<unk>`` means "Out of Vocabularies", but the meaning of ``<unk>`` may varies from situations.
         * If it appears at a list named with ``allvocabs`` (eg: ``sent_allvocabs``),
           ``<unk>`` indicates a token out of all vocabularies.
         * If it appears at a list named without ``allvocabs`` (eg: ``sent``),
@@ -262,7 +295,7 @@ There is also some other terms for vocabularies.
 Why CoTK Uses Rare Words
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In traditional implementation, vocabulary only contains frequent vocabulary.
+In traditional implementations, vocabulary only contains frequent vocabulary.
 ``CoTK`` use frequent vocabulary and rare vocabulary for supporting fair comparisons across different configurations.
 
 For examples, we test two models under the same dataset, but with different vocabularies.
@@ -273,58 +306,227 @@ For examples, we test two models under the same dataset, but with different voca
 The fairness of comparisons can be gauranteed under the conditions:
 
 * :class:`.metric.PerplexityMetric`: ``F_A + R_A == F_B + R_B``.
-* :class:`.metric.BleuCorpusMetric`: ``F_A + R_A == F_B + R_B`` if tokenizer is ``None``; ``F_A + R_A == F_B + R_B`` if tokenizer is set.
+* :class:`.metric.BleuCorpusMetric`: ``F_A + R_A == F_B + R_B`` if tokenizer is ``None``; Always fair if tokenizer is set.
 
-See each metrics for when the fairness can be gauranteed. :ref:`Hash value of metrics<metric_hashvalue_ref>`
-can help user determine whether the comparisons is fair.
+See each metrics for when the fairness can be gauranteed.
+:ref:`Hash value<metric_hashvalue_ref>` can help user determine whether the comparisons is fair.
 
 .. _context_ref:
 
-How to Use Context
-----------------------------------
+Context
+############################################
 
+:class:`FieldContext` and :class:`VocabContext` are used to set
+the default arguments for subclasses of :class:`Field` and :class:`Vocab` respectively.
 
-How to Use Dataloader
-----------------------------------
+>>> vocab = GeneralVocab(...)
+>>> with FieldContext.set_parameters(vocab=vocab, tokenizer="space", min_frequent_vocab_times=10):
+>>>     field = SentenceDefault()
+
+equals to:
+
+>>> vocab = GeneralVocab(...)
+>>> field = SentenceDefault(vocab=vocab, tokenizer="space", min_frequent_vocab_times=10)
+
+The context can be stacked, and ``weak`` means whether overwrite the outter context.
+
+>>> vocab = GeneralVocab(...)
+>>> with FieldContext.set_parameters(vocab=vocab, tokenizer="space", min_frequent_vocab_times=10):
+>>>     with FieldContext.set_parameters(min_frequent_vocab_times=20):
+>>>         field1 = SentenceDefault()  # min_frequent_vocab_times=20
+>>> with FieldContext.set_parameters(vocab=vocab, tokenizer="space", min_frequent_vocab_times=10):
+>>>     with FieldContext.set_parameters(min_frequent_vocab_times=20, weak=True):
+>>>         field2 = SentenceDefault()  # min_frequent_vocab_times=10
+
+It usually works with the initialization of :class:`LanguageProcessing` without creating the instance of :class:`Field` or :class:`Vocab`.
+See the :ref:`examples<dataloader_context_ref>` here.
 
 .. _dataloader_hash_ref:
 
-Hash Code
-==================================
+Hash Value for Dataloader
+############################################
+
+It is usually difficult to track the differences among different configurations,
+CoTK provides hash codes to identify each part of dataloader including
+the input data, vocabularies and settings.
+
+For example, if two data loaders have the same general hash, their data, vocabularies
+and settings are guaranteed to be the same.
+
+:class:`LanguageProcessing` provides the following hash value:
+
+* :meth:`LanguageProcessing.get_raw_data_hash`. Tracking the raw input file before processed.
+* :meth:`LanguageProcessing.get_data_hash`. Tracking the data after processed.
+* :meth:`LanguageProcessing.get_vocab_hash`. Tracking the vocabulary before processed.
+* :meth:`LanguageProcessing.get_setting_hash`. Tracking the settings (arguments of the dataloader).
+* :meth:`LanguageProcessing.get_general_hash`. Tracking all above.
 
 
-TODO: fill the documentation
 
 
-
-
-
-
-
-
-
-Context
+Dataloader
 ------------------------------------
+.. autoclass:: Dataloader
 
-.. autoclass:: Context
+    .. automethod:: get_all_subclasses
+    .. automethod:: load_class
 
-    .. automethod:: get
-    .. automethod:: set
-    .. automethod:: __enter__
-    .. automethod:: __exit__
-    .. automethod:: close
+LanguageProcessing
+------------------------------------
+.. autoclass:: LanguageProcessing
 
-FieldContext
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: FieldContext
+.. automethod:: LanguageProcessing.simple_create
 
-    .. automethod:: set_parameters
+Tokenizer, Vocabulary, and Field
+#########################################
+.. automethod:: LanguageProcessing.get_default_tokenizer
+.. automethod:: LanguageProcessing.get_default_vocab
+.. automethod:: LanguageProcessing.get_default_field
+.. automethod:: LanguageProcessing.set_default_field
+.. automethod:: LanguageProcessing.get_field
 
-VocabContext
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: VocabContext
+Batched Data
+#########################################
 
-    .. automethod:: set_parameters
+  .. automethod:: LanguageProcessing.get_batch
+  .. automethod:: LanguageProcessing.restart
+  .. automethod:: LanguageProcessing.get_next_batch
+  .. automethod:: LanguageProcessing.get_batches
+  .. automethod:: LanguageProcessing.get_all_batch
+
+Sentences and Ids
+#########################################
+
+.. automethod:: LanguageProcessing.tokenize
+.. automethod:: LanguageProcessing.tokenize_sentences
+.. automethod:: LanguageProcessing.convert_tokens_to_ids
+.. automethod:: LanguageProcessing.convert_ids_to_tokens
+.. automethod:: LanguageProcessing.convert_ids_to_sentence
+.. automethod:: LanguageProcessing.convert_sentence_to_ids
+.. automethod:: LanguageProcessing.add_special_to_ids
+.. automethod:: LanguageProcessing.remove_special_in_ids
+.. automethod:: LanguageProcessing.process_sentences
+.. automethod:: LanguageProcessing.trim_in_ids
+
+Vocabulary
+#########################################
+
+.. autoattribute:: LanguageProcessing.frequent_vocab_size
+.. autoattribute:: LanguageProcessing.all_vocab_size
+.. autoattribute:: LanguageProcessing.frequent_vocab_list
+.. autoattribute:: LanguageProcessing.all_vocab_list
+.. automethod:: LanguageProcessing.get_special_tokens_mapping
+.. automethod:: LanguageProcessing.get_special_tokens_id
+.. autoattribute:: LanguageProcessing.pad_id
+.. autoattribute:: LanguageProcessing.unk_id
+.. autoattribute:: LanguageProcessing.go_id
+.. autoattribute:: LanguageProcessing.eos_id
+
+Hash
+#########################################
+
+.. automethod:: LanguageProcessing.get_general_hash
+.. automethod:: LanguageProcessing.get_raw_data_hash
+.. automethod:: LanguageProcessing.get_data_hash
+.. automethod:: LanguageProcessing.get_vocab_hash
+.. automethod:: LanguageProcessing.get_setting_hash
+
+LanguageGeneration
+---------------------------------------
+.. autoclass:: LanguageGeneration
+
+    .. automethod:: get_batch
+    .. automethod:: get_teacher_forcing_metric
+    .. automethod:: get_inference_metric
+
+MSCOCO
+#########################################
+.. autoclass:: MSCOCO
+
+SingleTurnDialog
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autoclass:: SingleTurnDialog
+
+    .. automethod:: get_batch
+    .. automethod:: get_teacher_forcing_metric
+    .. automethod:: get_inference_metric
+
+OpenSubtitles
+#########################################
+.. autoclass:: OpenSubtitles
+
+
+Field
+-------------------------------------
+
+.. autoclass:: Field
+
+    .. automethod:: get_all_subclasses
+    .. automethod:: load_class
+    .. automethod:: get_vocab
+    .. automethod:: get_tokenizer
+    .. automethod:: get_batch
+    .. autoattribute:: DEFAULT_VOCAB_FROM
+
+Sentence
+#########################################
+.. autoclass:: Sentence
+
+    .. automethod:: tokenize
+    .. automethod:: tokenize_sentences
+    .. automethod:: convert_tokens_to_ids
+    .. automethod:: convert_ids_to_tokens
+    .. automethod:: convert_ids_to_sentence
+    .. automethod:: convert_sentence_to_ids
+    .. automethod:: add_special_to_ids
+    .. automethod:: remove_special_in_ids
+    .. automethod:: process_sentences
+    .. automethod:: trim_in_ids
+
+    .. autoattribute:: frequent_vocab_size
+    .. autoattribute:: all_vocab_size
+    .. autoattribute:: frequent_vocab_list
+    .. autoattribute:: all_vocab_list
+    .. automethod:: get_special_tokens_mapping
+    .. automethod:: get_special_tokens_id
+    .. autoattribute:: pad_id
+    .. autoattribute:: unk_id
+    .. autoattribute:: go_id
+    .. autoattribute:: eos_id
+
+SentenceDefault
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autoclass:: SentenceDefault
+
+    .. automethod:: get_batch
+
+SentenceGPT2
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autoclass:: SentenceGPT2
+
+    .. automethod:: get_batch
+
+Session
+#########################################
+.. autoclass:: Session
+
+SessionDefault
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autoclass:: SessionDefault
+
+    .. automethod:: get_batch
+
+DenseLabel
+#########################################
+.. autoclass:: DenseLabel
+
+    .. automethod:: get_batch
+
+SparseLabel
+#########################################
+.. autoclass:: SparseLabel
+
+    .. automethod:: get_batch
 
 Tokenizer
 -------------------------------------
@@ -339,12 +541,12 @@ Tokenizer
     .. automethod:: get_setting_hash
 
 SimpleTokenizer
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#########################################
 .. autoclass:: SimpleTokenizer
 
 
 Pretrainedtokenizer
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#########################################
 .. autoclass:: PretrainedTokenizer
 
     .. automethod:: get_tokenizer_class
@@ -376,7 +578,7 @@ Vocab
     .. automethod:: get_vocab_hash
 
 GeneralVocab
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#########################################
 .. autoclass:: GeneralVocab
 
     .. automethod:: from_predefined
@@ -387,171 +589,31 @@ GeneralVocab
     .. autoattribute:: all_vocab_list
 
 PretrainedVocab
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+#########################################
 .. autoclass:: PretrainedVocab
 
     .. autoattribute:: frequent_vocab_list
     .. autoattribute:: all_vocab_list
 
-Field
--------------------------------------
-
-.. autoclass:: Field
-
-    .. automethod:: get_all_subclasses
-    .. automethod:: load_class
-    .. automethod:: get_vocab
-    .. automethod:: get_tokenizer
-    .. automethod:: get_batch
-    .. autoattribute:: DEFAULT_VOCAB_FROM
-
-Sentence
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: Sentence
-
-    .. automethod:: tokenize
-    .. automethod:: tokenize_sentences
-    .. automethod:: convert_tokens_to_ids
-    .. automethod:: convert_ids_to_tokens
-    .. automethod:: convert_ids_to_sentence
-    .. automethod:: convert_sentence_to_ids
-    .. automethod:: add_special_to_ids
-    .. automethod:: remove_special_in_ids
-    .. automethod:: process_sentences
-    .. automethod:: trim_in_ids
-
-    .. autoattribute:: frequent_vocab_size
-    .. autoattribute:: all_vocab_size
-    .. autoattribute:: frequent_vocab_list
-    .. autoattribute:: all_vocab_list
-    .. automethod:: get_special_tokens_mapping
-    .. automethod:: get_special_tokens_id
-    .. autoattribute:: pad_id
-    .. autoattribute:: unk_id
-    .. autoattribute:: go_id
-    .. autoattribute:: eos_id
-
-SentenceDefault
-#####################################
-.. autoclass:: SentenceDefault
-
-    .. automethod:: get_batch
-
-SentenceGPT2
-#####################################
-.. autoclass:: SentenceGPT2
-
-    .. automethod:: get_batch
-
-Session
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: Session
-
-SessionDefault
-#####################################
-.. autoclass:: SessionDefault
-
-    .. automethod:: get_batch
-
-DenseLabel
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: DenseLabel
-
-    .. automethod:: get_batch
-
-SparseLabel
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: SparseLabel
-
-    .. automethod:: get_batch
-
-Dataloader
+Context
 ------------------------------------
-.. autoclass:: Dataloader
 
-    .. automethod:: get_all_subclasses
-    .. automethod:: load_class
+.. autoclass:: Context
 
-LanguageProcessing
-------------------------------------
-.. autoclass:: LanguageProcessing
+    .. automethod:: get
+    .. automethod:: set
+    .. automethod:: __enter__
+    .. automethod:: __exit__
+    .. automethod:: close
 
-.. automethod:: LanguageProcessing.simple_create
+FieldContext
+#########################################
+.. autoclass:: FieldContext
 
-Tokenizer, Vocabulary, and Field
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. automethod:: LanguageProcessing.get_default_tokenizer
-.. automethod:: LanguageProcessing.get_default_vocab
-.. automethod:: LanguageProcessing.get_default_field
-.. automethod:: LanguageProcessing.set_default_field
-.. automethod:: LanguageProcessing.get_field
+    .. automethod:: set_parameters
 
-Batched Data
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+VocabContext
+#########################################
+.. autoclass:: VocabContext
 
-  .. automethod:: LanguageProcessing.get_batch
-  .. automethod:: LanguageProcessing.restart
-  .. automethod:: LanguageProcessing.get_next_batch
-  .. automethod:: LanguageProcessing.get_batches
-  .. automethod:: LanguageProcessing.get_all_batch
-
-Sentences and Ids
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. automethod:: LanguageProcessing.tokenize
-.. automethod:: LanguageProcessing.tokenize_sentences
-.. automethod:: LanguageProcessing.convert_tokens_to_ids
-.. automethod:: LanguageProcessing.convert_ids_to_tokens
-.. automethod:: LanguageProcessing.convert_ids_to_sentence
-.. automethod:: LanguageProcessing.convert_sentence_to_ids
-.. automethod:: LanguageProcessing.add_special_to_ids
-.. automethod:: LanguageProcessing.remove_special_in_ids
-.. automethod:: LanguageProcessing.process_sentences
-.. automethod:: LanguageProcessing.trim_in_ids
-
-Vocabulary
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. autoattribute:: LanguageProcessing.frequent_vocab_size
-.. autoattribute:: LanguageProcessing.all_vocab_size
-.. autoattribute:: LanguageProcessing.frequent_vocab_list
-.. autoattribute:: LanguageProcessing.all_vocab_list
-.. automethod:: LanguageProcessing.get_special_tokens_mapping
-.. automethod:: LanguageProcessing.get_special_tokens_id
-.. autoattribute:: LanguageProcessing.pad_id
-.. autoattribute:: LanguageProcessing.unk_id
-.. autoattribute:: LanguageProcessing.go_id
-.. autoattribute:: LanguageProcessing.eos_id
-
-Hash
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. automethod:: LanguageProcessing.get_general_hash
-.. automethod:: LanguageProcessing.get_raw_data_hash
-.. automethod:: LanguageProcessing.get_data_hash
-.. automethod:: LanguageProcessing.get_vocab_hash
-.. automethod:: LanguageProcessing.get_setting_hash
-
-LanguageGeneration
----------------------------------------
-.. autoclass:: LanguageGeneration
-
-    .. automethod:: get_batch
-    .. automethod:: get_teacher_forcing_metric
-    .. automethod:: get_inference_metric
-
-MSCOCO
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: MSCOCO
-
-SingleTurnDialog
----------------------------------------
-.. autoclass:: SingleTurnDialog
-
-    .. automethod:: get_batch
-    .. automethod:: get_teacher_forcing_metric
-    .. automethod:: get_inference_metric
-
-OpenSubtitles
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. autoclass:: OpenSubtitles
+    .. automethod:: set_parameters
