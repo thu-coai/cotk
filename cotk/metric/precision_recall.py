@@ -178,7 +178,7 @@ class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
 		self.ngram = ngram
 		self.weights = [1 / ngram] * ngram
 		self.res_prefix = 'BLEU-{}'.format(ngram)
-		self._hash_relevant_data([ngram, generated_num_per_context])
+		self._hash_ordered_data([ngram, generated_num_per_context])
 
 	def _replace_unk(self, _input, _target=-1):
 		'''Auxiliary function for replacing the unknown words:
@@ -274,7 +274,7 @@ class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
 		self.word2vec = word2vec
 		self.mode = mode
 		self.res_prefix = '{}-bow'.format(mode)
-		self._hash_relevant_data([mode, generated_num_per_context] + \
+		self._hash_ordered_data([mode, generated_num_per_context] + \
 				[(word, list(emb)) for word, emb in self.word2vec.items()])
 
 	def _score(self, gen: List[int], reference: List[int]) -> float:

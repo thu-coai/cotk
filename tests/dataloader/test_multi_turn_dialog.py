@@ -10,6 +10,7 @@ from cotk.metric import MetricBase
 from cotk.wordvector import Glove
 from test_dataloader import BaseTestLanguageProcessing
 from version_test_base import base_test_version
+from test_field import CheckGetBatch
 
 
 def setup_module():
@@ -32,32 +33,6 @@ class TestMultiTurnDialog(BaseTestLanguageProcessing):
 		assert dl.all_vocab_size > 4
 		assert dl.all_vocab_size >= dl.frequent_vocab_size
 
-	def _test_get_batch_of_session_field(self, batch_data: dict, field_name: str, indexes: list):
-		"""Help function for testing :meth:`Dataloader.get_batch.` The dataloader must have a session field.
-
-		Args:
-			batch_data: return value of get_batch.
-			field_name: argument of Session.get_batch
-			indexes: argument of Session.get_batch
-		"""
-		assert isinstance(batch_data.get(field_name, None), np.ndarray)
-		assert len(batch_data[field_name].shape) == 3 and batch_data[field_name].shape[0] == len(indexes)
-		assert isinstance(batch_data.get(field_name + '_turn_length'), np.ndarray)
-		assert len(batch_data[field_name + '_turn_length'].shape) == 1 and \
-			   batch_data[field_name + '_turn_length'].shape[0] == len(indexes)
-		assert isinstance(batch_data.get(field_name + '_sent_length', None), list)
-		assert len(batch_data[field_name + '_sent_length']) == len(indexes) and isinstance(
-			batch_data[field_name + '_sent_length'][0], list) and not isinstance(batch_data[field_name+'_sent_length'][0][0], list)
-		assert isinstance(batch_data.get(field_name + '_allvocabs', None), np.ndarray)
-		assert len(batch_data[field_name + '_allvocabs'].shape) == 3 and batch_data[field_name + '_allvocabs'].shape[
-			0] == len(indexes)
-		assert isinstance(batch_data.get(field_name + '_str', None), list)
-		assert isinstance(batch_data[field_name + '_str'][0], list)
-		assert isinstance(batch_data[field_name + '_str'][0][0], str)
-
-		shape = batch_data[field_name].shape
-		assert max(batch_data[field_name + '_turn_length']) == shape[1]
-		assert max(chain.from_iterable(batch_data[field_name + '_sent_length'])) == shape[2]
 
 	def base_test_get_batch(self, dl):
 		super().base_test_get_batch(dl)
@@ -69,7 +44,7 @@ class TestMultiTurnDialog(BaseTestLanguageProcessing):
 				batch_data = dl.get_batch(set_name, indexes)
 				for field_name in dl.fields[set_name]:
 					if isinstance(dl.fields[set_name][field_name], Session):
-						self._test_get_batch_of_session_field(batch_data, field_name, indexes)
+						CheckGetBatch.check_result_of_get_batch(dl.fields[set_name][field_name], field_name, dl.data[set_name][field_name], indexes, batch_data)
 
 	def base_test_multi_turn_convert(self, dl: MultiTurnDialog):
 		sent_id = [[0, 1, 2], [2, 1, 1]]
@@ -211,8 +186,6 @@ class TestSwitchboardCorpus(TestMultiTurnDialog):
 	def test_teacher_inference_metric(self, load_switchboardcorpus):
 		super().base_test_teacher_inference_metric(load_switchboardcorpus())
 
-	# TODO: fix bug
-	@pytest.mark.skip()
 	@pytest.mark.dependency()
 	def test_teacher_precision_recall_metric(self, load_switchboardcorpus):
 		dl = load_switchboardcorpus()

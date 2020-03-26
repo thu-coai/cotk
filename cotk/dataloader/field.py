@@ -966,7 +966,7 @@ class SparseLabel(Field):
 			... 	except StopIteration:
 			... 		break
 			>>> field_content.process_before_vocab()
-			>>> field.vocab.build_vocab()
+			>>> field.get_vocab().build_vocab()
 			>>> data = field_content.get_data()
 			>>> data
 			{'id': [0, 2, 1, 0], 'str': ['Java', 'Python', 'Cpp', 'Java']}
@@ -986,7 +986,7 @@ class SparseLabel(Field):
 		}
 
 	def _get_setting_hash(self, vocabs) -> str:
-		return hashlib.sha256(dumps([self.__class__.__name__]))
+		return hashlib.sha256(dumps([self.__class__.__name__])).hexdigest()
 
 	def _create(self, set_name: str) -> "_FieldContent":
 		return _SparseLabelContent(self)
