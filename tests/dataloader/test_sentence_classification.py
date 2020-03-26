@@ -5,6 +5,7 @@ from cotk.metric import MetricBase
 
 from test_dataloader import BaseTestLanguageProcessing
 from version_test_base import base_test_version
+from test_field import CheckGetBatch
 
 
 def setup_module():
@@ -72,7 +73,7 @@ class TestSentenceClassification(BaseTestLanguageProcessing):
 				batch_data = dl.get_batch(set_name, indexes)
 				for field_name in dl.fields[set_name]:
 					if isinstance(dl.fields[set_name][field_name], Sentence):
-						self._test_get_batch_of_sentence_field(batch_data, field_name, indexes)
+						CheckGetBatch.check_result_of_get_batch(dl.fields[set_name][field_name], field_name, dl.data[set_name][field_name], indexes, batch_data)
 
 
 @pytest.fixture
