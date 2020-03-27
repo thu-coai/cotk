@@ -90,9 +90,9 @@ class _PrecisionRecallMetric(MetricBase):
 		if not isinstance(multiple_gen, (np.ndarray, list)):
 			raise TypeError("Unknown type for multiple_gen")
 
-		references = [[self.dataloader.trim(cand[1:]) for cand in inst] \
+		references = [[self.dataloader.trim_in_ids(cand[1:]) for cand in inst] \
 					  for inst in candidate_allvocabs]
-		gens = [[self.dataloader.trim(cand) for cand in inst] \
+		gens = [[self.dataloader.trim_in_ids(cand) for cand in inst] \
 					  for inst in multiple_gen]
 
 		if len(references) != len(gens):
@@ -104,7 +104,7 @@ class _PrecisionRecallMetric(MetricBase):
 					"Number of geneated sentences per context does not equal to\
 					the specified `generated_num_per_context`")
 
-		self._hash_relevant_data(list(chain(*references)))
+		self._hash_unordered_list(list(chain(*references)))
 		for reference, gen in zip(references, gens):
 			# pylint: disable=no-member
 			matrix = np.zeros((len(reference), len(gen)), dtype=np.float32)
@@ -164,7 +164,7 @@ class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
 	'''
 
 	_name = 'BleuPrecisionRecallMetric'
-	_version = 1
+	_version = 2
 
 	@hooks.hook_metric
 	def __init__(self, dataloader: "LanguageProcessing", \
@@ -252,7 +252,7 @@ class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
 	'''
 
 	_name = 'EmbSimilarityPrecisionRecallMetric'
-	_version = 1
+	_version = 2
 
 	@hooks.hook_metric
 	def __init__(self, dataloader: "LanguageProcessing", \

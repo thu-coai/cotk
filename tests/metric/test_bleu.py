@@ -18,7 +18,7 @@ def setup_module():
 	random.seed(0)
 	np.random.seed(0)
 
-pytestmark = pytest.mark.skip("all tests still WIP")
+#pytestmark = pytest.mark.skip("all tests still WIP")
 
 @pytest.mark.skip()
 def test_bleu_bug():
@@ -44,8 +44,8 @@ class TestBleuCorpusMetric:
 		refs = []
 		gens = []
 		for gen_sen, resp_sen in zip(input[gen_key], input[reference_key]):
-			gen_sen_processed = dataloader.trim(gen_sen)
-			resp_sen_processed = dataloader.trim(resp_sen[1:])
+			gen_sen_processed = dataloader.trim_in_ids(gen_sen)
+			resp_sen_processed = dataloader.trim_in_ids(resp_sen[1:])
 			refs.append([resp_sen_processed])
 			gens.append(gen_sen_processed)
 		gens = replace_unk(gens)
@@ -142,7 +142,7 @@ class TestSelfBleuCorpusMetric:
 	def get_self_bleu(self, dataloader, input, gen_key):
 		gens = []
 		for gen_sen in input[gen_key]:
-			gen_sen_processed = dataloader.trim(gen_sen)
+			gen_sen_processed = dataloader.trim_in_ids(gen_sen)
 			gens.append(gen_sen_processed)
 		refs = copy.deepcopy(gens)
 		_refs = replace_unk(refs)
@@ -220,7 +220,7 @@ class TestSelfBleuCorpusMetric:
 				if argument == 'default':
 					bcm = SelfBleuCorpusMetric(dataloader, sample=4000)
 				else:
-					bcm = SelfBleuCorpusMetric(dataloader, gen_key, sample=4000)
+					bcm = SelfBleuCorpusMetric(dataloader, gen_key = gen_key, sample=4000)
 				assert bcm.sample == 4000
 
 				rng_state_st = random.getstate()
@@ -266,8 +266,8 @@ class TestFwBwBleuCorpusMetric:
 		refs = []
 		gens = []
 		for gen_sen, resp_sen in zip(input[gen_key], input[reference_key]):
-			gen_sen_processed = dataloader.trim(gen_sen)
-			resp_sen_processed = dataloader.trim(resp_sen[1:])
+			gen_sen_processed = dataloader.trim_in_ids(gen_sen)
+			resp_sen_processed = dataloader.trim_in_ids(resp_sen[1:])
 			refs.append(resp_sen_processed)
 			gens.append(gen_sen_processed)
 		gens = replace_unk(gens)
@@ -281,7 +281,7 @@ class TestFwBwBleuCorpusMetric:
 		bw_bleu = (1.0 * sum(bleu_irl_bw) / len(bleu_irl_bw))
 		return 2.0 * bw_bleu * fw_bleu / (fw_bleu + bw_bleu)
 
-	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
+	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True]])
 	def test_hashvalue(self, to_list, pad):
 		dataloader = FakeDataLoader()
 		reference_key, gen_key = ('resp_allvocabs', 'gen')
@@ -349,14 +349,14 @@ class TestFwBwBleuCorpusMetric:
 				reference_key, gen_key = ('resp_allvocabs', 'gen') \
 					if argument == 'default' else ('rk', 'gk')
 				data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
-										   to_list=(type == 'list'), pad=(shape == 'pad'), \
+										   to_list=True, pad=(shape == 'pad'), \
 										   gen_len=gen_len, ref_len=ref_len, batch=sample)
 				# dataloader.data["test"][reference_key] = data[reference_key]
 				_data = copy.deepcopy(data)
 				if argument == 'default':
 					bcm = FwBwBleuCorpusMetric(dataloader, data[reference_key], sample=sample)
 				else:
-					bcm = FwBwBleuCorpusMetric(dataloader, data[reference_key], gen_key, sample=sample)
+					bcm = FwBwBleuCorpusMetric(dataloader, data[reference_key], gen_key = gen_key, sample=sample)
 
 				rng_state_st = random.getstate()
 				assert bcm.sample == sample
@@ -422,8 +422,8 @@ class TestMultiTurnBleuCorpusMetric:
 		gens = []
 		for i in range(len(input[reference_key])):
 			for resp_sen, gen_sen in zip(input[reference_key][i], input[gen_key][i]):
-				gen_sen_processed = dataloader.trim(gen_sen)
-				resp_sen_processed = dataloader.trim(resp_sen)
+				gen_sen_processed = dataloader.trim_in_ids(gen_sen)
+				resp_sen_processed = dataloader.trim_in_ids(resp_sen)
 				gens.append(gen_sen_processed)
 				refs.append([resp_sen_processed[1:]])
 		gens = replace_unk(gens)
@@ -502,7 +502,7 @@ class TestMultiTurnBleuCorpusMetric:
 		version_test(MultiTurnBleuCorpusMetric, dataloader=FakeMultiDataloader())
 
 	@pytest.mark.skip()
-	def test_bleu(self):
+	def test_bleu_bug(self):
 		dataloader = FakeMultiDataloader()
 		ref = [[[2, 5, 3]]]
 		gen = [[[5]]]
