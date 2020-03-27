@@ -45,7 +45,7 @@ class SingleTurnDialogRecorder(MetricBase):
 	'''
 
 	_name = 'SingleTurnDialogRecorder'
-	_version = 1
+	_version = 2
 	def __init__(self, dataloader: "LanguageProcessing", post_allvocabs_key: str = "post_allvocabs", \
 			resp_allvocabs_key: str = "resp_allvocabs", gen_key: str = "gen"):
 		super().__init__(self._name, self._version)
@@ -155,7 +155,7 @@ class MultiTurnDialogRecorder(MetricBase):
 
 	'''
 	_name = 'MultiTurnDialogRecorder'
-	_version = 1
+	_version = 2
 	def __init__(self, dataloader: "LanguageProcessing",
 			multi_turn_reference_allvocabs_key: str = "multi_turn_ref_allvocabs", \
 			multi_turn_gen_key: str = "multi_turn_gen", \
@@ -208,10 +208,9 @@ class MultiTurnDialogRecorder(MetricBase):
 
 		for i, _ in enumerate(reference_allvocabs):
 			self.reference_list.append(self.dataloader.convert_multi_turn_ids_to_tokens( \
-				np.array(reference_allvocabs[i]), turn_length=turn_length[i], ignore_first_token=True))
+				reference_allvocabs[i], remove_special=True))
 			self.gen_list.append(self.dataloader.convert_multi_turn_ids_to_tokens( \
-				np.array(gen[i]), turn_length=turn_length[i]))
-
+				gen[i], remove_special=False))
 			if len(self.reference_list[-1]) != len(self.gen_list[-1]):
 				raise ValueError("Reference turn num %d != gen turn num %d." % \
 						(len(self.reference_list[-1]), len(self.gen_list[-1])))
@@ -251,7 +250,7 @@ class LanguageGenerationRecorder(MetricBase):
 		{'gen': [['<go>', 'I', 'like', 'python'], ['<go>', 'I', 'use', 'python']]}
 	'''
 	_name = 'LanguageGenerationRecorder'
-	_version = 1
+	_version = 2
 	def __init__(self, dataloader: "LanguageProcessing", gen_key: str = "gen"):
 		super().__init__(self._name, self._version)
 		self.dataloader = dataloader

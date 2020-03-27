@@ -3,47 +3,86 @@ import itertools
 import copy
 import json
 import re
+import logging
+
+from collections import OrderedDict
+from typing import Optional, Dict
 
 import numpy as np
 
 from cotk.dataloader import LanguageProcessing, MultiTurnDialog
+from cotk.dataloader import Vocab, GeneralVocab, Tokenizer, SimpleTokenizer
+from cotk.dataloader import Field, SentenceDefault, Sentence, Session, SessionDefault
+from cotk.dataloader.field import _FieldContent
+from cotk.dataloader import FieldContext, VocabContext
+from cotk.file_utils import get_resource_file_path
 
 class FakeDataLoader(LanguageProcessing):
 	def __init__(self):
-		self.all_vocab_list = ['<pad>', '<unk>', '<go>', '<eos>', \
-							   'what', 'how', 'here', 'do', 'as', 'can', 'to']
-		self.pad_id = 0
-		self.unk_id = 1
-		self.go_id = 2
-		self.eos_id = 3
-		self.end_token = self.eos_id
-		self.valid_vocab_len = 8
-		self.word2id = {x: i for i, x in enumerate(self.all_vocab_list)}
-		self.key_name = ["train", "dev", "test"]
-		self.data = {}
-		for key in self.key_name:
-			self.data[key] = {}
 
+		self.file_id = './tests/dataloader/dummy_languageprocessing'
+		self.file_path = get_resource_file_path(self.file_id)
+
+		all_vocab_list = ['<pad>', '<unk>', '<go>', '<eos>', \
+						     'what', 'how', 'here', 'do', 'as', 'can', 'to']
+		set_names = ["train", "dev", "test"]
+		vocab = GeneralVocab.from_predefined(all_vocab_list, 8)
+		toker = SimpleTokenizer('space', ['<pad>', '<unk>', '<go>', '<eos>'])
+		sent = SentenceDefault(toker, vocab, convert_to_lower_letter=True)
+		fields = {set_name: {'sent': sent} for set_name in set_names}
+
+		with FieldContext.set_parameters(vocab=GeneralVocab.from_predefined(all_vocab_list, 8), weak=True) as field_context:
+
+			fieldcontents: Dict[str, OrderedDictType[str, _FieldContent]] = {}
+			self.fields: Dict[str, OrderedDictType[str, Field]] = {}
+			if isinstance(fields, OrderedDict):
+				fields = {set_name: fields for set_name in ["train", "dev", "test"]}
+			if isinstance(fields, dict):
+				for set_name, fields_in_one_set in fields.items():
+					one_fields, one_fieldcontents = self._fill_field_and_create_content(set_name, fields_in_one_set)
+					self.fields[set_name] = one_fields
+					fieldcontents[set_name] = one_fieldcontents
+			else:
+				raise TypeError("Unknown type for fields")
+
+			self._load_data(fieldcontents)
+
+			self.vocabs = self._collect_vocabs_from_fields(self.fields)
+			# self.default_vocab_id = 0 if len(self.vocabs) == 1 else None
+			self.tokenizers = self._collect_tokenizers_from_fields(self.fields)
+			# self.default_tokenizer_id = 0 if len(self.tokenizers) == 1 else None
+			self.default_field_set_name: Optional[str] = None
+			self.default_field_name: Optional[str] = None
+			self._build_vocabs()
+
+			self._setting_hash = self._create_setting_hash()
+			self._vocab_hash = self._create_vocab_hash()
+			self.data = self._get_data(fieldcontents)
+			self._raw_data_hash, self._data_hash = self._create_data_hash(fieldcontents)
+			self.index, self.batch_id, self.batch_size = self._init_batch(fieldcontents)
+
+		self.set_default_field("train", "sent")
+
+	# Generate a sentence
 	def get_sen(self, max_len, len, gen=False, pad=True, all_vocab=False):
 		sen = []
 		for i in range(len):
 			if all_vocab:
-				vocab = random.randrange(self.word2id['<eos>'], self.all_vocab_size)
+				vocab = random.randrange(self.eos_id, self.all_vocab_size)
 			else:
-				vocab = random.randrange(self.word2id['<eos>'], self.vocab_size)
+				vocab = random.randrange(self.eos_id, self.frequent_vocab_size)
 			if vocab == self.eos_id:
 				vocab = self.unk_id
 			# consider unk
-			if vocab == self.word2id['<eos>']:
-				vocab = self.unk_id
 			sen.append(vocab)
 		if not gen:
-			sen[0] = self.word2id['<go>']
-		sen[len - 1] = self.word2id['<eos>']
+			sen[0] = self.go_id
+		sen[len - 1] = self.eos_id
 		if pad:
 			for i in range(max_len - len):
-				sen.append(self.word2id['<pad>'])
+				sen.append(self.pad_id)
 		return sen
+
 
 	def get_data(self, reference_key=None, reference_len_key=None, gen_prob_key=None, gen_key=None, \
 				 post_key=None, \
@@ -90,7 +129,7 @@ class FakeDataLoader(LanguageProcessing):
 				if gen_prob_vocab == 'all_vocab':
 					vocab_nowsize = self.all_vocab_size
 				else:
-					vocab_nowsize = self.vocab_size
+					vocab_nowsize = self.frequent_vocab_size
 
 				for k in range(vocab_nowsize):
 					vocab_prob.append(random.random())
@@ -111,16 +150,51 @@ class FakeDataLoader(LanguageProcessing):
 
 class FakeMultiDataloader(MultiTurnDialog):
 	def __init__(self):
-		self.all_vocab_list = ['<pad>', '<unk>', '<go>', '<eos>', \
-							   'what', 'how', 'here', 'do', 'as', 'can', 'to']
-		self.pad_id = 0
-		self.unk_id = 1
-		self.go_id = 2
-		self.eos_id = 3
-		self.end_token = self.eos_id
-		self.valid_vocab_len = 8
-		self.word2id = {x: i for i, x in enumerate(self.all_vocab_list)}
-		self.key_name = ["train", "dev", "test"]
+
+		self.file_id = "./tests/dataloader/dummy_ubuntucorpus#Ubuntu"
+		self.file_path = get_resource_file_path(self.file_id)
+
+		all_vocab_list = ['<pad>', '<unk>', '<go>', '<eos>', \
+						   'what', 'how', 'here', 'do', 'as', 'can', 'to']
+		set_names = ["train", "dev", "test"]
+		vocab = GeneralVocab.from_predefined(all_vocab_list, 8)
+		toker = SimpleTokenizer('space', ['<pad>', '<unk>', '<go>', '<eos>'])
+		sent = SessionDefault(toker, vocab, convert_to_lower_letter=True)
+		fields = {set_name: {'session': sent} for set_name in set_names}
+
+		with FieldContext.set_parameters(vocab=GeneralVocab.from_predefined(all_vocab_list, 8),
+										 weak=True) as field_context:
+
+			fieldcontents: Dict[str, OrderedDictType[str, _FieldContent]] = {}
+			self.fields: Dict[str, OrderedDictType[str, Field]] = {}
+			if isinstance(fields, OrderedDict):
+				fields = {set_name: fields for set_name in ["train", "dev", "test"]}
+			if isinstance(fields, dict):
+				for set_name, fields_in_one_set in fields.items():
+					one_fields, one_fieldcontents = self._fill_field_and_create_content(set_name, fields_in_one_set)
+					self.fields[set_name] = one_fields
+					fieldcontents[set_name] = one_fieldcontents
+			else:
+				raise TypeError("Unknown type for fields")
+
+			self._load_data(fieldcontents)
+
+			self.vocabs = self._collect_vocabs_from_fields(self.fields)
+			# self.default_vocab_id = 0 if len(self.vocabs) == 1 else None
+			self.tokenizers = self._collect_tokenizers_from_fields(self.fields)
+			# self.default_tokenizer_id = 0 if len(self.tokenizers) == 1 else None
+			self.default_field_set_name: Optional[str] = None
+			self.default_field_name: Optional[str] = None
+			self._build_vocabs()
+
+			self._setting_hash = self._create_setting_hash()
+			self._vocab_hash = self._create_vocab_hash()
+			self.data = self._get_data(fieldcontents)
+			self._raw_data_hash, self._data_hash = self._create_data_hash(fieldcontents)
+			self.index, self.batch_id, self.batch_size = self._init_batch(fieldcontents)
+
+		self.set_default_field("train", "session")
+
 
 	def get_sen(self, max_len, len, gen=False, pad=True, all_vocab=False):
 		return FakeDataLoader.get_sen(self, max_len, len, gen, pad, all_vocab)
@@ -179,7 +253,7 @@ class FakeMultiDataloader(MultiTurnDialog):
 					if gen_prob_vocab == 'all_vocab':
 						vocab_nowsize = self.all_vocab_size
 					else:
-						vocab_nowsize = self.vocab_size
+						vocab_nowsize = self.frequent_vocab_size
 
 					for l in range(vocab_nowsize):
 						vocab_prob.append(random.random())
@@ -224,7 +298,8 @@ test_gen_prob_vocab = ['valid_vocab', 'all_vocab']
 
 test_resp_len = ['>=2', '<2']
 test_include_invalid = [False, True]
-test_ngram = [1, 2, 3, 4, 5, 6]
+#test_ngram = [1, 2, 3, 4, 5, 6]
+test_ngram = [1, 2, 3, 4]
 
 test_emb_mode = ['avg', 'extrema', 'sum']
 test_emb_type = ['dict', 'list']
@@ -372,15 +447,32 @@ def version_test(metric_class, dataloader=None):
 	name = metric_class._name
 	version = metric_class._version
 	filename = './tests/metric/version_test_data/{}_v{}.jsonl'.format(name, version)
+	if isinstance(dataloader, FakeMultiDataloader):
+		tmp_file_id = "./tests/dataloader/dummy_ubuntucorpus#Ubuntu"
+	else:
+		tmp_file_id = './tests/dataloader/dummy_languageprocessing'
 	with open(filename, "r") as file:
 		for line in file:
 			data = json.loads(line)
 			if dataloader:
-				dataloader.all_vocab_list = data['init']['dataloader']['all_vocab_list']
-				dataloader.valid_vocab_len = data['init']['dataloader']['valid_vocab_len']
-				dataloader.word2id = dict(zip(range(len(data['init']['dataloader']['all_vocab_list'])), \
-											  data['init']['dataloader']['all_vocab_list']))
-				data['init']['dataloader'] = dataloader
+				tmp_set_names = ["train", "dev", "test"]
+				tmp_vocab = GeneralVocab.from_predefined(data['init']['dataloader']['all_vocab_list'], \
+														 	data['init']['dataloader']['valid_vocab_len'])
+				tmp_toker = SimpleTokenizer('space', ['<pad>', '<unk>', '<go>', '<eos>'])
+				if isinstance(dataloader, FakeMultiDataloader):
+					tmp_sent = SessionDefault(tmp_toker, tmp_vocab, convert_to_lower_letter=True)
+					tmp_fields = {set_name: {'session': tmp_sent} for set_name in tmp_set_names}
+				else:
+					tmp_sent = SentenceDefault(tmp_toker, tmp_vocab, convert_to_lower_letter=True)
+					tmp_fields = {set_name: {'sent': tmp_sent} for set_name in tmp_set_names}
+
+				tmp_dataloader = dataloader.simple_create(tmp_file_id, tmp_fields)
+				if isinstance(dataloader, FakeMultiDataloader):
+					tmp_dataloader.set_default_field("train", "session")
+				else:
+					tmp_dataloader.set_default_field("train", "sent")
+				data['init']['dataloader'] = tmp_dataloader
+
 			metric = metric_class(**data['init'])
 			for batch in data['forward']:
 				metric.forward(**batch)
@@ -390,5 +482,7 @@ def version_test(metric_class, dataloader=None):
 					res[key] = float(val)
 				elif isinstance(val, int) or re.match(r"<class 'numpy\.int\d*'>", str(type(val))):
 					res[key] = int(val)
+			print(res)
+			print(data['output'])
 			assert same_dict(res, data['output'], exact_equal=False), "Version {} error".format(version)
 			# assert metric.close() == data['output'], "Version {} error".format(version)

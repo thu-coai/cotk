@@ -47,7 +47,7 @@ class PerplexityMetric(MetricBase):
 	'''
 
 	_name = 'PerplexityMetric'
-	_version = 1
+	_version = 2
 
 	@hooks.hook_metric
 	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence"], \
@@ -161,7 +161,8 @@ class PerplexityMetric(MetricBase):
 
 			resp_now = np.array(resp_allvocabs[i][1:resp_len])
 			gen_now = np.array(gen_log_prob[i])
-			relevant_data.append(resp_now.tolist())
+			#relevant_data.append(resp_now.tolist())
+			relevant_data.append(self.dataloader.convert_ids_to_tokens(resp_now.tolist()))
 
 			if len(resp_now.shape) != 1:
 				raise ValueError("resp_allvocabs need to be 2 dimension")
@@ -175,7 +176,7 @@ class PerplexityMetric(MetricBase):
 					raise ValueError("data[gen_log_prob_key] must be processed after log_softmax.")
 
 			if not self.generate_rare_vocab:
-				if gen_now.shape[1] != self.dataloader.all_vocab_size:
+				if gen_now.shape[1] != self.dataloader.frequent_vocab_size:
 					raise ValueError(("The third dimension gen_log_prob should be equals to frequent_vocab_size when "
 						"generate_rare_vocab = False, "
 						"but %d != %d") % (gen_now.shape[1], self.dataloader.frequent_vocab_size))
@@ -191,7 +192,8 @@ class PerplexityMetric(MetricBase):
 
 			resp_known = resp.copy()
 			if not self.generate_rare_vocab and self.have_unk:
-				resp_known[resp_known >= self.dataloader.all_vocab_size] = self.dataloader.unk_id
+				#resp_known[resp_known >= self.dataloader.all_vocab_size] = self.dataloader.unk_id
+				resp_known[resp_known >= self.dataloader.frequent_vocab_size] = self.dataloader.unk_id
 
 			self.gen_valid_log_prob.append(gen_now[list(range(resp_len-1)), resp_known])
 			if self.have_unk:
@@ -324,7 +326,7 @@ class PerplexityMetric(MetricBase):
 			loader = self.dataloader
 			unk_id = loader.unk_id if self.have_unk else None
 			tasks = ((self.gen_valid_log_prob[i], self.gen_unk_log_prob[i], self.resp[i], \
-							self.generate_rare_vocab, loader.all_vocab_size, loader.all_vocab_size, unk_id) \
+							self.generate_rare_vocab, loader.frequent_vocab_size, loader.all_vocab_size, unk_id) \
 							for i, _ in enumerate(self.gen_valid_log_prob))
 
 			# Multiprocessing seems can't boost the speed
@@ -386,7 +388,7 @@ class MultiTurnPerplexityMetric(MetricBase):
 	'''
 
 	_name = 'MultiTurnPerplexityMetric'
-	_version = 1
+	_version = 2
 
 	@hooks.hook_metric
 	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence"], \

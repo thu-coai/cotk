@@ -12,7 +12,7 @@ def setup_module():
 	random.seed(0)
 	np.random.seed(0)
 
-pytestmark = pytest.mark.skip("all tests still WIP")
+#pytestmark = pytest.mark.skip("all tests still WIP")
 
 perplexity_test_parameter = generate_testcase(\
 	(zip(test_argument), "add"),
@@ -51,19 +51,17 @@ class TestPerplexityMetric():
 				vocab_now = input[reference_key][i][j + 1]
 				if vocab_now == dataloader.unk_id:
 					continue
-				if vocab_now < dataloader.vocab_size:
+				if vocab_now < dataloader.frequent_vocab_size:
 					word_loss += -(input[gen_prob_key][i][j][vocab_now])
 				else:
 					invalid_log_prob = input[gen_prob_key][i][j][dataloader.unk_id] - \
-									 np.log(dataloader.all_vocab_size - dataloader.vocab_size)
+									 np.log(dataloader.all_vocab_size - dataloader.frequent_vocab_size)
 					if invalid_vocab:
 						word_loss += -np.log(np.exp(invalid_log_prob) + \
 											np.exp(input[gen_prob_key][i][j][vocab_now]))
 					else:
 						word_loss += -invalid_log_prob
 				length_sum += 1
-		# print('test_metric.word_loss: ', word_loss)
-		# print('test_metric.length_sum: ',	 length_sum)
 		return np.exp(word_loss / length_sum)
 
 	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
@@ -77,8 +75,8 @@ class TestPerplexityMetric():
 								   gen_prob_check='no_check', ref_len='non-empty', \
 								   ref_vocab='non-empty', gen_prob_vocab='all_vocab', \
 								   resp_len='>=2')
-		pm = PerplexityMetric(dataloader, invalid_vocab=True, full_check=False)
-		pm_shuffle = PerplexityMetric(dataloader, invalid_vocab=True, full_check=False)
+		pm = PerplexityMetric(dataloader, generate_rare_vocab=True, full_check=False)
+		pm_shuffle = PerplexityMetric(dataloader, generate_rare_vocab=True, full_check=False)
 
 		data_shuffle = shuffle_instances(data, key_list)
 
@@ -95,10 +93,10 @@ class TestPerplexityMetric():
 
 		assert same_dict(res, res_shuffle, False)
 
-		for data_unequal in generate_unequal_data(data, key_list, dataloader.pad_id, \
+		for data_unequal in generate_unequal_data(data, key_list, dataloader.vocabs[0].pad_id, \
 												  reference_key, reference_len_key, \
 												  reference_is_3D=False):
-			pm_unequal = PerplexityMetric(dataloader, invalid_vocab=True, full_check=False)
+			pm_unequal = PerplexityMetric(dataloader, generate_rare_vocab=True, full_check=False)
 
 			pm_unequal.forward(data_unequal)
 			res_unequal = pm_unequal.close()
@@ -115,9 +113,9 @@ class TestPerplexityMetric():
 								   gen_prob_check='no_check', ref_len='non-empty', \
 								   ref_vocab=ref_vocab, gen_prob_vocab=gen_prob_vocab, \
 								   resp_len='>=2')
-		pm = PerplexityMetric(dataloader, invalid_vocab=gen_prob_vocab == "all_vocab", full_check=False)
-		pm_shuffle = PerplexityMetric(dataloader, invalid_vocab=gen_prob_vocab == "all_vocab", full_check=False)
-		pm_shuffle2 = PerplexityMetric(dataloader, invalid_vocab=gen_prob_vocab == "all_vocab", full_check=False)
+		pm = PerplexityMetric(dataloader, generate_rare_vocab=gen_prob_vocab == "all_vocab", full_check=False)
+		pm_shuffle = PerplexityMetric(dataloader, generate_rare_vocab=gen_prob_vocab == "all_vocab", full_check=False)
+		pm_shuffle2 = PerplexityMetric(dataloader, generate_rare_vocab=gen_prob_vocab == "all_vocab", full_check=False)
 
 		data_shuffle = copy.deepcopy(data)
 		indices = list(range(len(data_shuffle[reference_key])))
@@ -163,10 +161,10 @@ class TestPerplexityMetric():
 								   resp_len=resp_len)
 		_data = copy.deepcopy(data)
 		if argument == 'default':
-			pm = PerplexityMetric(dataloader, invalid_vocab=include_invalid, full_check=(check=='full_check'))
+			pm = PerplexityMetric(dataloader, generate_rare_vocab=include_invalid, full_check=(check == 'full_check'))
 		else:
 			pm = PerplexityMetric(dataloader, reference_key, reference_len_key, gen_prob_key, \
-								   invalid_vocab=include_invalid,  full_check=(check=='full_check'))
+								  	generate_rare_vocab=include_invalid,  full_check=(check=='full_check'))
 
 		if batch_len == 'unequal':
 			data[reference_key] = data[reference_key][1:]
@@ -228,11 +226,11 @@ class TestMultiTurnPerplexityMetric:
 					vocab_now = input[reference_key][i][turn][j + 1]
 					if vocab_now == dataloader.unk_id:
 						continue
-					if vocab_now < dataloader.vocab_size:
+					if vocab_now < dataloader.frequent_vocab_size:
 						word_loss += -(gen_prob_turn[j][vocab_now])
 					else:
 						invalid_log_prob = gen_prob_turn[j][dataloader.unk_id] - \
-										 np.log(dataloader.all_vocab_size - dataloader.vocab_size)
+										 np.log(dataloader.all_vocab_size - dataloader.frequent_vocab_size)
 						if invalid_vocab:
 							word_loss += -np.log(np.exp(invalid_log_prob) + \
 												np.exp(gen_prob_turn[j][vocab_now]))
@@ -253,8 +251,8 @@ class TestMultiTurnPerplexityMetric:
 								   ref_vocab='non-empty', gen_prob_vocab='valid_vocab', \
 								   resp_len=">=2")
 
-		mtpm = MultiTurnPerplexityMetric(dataloader, invalid_vocab=False, full_check=False)
-		mtpm_shuffle = MultiTurnPerplexityMetric(dataloader, invalid_vocab=False, full_check=False)
+		mtpm = MultiTurnPerplexityMetric(dataloader, generate_rare_vocab=False, full_check=False)
+		mtpm_shuffle = MultiTurnPerplexityMetric(dataloader, generate_rare_vocab=False, full_check=False)
 
 		data_shuffle = shuffle_instances(data, key_list)
 
@@ -274,7 +272,7 @@ class TestMultiTurnPerplexityMetric:
 		for data_unequal in generate_unequal_data(data, key_list, dataloader.pad_id, \
 												  reference_key, reference_len_key, \
 												  reference_is_3D=True):
-			mtpm_unequal = MultiTurnPerplexityMetric(dataloader, invalid_vocab=False, full_check=False)
+			mtpm_unequal = MultiTurnPerplexityMetric(dataloader, generate_rare_vocab=False, full_check=False)
 
 			mtpm_unequal.forward(data_unequal)
 			res_unequal = mtpm_unequal.close()
@@ -304,10 +302,10 @@ class TestMultiTurnPerplexityMetric:
 		_data = copy.deepcopy(data)
 		if argument == 'default':
 			mtpm = MultiTurnPerplexityMetric(dataloader, \
-											 invalid_vocab=include_invalid, full_check=(check=='full_check'))
+											 	generate_rare_vocab=include_invalid, full_check=(check=='full_check'))
 		else:
 			mtpm = MultiTurnPerplexityMetric(dataloader, reference_key, reference_len_key, gen_prob_key, \
-								   invalid_vocab=include_invalid,  full_check=(check=='full_check'))
+											 	generate_rare_vocab=include_invalid, full_check=(check=='full_check'))
 
 		if batch_len == 'unequal':
 			data[reference_key] = data[reference_key][1:]
