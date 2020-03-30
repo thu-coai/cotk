@@ -14,20 +14,20 @@ class _UNDEFINED():
 	pass
 
 class Context(metaclass=DocStringInheritor):
-	'''A base class for Context. This class is used for setting default parameters
+	'''An abstract base class for context manager.
+
+	This class is used for setting default parameters
 	for :class:`Field` or :class:`Vocab`, without directly
 	passing parameters to ``__init__`` of the object.
 
-	When initialized, the object write the list of parameters stored in the class.
-	The old parameters are restored when :meth:`.close` or :meth:`.__exit__` is called.
-	TODO: add an example for context manager, use ``with``.
+	See :ref:`examples<dataloader_context_ref>` for how to use context manager.
 
 	Arguments:
 		parameter_dict (Dict[str, Any]): Key-value dict for changed parameters.
-		weak (bool, optional): When ``False``, overwrite existing parameters. Default: False.
+		weak (bool, optional): When ``False``, overwrite existing parameters. Default: ``False``.
 		none_as_ignored (bool, optional): When ``True``, ``None`` values in ``parameter_dict`` are ignored.
 			Otherwise, the corresponding key will be set to ``None``.
-			Default: True.
+			Default: ``True``.
 	'''
 
 	context_dict: Dict[str, Any] = {}
@@ -53,13 +53,11 @@ class Context(metaclass=DocStringInheritor):
 	@classmethod
 	def get(cls, key: str, default: Any = None, no_default=False) -> Any:
 		'''Get the value of parameter named ``key`` stored in this class.
-		If ``key`` is not set, return ``default``.
-		When ``no_default`` is ``True``, raise a KeyError if ``key`` is not set.
 
 		Arguments:
 			key (str): name of the parameter
-			default (Any, optional): Default value if ``key`` is not set. Defaults: None.
-			no_default (bool, optional): When ``True``, Raise KeyError if ``key`` is not set. Defaults: False.
+			default (Any, optional): Default value if ``key`` is not set. Defaults: ``None``.
+			no_default (bool, optional): When ``True``, Raise ``KeyError`` if ``key`` is not set. Defaults: ``False``.
 		'''
 		if key in cls.context_dict:
 			return cls.context_dict[key]
@@ -69,6 +67,15 @@ class Context(metaclass=DocStringInheritor):
 			else:
 				return default
 
+	WEAK_ARGS = r'''
+			weak (bool, optional): When ``False``, overwrite existing parameters. Defaults: ``False``.
+	'''
+	NONE_AS_IGNORED_ARGS = r'''
+			none_as_ignored (bool, optional): When ``True``, ``None`` values in ``parameter_dict`` are ignored.
+				Otherwise, the corresponding value will be set to ``None``.
+				Default: ``True``.
+	'''
+
 	@classmethod
 	def set(cls, key: str, value: Any, weak=False, none_as_ignored=True) -> Any:
 		'''Set the parameter named ``key`` to ``value``, stored in this class.
@@ -77,12 +84,10 @@ class Context(metaclass=DocStringInheritor):
 
 		Arguments:
 			key (str): The name of the changed parameter.
-			value (Any): The new value of changed parameter. If None, do nothing.
-				If want to set the value to None, use ``"force_none"``.
-			weak (bool, optional): When ``False``, overwrite existing parameters. Defaults: False.
-			none_as_ignored (bool, optional): When ``True``, ``None`` values in ``parameter_dict`` are ignored.
-				Otherwise, the corresponding key will be set to ``None``.
-				Default: True.
+			value (Any): The new value of changed parameter.
+				If want to delete the key, use ``Context.UNDEFINED``.
+			{WEAK_ARGS}
+			{NONE_AS_IGNORED_ARGS}
 		'''
 		if key not in cls.context_dict:
 			old = Context.UNDEFINED
@@ -137,13 +142,18 @@ class FieldContext(Context):
 	corrupted = False
 	UNDEFINED = Context.UNDEFINED
 
+	NONE_AS_IGNORED_ARGS = Context.NONE_AS_IGNORED_ARGS.replace("``parameter_dict``", "``kwargs``")
+
 	# pylint: disable=unused-argument
 	@classmethod
 	def set_parameters(cls, *, weak=False, none_as_ignored=True, **kwargs) -> "FieldContext":
 		'''Set a context for initialization of :class:`Field`.
-		See the example at TODO: write an example for how to use field context.
+		See :ref:`examples<dataloader_context_ref>` for how to use context manager.
+
 		Arguments:
-			TODO: fill the parameters from Field classes.
+			{WEAK_ARGS}
+			{NONE_AS_IGNORED_ARGS}
+			\*\*kwargs: Any parameters to be set. Set ``key`` to ``FieldContext.UNDEFINED`` to delete a parameter.
 		'''
 		return FieldContext(kwargs, weak=weak, none_as_ignored=none_as_ignored)
 
@@ -157,12 +167,17 @@ class VocabContext(Context):
 	corrupted = False
 	UNDEFINED = Context.UNDEFINED
 
+	NONE_AS_IGNORED_ARGS = Context.NONE_AS_IGNORED_ARGS.replace("``parameter_dict``", "``kwargs``")
+
 	# pylint: disable=unused-argument
 	@classmethod
 	def set_parameters(cls, *, weak=False, none_as_ignored=True, **kwargs) -> "VocabContext":
 		'''Set a context for initialization of :class:`Vocab`.
-		See the example at TODO: write an example for how to use field context.
+		See :ref:`examples<dataloader_context_ref>` for how to use context manager.
+
 		Arguments:
-			TODO: fill the parameters from Vocab classes.
+			{WEAK_ARGS}
+			{NONE_AS_IGNORED_ARGS}
+			\*\*kwargs: Any parameters to be set. Set ``key`` to ``VocabContext.UNDEFINED`` to delete a parameter.
 		'''
 		return VocabContext(kwargs, weak=weak, none_as_ignored=none_as_ignored)

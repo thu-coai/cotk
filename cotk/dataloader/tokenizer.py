@@ -12,16 +12,15 @@ from .._utils.metaclass import DocStringInheritor
 from .._utils import chain_sessions, restore_sessions
 
 class Tokenizer(metaclass=DocStringInheritor):
-	"""Tokenizer is used for spliting sentence to tokens."""
+	"""Tokenizer is used for spliting sentence to tokens.
+	This is an abstract base class.
+	It often works as a part of :class:`Field`"""
 
 	def tokenize(self, sentence: str) -> List[str]:
 		'''Tokenize a sentence to a list of tokens.
 
 		Arguments:
 			sentence (str): a sentence to tokenize.
-
-		Returns:
-			List[str]: tokenized sentence.
 		'''
 		raise NotImplementedError
 
@@ -30,9 +29,6 @@ class Tokenizer(metaclass=DocStringInheritor):
 
 		Arguments:
 			sentences (List[str]): sentences to tokenize.
-
-		Returns:
-			List[List[str]]: tokenized sentences.
 		'''
 		return [self.tokenize(sentence) for sentence in sentences]
 
@@ -41,9 +37,6 @@ class Tokenizer(metaclass=DocStringInheritor):
 
 		Arguments:
 			sessions (List[List[str]]): sessions to tokenize.
-
-		Returns:
-			List[List[List[str]]]: tokenized sessions.
 		'''
 		sentences, session_lengths = chain_sessions(sessions)
 		tokenized_sentences = self.tokenize_sentences(sentences)
@@ -56,24 +49,20 @@ class Tokenizer(metaclass=DocStringInheritor):
 
 		Arguments:
 			tokens(List[str]): tokenized sentence
-
-		Returns:
-			str: the sentence concatenated.
 		'''
 		raise NotImplementedError
 
 	def get_setting_hash(self) -> str:
 		'''Return the setting hash of this tokenizer instance.
 		See :ref:`here <dataloader_hash_ref>` for the explaination of ``setting hash``.
-
-		Returns:
-			str: the setting hash.
 		'''
 		raise NotImplementedError
 
 class SimpleTokenizer(Tokenizer):
-	'''A simple tokenizer. Method can either be ``nltk`` or ``space``.
-	If ``nltk``, use WordPunctTokenizer from nltk.tokenize.
+	'''Bases: :class:`.dataloader.Tokenizer`
+
+	A simple tokenizer. ``method`` can either be ``nltk`` or ``space``.
+	If ``nltk``, use ``WordPunctTokenizer`` from ``nltk.tokenize``.
 	If ``space``, use ``str.split(" ")``.
 
 	Arguments:
@@ -123,7 +112,9 @@ class SimpleTokenizer(Tokenizer):
 		return self._setting_hash
 
 class PretrainedTokenizer(Tokenizer):
-	'''A wrapper for ``Pretrainedtokenizer`` from the transformers package.
+	'''Bases: :class:`.dataloader.Tokenizer`
+
+	A wrapper for ``Pretrainedtokenizer`` from ``transformers`` package.
 	If you don't want to do tokenization on some special tokens, see
 	``transformers.Pretrainedtokenizer.add_special_tokens``.
 
@@ -150,8 +141,5 @@ class PretrainedTokenizer(Tokenizer):
 
 	def get_tokenizer_class(self) -> str:
 		'''Get the class name of pretrained tokenizer.
-
-		Returns:
-			str: the class name of pretrained tokenizer.
 		'''
 		return self._tokenizer_class_name

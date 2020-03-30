@@ -28,32 +28,10 @@ class SingleTurnDialog(LanguageProcessing):
 	This class is supported for sequence to sequence generation tasks, especially
 	single turn dialog tasks.
 
-	Arguments:{ARGUMENTS}
+	Arguments:{SHARED_ARGUMENTS}
 	"""
 
 	_version = 2
-
-	ARGUMENTS = r'''
-			file_id (str): A string indicating the source of single turn dialog dataset. {FILE_ID_DEFAULT}
-			min_frequent_vocab_times (int): A cut-off threshold of valid tokens. All tokens appear
-				not less than ``min_frequent_vocab_times`` in **training set** will be marked as valid words.
-				{MIN_FREQUENT_VOCAB_TIMES_DEFAULT}
-			max_sent_length (int): All sentences longer than ``max_sent_length`` will be shortened
-				to first ``max_sent_length`` tokens. {MAX_SENT_LENGTH}
-			min_rare_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
-				not less than ``min_rare_vocab_times`` in the **whole dataset** (except valid words) will be
-				marked as invalid words. Otherwise, they are unknown words, which are ignored both for
-				model or metrics. {MIN_RARE_VOCAB_TIMES_DEFAULT}
-			tokenizer (str): How to tokenize sentence. ``nltk.tokenize.WordPunctTokenizer`` is used if ``nltk`` is specified,
-				python built-in ``str.split`` is used if ``space`` is specified. {TOKENIZER_DEFAULT}
-			remains_capital(bool): Whether remaining capital letter in data or converting them to lower case. {CONVERT_TO_LOWER_LETTER_DEFAULT}
-		'''
-	FILE_ID_DEFAULT = ''
-	MIN_FREQUENT_VOCAB_TIMES_DEFAULT = ''
-	MAX_SENT_LENGTH = ''
-	MIN_RARE_VOCAB_TIMES_DEFAULT = ''
-	TOKENIZER_DEFAULT = ''
-	CONVERT_TO_LOWER_LETTER_DEFAULT = ''
 
 	@hooks.hook_dataloader
 	def __init__(self, file_id, *, tokenizer=None, \
@@ -188,7 +166,7 @@ class OpenSubtitles(SingleTurnDialog):
 	A dataloader for OpenSubtitles dataset.
 	Refer to :class:`.SingleTurnDialog`, :class:`.LanguageProcessing` for attributes and methods.
 
-	Arguments:{ARGUMENTS}
+	Arguments:{SHARED_ARGUMENTS}
 
 	References:
 		[1] http://opus.nlpl.eu/OpenSubtitles.php
@@ -197,13 +175,12 @@ class OpenSubtitles(SingleTurnDialog):
 		Movie and TV Subtitles. LREC 2016.
 	'''
 
-	ARGUMENTS = SingleTurnDialog.ARGUMENTS
-	FILE_ID_DEFAULT = r'''Default: ``resources://OpenSubtitles``.'''
-	FREQUENT_VOCAB_TIMES_DEFAULT = r'''Default: ``10``.'''
-	MAX_SENT_LENGTH = r'''Default: ``50``.'''
-	RARE_VOCAB_TIMES_DEFAULT = r'''Default: ``0`` (No unknown words).'''
-	TOKENIZER_DEFAULT = r'''Default: ``nltk``'''
-	REMAINS_CAPITAL_DEFAULT = r'''Default: ``False``'''
+	_FILE_ID_DEFAULT = r'''Default: ``resources://OpenSubtitles``.'''
+	_TOKENIZER_DEFAULT = r'''Default: ``nltk``'''
+	_CONVERT_TO_LOWER_LETTER_DEFAULT = r'''Default: ``False``'''
+	_MAX_SENT_LENGTH_DEFAULT = r'''Default: ``50``.'''
+	_MIN_FREQUENT_VOCAB_TIMES_DEFAULT = r'''Default: ``10``.'''
+	_MIN_RARE_VOCAB_TIMES_DEFAULT = r'''Default: ``0``'''
 
 	@hooks.hook_dataloader
 	def __init__(self, file_id="resources://OpenSubtitles", *, \

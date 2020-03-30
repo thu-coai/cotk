@@ -2,6 +2,7 @@ r"""
 ``cotk._utils`` is a function lib for internal use.
 """
 
+import os
 from typing import List, Any, Tuple
 from itertools import chain
 
@@ -45,3 +46,6 @@ def replace_unk(sentences: List[Any], unk_token, target_token: Any = -1):
 		* list: processed result.
 	'''
 	return [[target_token if token == unk_token else token for token in sentence] for sentence in sentences]
+
+def is_build_private_docs():
+	return os.environ.get('COTK_DOCS_TYPE', None) == 'private'

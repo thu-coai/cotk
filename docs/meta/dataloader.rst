@@ -6,16 +6,23 @@ Overview
 -------------------------------------
 
 Dataloaders are essential components in ``CoTK`` to build models or do fair evaluation.
-Here we give an overview of what makes a dataloader.
+``CoTK`` uses a dataloader class, :class:`LanguageProcessing`, to handle all the tasks about language.
+Here we give an overview of what makes a :class:`LanguageProcessing` dataloader.
 
 .. image:: dataloader_structure.png
 
-* Dataloader describes :ref:`the format of the dataset<customized_tasks_ref>`, including how the data is split (``train``, ``dev``, ``test``)
-  and how a sample is composed of one or more data fields.
-* Each data field in dataloader can share a :class:`Field` instances, or use different :class:`Field` instances.
-* :class:`Field` defines the way that the dataloader reads, process, and output the data.
+* A dataloader may have multiple sets of data. In this case,
+  the name of 3 sets (``set_name``) are ``"train"``, ``"dev"``, ``"test"``.
+* Each set stores the data read from a text file. In this example,
+  3 sets are refered to ``"train.txt"``, ``"dev.txt"``, ``"test.txt"``.
+* A set may have multiple data fields. In this case,
+  ``"train"`` set have two fields, and their name (``field_name``) are ``"post"`` and ``"resp"``.
+* Data fields are specified by :class:`Field` instances.
+  :class:`Field` defines the way that the dataloader reads, process, and output the data.
   (But it doesn't store the data, the data is stored in dataloader.)
-* :class:`Field` works with :class:`Tokenizer` and :class:`Vocab`.
+* A :class:`Field` instance can be shared between data fields.
+  In the example, ``"post"`` in ``"train"`` set and ``"post"`` in ``"dev"`` set share an instance.
+* :class:`Field` may contains :class:`Tokenizer` and :class:`Vocab`.
 * :class:`Tokenizer` defines the methods to tokenize a sentence.
 * :class:`Vocab` defines the vocabulary. A instance of :class:`Vocab` can be shared between multiple :class:`Field`, where the data
   from multiple :class:`Field` will be used to construct the vocabulary.
@@ -151,7 +158,8 @@ See :ref:`Context<context_ref>` for further details.
 Field
 ############################################
 
-:class:`Field` indicates data fields, which defines how dataloaders read the file, process the data, and provide the data to networks.
+:class:`Field` indicates data fields, which work secretly behind dataloaders.
+They define how dataloaders read the file, process the data, and provide the data to networks.
 
 ``Cotk`` provides several fields, including
 
@@ -202,17 +210,20 @@ See :meth:`LanguageProcessing.set_default_field` for details.
 Provide the Data to Networks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Each subclass of :class:`Field` defines :meth:`Field.get_batch`.
-This method defines the data format when training the networks.
+Each subclass of :class:`Field` defines :meth:`Field.get_batch`, 
+which returns a dict of data for training the networks.
 
-For example, if an instance of :class:`SentenceDefault` is named with ``"sent"``, it returns a dict when :meth:`SentenceDefault.get_batch` called:
+For example, if an instance of :class:`SentenceDefault` is named with ``"sent"``,
+:meth:`SentenceDefault.get_batch` will return a dict containing:
 
-* sent (np.ndarray[batch_size, max_sent_length]): padded sentences in id formats with :ref:`frequent words<vocabulary_ref>`.
-* sent_allvocabs(np.ndarray[batch_size, max_sent_length]): padded sentences in id formats with :ref:`frequent and rare words<vocabulary_ref>`.
-* sent_length (np.ndarray[batch_size]): length of sentences
-* sent_str (List[str]): the raw sentence
+* ``sent``
+* ``sent_length``
+* ``sent_allvocabs``
+* ``sent_str``
 
-Relatively, a dataloader with two :class:`SentenceDefault` fields named ``"post"``, ``"resp"`` will returns a dict when :meth:`LanguageProcessing.get_batch` called:
+:meth:`LanguageProcessing.get_batch` will collect dict returned from every field and merge them.
+For example, if a dataloader with two :class:`SentenceDefault` fields named ``"post"``, ``"resp"``,
+:meth:`LanguageProcessing.get_batch` will return a dict containing:
 
 * ``post``
 * ``post_allvocabs``
@@ -223,7 +234,19 @@ Relatively, a dataloader with two :class:`SentenceDefault` fields named ``"post"
 * ``resp_length``
 * ``resp_str``
 
-This is the merge of two returned dicts by :meth:`SentenceDefault.get_batch`.
+.. _pretrained_field_ref:
+
+Pretrained Field
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Default fields like :class:`SentenceDefault` and :class:`SessionDefault` are designing
+for common use in different language processing task. They use ``<go>`` and ``<eos>`` to mark
+the start and the end of sentences.
+
+For some pretrained models like ``GPT2``, ``<go>`` are not pretrained in the vocabulary and thus not available.
+We design different field for different pretrained models, including:
+
+* GPT2: :class:`SentenceGPT2`, :class:`SessionGPT2`
 
 .. _tokenizer_ref:
 
@@ -237,6 +260,14 @@ Tokenizer
 * :class:`SimpleTokenizer`: A simple tokenizer for general use in ``CoTK``, supporting ``space`` or ``nltk`` tokenization.
 * :class:`PretrainedTokenizer`: A pretrained Tokenizer from the ``transformers`` package. For example, tokenizer for ``GPT2``.
 
+When creating a dataloader, it often receives ``str`` or :class`Tokenizer`.
+If ``str``, the following arguments are acceptable:
+
+* ``space``: Split by spaces.
+* ``nltk``: ``nltk.tokenize.WordPunctTokenizer`` will be used.
+
+A :class:`SimpleTokenizer` will be created by the ``str`` arguments.
+
 .. _vocabulary_ref:
 
 Vocabulary
@@ -246,8 +277,9 @@ Vocabulary
 
 ``CoTK`` provides several vocabularies, including
 
-* :class:`GeneralVocab`: A vocabulary for general use in ``CoTK``.
-* :class:`PretrainedVocab`: A pretrained vocabulary from the ``transformers`` package. For example, vocabulary for ``GPT2``.
+* :class:`GeneralVocab`: A vocabulary for general use in ``CoTK``. The vocabulary list is often built during the processing of input data.
+  Save and load a predefined vocabulary is also supported.
+* :class:`PretrainedVocab`: A predefeined vocabulary from the ``transformers`` package. For example, vocabulary for ``GPT2``.
 
 Type of Tokens
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -310,6 +342,39 @@ The fairness of comparisons can be gauranteed under the conditions:
 
 See each metrics for when the fairness can be gauranteed.
 :ref:`Hash value<metric_hashvalue_ref>` can help user determine whether the comparisons is fair.
+
+.. _vocab_from_ref:
+
+Connecting Field and Vocab
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+:class:`GeneralVocab` is often shared between fields for constructing vocabulary list together.
+To identify tokens from a field is regarded as training set or test set
+(which may be relative to the division of frequent vocab and rare vocab), :class:`Sentence` use an arguments named ``vocab_from_mappings``.
+
+``vocab_from_mappings`` is a dict, which infer the type of token by the set name. By default:
+
+=============  ========
+ **Set Name**  **Type**
+-------------  --------
+  train         train
+  training      train
+  dev           test
+  development   test
+  valid         test
+  validation    test
+  test          test
+  evaluation    test
+=============  ========
+
+For example, a token from the ``training`` set will have a type of ``train``.
+The type will passed to :meth:`Vocab.add_tokens` as ``vocab_from``.
+There are 3 types:
+
+* ``train``: Frequent vocabs are selected from tokens of this type.
+* ``test``: Rare vocabs are selected from tokens of this type.
+* ``extra``: The tokens of this type will not selected as frequent or rare vocabs.
+
 
 .. _context_ref:
 
@@ -394,7 +459,7 @@ Batched Data
   .. automethod:: LanguageProcessing.get_batches
   .. automethod:: LanguageProcessing.get_all_batch
 
-Sentences and Ids
+Sentences and Manipulations
 #########################################
 
 .. automethod:: LanguageProcessing.tokenize
@@ -444,7 +509,7 @@ MSCOCO
 .. autoclass:: MSCOCO
 
 SingleTurnDialog
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------------------------
 .. autoclass:: SingleTurnDialog
 
     .. automethod:: get_batch
@@ -454,6 +519,33 @@ SingleTurnDialog
 OpenSubtitles
 #########################################
 .. autoclass:: OpenSubtitles
+
+MultiTurnDialog
+-------------------------------------------
+.. autoclass:: MultiTurnDialog
+
+    .. automethod:: get_batch
+    .. automethod:: get_teacher_forcing_metric
+    .. automethod:: get_inference_metric
+
+UbuntuCorpus
+#########################################
+.. autoclass:: UbuntuCorpus
+
+SwitchboardCorpus
+#########################################
+.. autoclass:: SwitchboardCorpus
+
+SentenceClassification
+-------------------------------------------
+.. autoclass:: SentenceClassification
+
+    .. automethod:: get_batch
+    .. automethod:: get_metric
+
+SST
+#########################################
+.. autoclass:: SST
 
 
 Field
@@ -466,7 +558,6 @@ Field
     .. automethod:: get_vocab
     .. automethod:: get_tokenizer
     .. automethod:: get_batch
-    .. autoattribute:: DEFAULT_VOCAB_FROM
 
 Sentence
 #########################################
@@ -476,12 +567,12 @@ Sentence
     .. automethod:: tokenize_sentences
     .. automethod:: convert_tokens_to_ids
     .. automethod:: convert_ids_to_tokens
-    .. automethod:: convert_ids_to_sentence
     .. automethod:: convert_sentence_to_ids
+    .. automethod:: convert_ids_to_sentence
     .. automethod:: add_special_to_ids
     .. automethod:: remove_special_in_ids
-    .. automethod:: process_sentences
     .. automethod:: trim_in_ids
+    .. automethod:: process_sentences
 
     .. autoattribute:: frequent_vocab_size
     .. autoattribute:: all_vocab_size
@@ -509,6 +600,33 @@ SentenceGPT2
 Session
 #########################################
 .. autoclass:: Session
+
+    .. automethod:: tokenize
+    .. automethod:: tokenize_sentences
+    .. automethod:: tokenize_sessions
+    .. automethod:: convert_tokens_to_ids
+    .. automethod:: convert_ids_to_tokens
+    .. automethod:: convert_sentence_to_ids
+    .. automethod:: convert_ids_to_sentence
+    .. automethod:: convert_multi_turn_tokens_to_ids
+    .. automethod:: convert_multi_turn_ids_to_tokens
+    .. automethod:: add_special_to_ids
+    .. automethod:: remove_special_in_ids
+    .. automethod:: trim_in_ids
+    .. automethod:: multi_turn_trim_in_ids
+    .. automethod:: process_sentences
+    .. automethod:: process_sessions
+
+    .. autoattribute:: frequent_vocab_size
+    .. autoattribute:: all_vocab_size
+    .. autoattribute:: frequent_vocab_list
+    .. autoattribute:: all_vocab_list
+    .. automethod:: get_special_tokens_mapping
+    .. automethod:: get_special_tokens_id
+    .. autoattribute:: pad_id
+    .. autoattribute:: unk_id
+    .. autoattribute:: go_id
+    .. autoattribute:: eos_id
 
 SessionDefault
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -585,8 +703,6 @@ GeneralVocab
     .. automethod:: from_predefined_vocab
     .. automethod:: from_frequent_word
     .. automethod:: from_frequent_word_of_vocab
-    .. autoattribute:: frequent_vocab_list
-    .. autoattribute:: all_vocab_list
 
 PretrainedVocab
 #########################################
@@ -595,6 +711,10 @@ PretrainedVocab
     .. autoattribute:: frequent_vocab_list
     .. autoattribute:: all_vocab_list
 
+SimpleVocab
+#########################################
+.. autoclass:: SimpleVocab
+
 Context
 ------------------------------------
 
@@ -602,8 +722,6 @@ Context
 
     .. automethod:: get
     .. automethod:: set
-    .. automethod:: __enter__
-    .. automethod:: __exit__
     .. automethod:: close
 
 FieldContext

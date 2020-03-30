@@ -20,7 +20,7 @@ if False: # for type check # pylint: disable=using-constant-test
 class MultiTurnDialog(LanguageProcessing):
 	r"""Base class for multi-turn dialog datasets. This is an abstract class.
 
-	Arguments:{LanguageProcessing.ARGUMENTS}
+	Arguments:
 
 	Attributes:{ATTRIBUTES}
 
@@ -191,7 +191,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 
 	Arguments:
 		file_id (str): a string indicating the source of SwitchboardCorpus dataset.
-			Default: ``resources://SwitchboardCorpus``. A preset dataset is downloaded and cached.{ARGUMENTS}{ARG_TOKENIZER}
+			Default: ``resources://SwitchboardCorpus``. A preset dataset is downloaded and cached.
 
 	Refer to :class:`.MultiTurnDialog` for attributes and methods.
 
@@ -207,7 +207,6 @@ class SwitchboardCorpus(MultiTurnDialog):
 		default_max_turn_length=1000,
 		default_min_rare_vocab_times=0
 	)
-	ARG_TOKENIZER = Sentence.ARG_TOKENIZER
 
 	class Candidate(SessionDefault):
 		def process_sessions(self, sessions, add_special=True, cut=False,
@@ -229,7 +228,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 			max_sent_length=max_sent_length,
 			max_turn_length=max_turn_length,
 			convert_to_lower_letter=False,
-			vocab_from={**SessionDefault.DEFAULT_VOCAB_FROM, 'multi_ref': 'test'}):
+			vocab_from_mappings={**SessionDefault.DEFAULT_VOCAB_FROM_MAPPINGS, 'multi_ref': 'test'}):
 			super().__init__(file_id, fields)
 		self.set_default_field('train', 'session')
 

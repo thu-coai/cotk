@@ -8,9 +8,7 @@ from .dataloader import LanguageProcessing
 from .context import FieldContext, VocabContext
 from .tokenizer import PretrainedTokenizer
 from .vocab import GeneralVocab, PretrainedVocab
-
-if False: # for type check # pylint: disable=using-constant-test
-	from ..metric import MetricChain #pylint: disable=unused-import
+from ..metric.metric import MetricChain, MetricBase
 
 # pylint: disable=W0223
 class LanguageGeneration(LanguageProcessing):
@@ -19,30 +17,8 @@ class LanguageGeneration(LanguageProcessing):
 	This class is supported for language modeling tasks or language generation tasks
 	without any inputs.
 
-	Arguments:{ARGUMENTS}
+	Arguments:{SHARED_ARGUMENTS}
 	"""
-
-	ARGUMENTS = r'''
-			file_id (str): A string indicating the source of language generation dataset. {FILE_ID_DEFAULT}
-			min_frequent_vocab_times (int): A cut-off threshold of valid tokens. All tokens appear
-				not less than ``min_frequent_vocab_times`` in **training set** will be marked as valid words.
-				{MIN_FREQUENT_VOCAB_TIMES_DEFAULT}
-			max_sent_length (int): All sentences longer than ``max_sent_length`` will be shortened
-				to first ``max_sent_length`` tokens. {MAX_SENT_LENGTH}
-			min_rare_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
-				not less than ``min_rare_vocab_times`` in the **whole dataset** (except valid words) will be
-				marked as invalid words. Otherwise, they are unknown words, which are ignored both for
-				model or metrics. {MIN_RARE_VOCAB_TIMES_DEFAULT}
-			tokenizer (str): How to tokenize sentence. ``nltk.tokenize.WordPunctTokenizer`` is used if ``nltk`` is specified,
-				python built-in ``str.split`` is used if ``space`` is specified. {TOKENIZER_DEFAULT}
-			convert_to_lower_letter(bool): Whether remaining capital letter in data or converting them to lower case. {CONVERT_TO_LOWER_LETTER_DEFAULT}
-		'''
-	FILE_ID_DEFAULT = ''
-	MIN_FREQUENT_VOCAB_TIMES_DEFAULT = ''
-	MAX_SENT_LENGTH = ''
-	MIN_RARE_VOCAB_TIMES_DEFAULT = ''
-	TOKENIZER_DEFAULT = ''
-	CONVERT_TO_LOWER_LETTER_DEFAULT = ''
 
 	_version = 2
 
@@ -114,6 +90,8 @@ class LanguageGeneration(LanguageProcessing):
 			) -> Dict[str, Any]:
 		return super().get_batch(set_name, indexes)
 
+
+	GEN_LOG_PROB_KEY_ARGUMENTS = MetricBase.GEN_LOG_PROB_KEY_ARGUMENTS
 	def get_teacher_forcing_metric(self, gen_log_prob_key="gen_log_prob") -> "MetricChain":
 		'''Get metrics for teacher-forcing. In other words, this function
 		provides metrics for language modelling task.
@@ -122,9 +100,10 @@ class LanguageGeneration(LanguageProcessing):
 
 		* :class:`.metric.PerplexityMetric`
 
+		See the above class for details of arguments.
+
 		Arguments:
-			gen_log_prob_key (str): The key of predicted log probability over words.
-				Refer to :class:`.metric.PerplexityMetric`. Default: ``gen_log_prob``.
+			{GEN_LOG_PROB_KEY_ARGUMENTS}
 		'''
 		from ..metric import MetricChain, PerplexityMetric
 		metric = MetricChain()
@@ -134,7 +113,15 @@ class LanguageGeneration(LanguageProcessing):
 					gen_log_prob_key=gen_log_prob_key))
 		return metric
 
-	def get_inference_metric(self, gen_key="gen", sample=1000, seed=1229, cpu_count=None) -> "MetricChain":
+	GEN_KEY_ARGUMENTS = MetricBase.GEN_KEY_ARGUMENTS
+	SAMPLE_ARGUMENTS_IN_BLEU = MetricBase.SAMPLE_ARGUMENTS_IN_BLEU.\
+			replace("sample (int, optional)", "sample_in_bleu (int, optional)")
+	SAMPLE_ARGUMENTS_IN_NGRAM_PERPLEXITY = MetricBase.SAMPLE_ARGUMENTS_IN_NGRAM_PERPLEXITY.\
+			replace("sample (int, optional)", "sample_in_ngram_perplexity (int, optional)")
+	SEED_ARGUMENTS = MetricBase.SEED_ARGUMENTS
+	CPU_COUNT_ARGUMENTS = MetricBase.CPU_COUNT_ARGUMENTS
+	def get_inference_metric(self, gen_key="gen", sample_in_bleu=1000, \
+			sample_in_ngram_perplexity=10000, seed=1229, cpu_count=None) -> "MetricChain":
 		'''Get metrics for inference. In other words, this function provides metrics for
 		language generation tasks.
 
@@ -142,32 +129,36 @@ class LanguageGeneration(LanguageProcessing):
 
 		* :class:`.metric.SelfBleuCorpusMetric`
 		* :class:`.metric.FwBwBleuCorpusMetric`
+		* :class:`.metric.NgramFwBwPerplexityMetric`
 		* :class:`.metric.LanguageGenerationRecorder`
 
+		See the above class for details of arguments.
+
 		Arguments:
-			gen_key (str): The key of generated sentences in index form.
-				Refer to :class:`.metric.LanguageGenerationRecorder`.
-				Default: ``gen``.
-			sample (int): Sample numbers for self-bleu metric.
-				It will be fast but inaccurate if this become small.
-				Refer to :class:`.metric.SelfBleuCorpusMetric`. Default: ``1000``.
-			seed (int): Random seed for sampling.
-				Refer to :class:`.metric.SelfBleuCorpusMetric`. Default: ``1229``.
-			cpu_count (int): Number of used cpu for multiprocessing.
-				Refer to :class:`.metric.SelfBleuCorpusMetric`. Default: ``None``.
+			{GEN_KEY_ARGUMENTS}
+			{SAMPLE_ARGUMENTS_IN_BLEU}
+			{SAMPLE_ARGUMENTS_IN_NGRAM_PERPLEXITY}
+			{SEED_ARGUMENTS}
+			{CPU_COUNT_ARGUMENTS}
 		'''
 		from ..metric import MetricChain, LanguageGenerationRecorder, \
-			FwBwBleuCorpusMetric, SelfBleuCorpusMetric
+			FwBwBleuCorpusMetric, SelfBleuCorpusMetric, NgramFwBwPerplexityMetric
 		metric = MetricChain()
 		metric.add_metric(SelfBleuCorpusMetric(self, \
 					gen_key=gen_key, \
-					sample=sample, \
+					sample=sample_in_bleu, \
 					seed=seed, \
 					cpu_count=cpu_count))
 		metric.add_metric(FwBwBleuCorpusMetric(self, \
 					reference_test_list=self.get_all_batch("test")["sent"], \
 					gen_key=gen_key, \
-					sample=sample, \
+					sample=sample_in_bleu, \
+					seed=seed, \
+					cpu_count=cpu_count))
+		metric.add_metric(FwBwBleuCorpusMetric(self, \
+					reference_test_list=self.get_all_batch("test")["sent"], \
+					gen_key=gen_key, \
+					sample=sample_in_ngram_perplexity, \
 					seed=seed, \
 					cpu_count=cpu_count))
 		metric.add_metric(LanguageGenerationRecorder(self, gen_key=gen_key))
@@ -179,7 +170,7 @@ class MSCOCO(LanguageGeneration):
 	A dataloader for preprocessed MSCOCO dataset.
 	Refer to :class:`.LanguageGeneration` and :class:`.LanguageProcessing` for attributes and methods.
 
-	Arguments:{ARGUMENTS}
+	Arguments:{SHARED_ARGUMENTS}
 
 	References:
 		[1] http://images.cocodataset.org/annotations/annotations_trainval2017.zip
@@ -188,13 +179,12 @@ class MSCOCO(LanguageGeneration):
 		Data Collection and Evaluation Server. arXiv:1504.00325, 2015.
 	'''
 
-	ARGUMENTS = LanguageGeneration.ARGUMENTS
-	FILE_ID_DEFAULT = r'''Default: ``resources://MSCOCO``.'''
-	MIN_FREQUENT_VOCAB_TIMES_DEFAULT = r'''Default: ``10``.'''
-	MAX_SENT_LENGTH = r'''Default: ``50``.'''
-	MIN_RARE_VOCAB_TIMES_DEFAULT = r'''Default: ``0`` (No unknown words).'''
-	TOKENIZER_DEFAULT = r'''Default: ``nltk``'''
-	CONVERT_TO_LOWER_LETTER_DEFAULT = r'''Default: ``True``'''
+	_FILE_ID_DEFAULT = r'''Default: ``resources://MSCOCO``.'''
+	_TOKENIZER_DEFAULT = r'''Default: ``nltk``'''
+	_MAX_SENT_LENGTH = r'''Default: ``50``.'''
+	_CONVERT_TO_LOWER_LETTER_DEFAULT = r'''Default: ``True``'''
+	_MIN_FREQUENT_VOCAB_TIMES_DEFAULT = r'''Default: ``10``.'''
+	_MIN_RARE_VOCAB_TIMES_DEFAULT = r'''Default: ``0``.'''
 
 	@hooks.hook_dataloader
 	def __init__(self, file_id, *, tokenizer="nltk", \

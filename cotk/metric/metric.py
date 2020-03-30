@@ -24,7 +24,7 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 			BLEU. Default: ``False``."""
 	SAMPLE_ARGUMENTS_IN_BLEU = \
 		"""sample (int, optional): Number of examples sampled from the generated sentences. Default: ``1000``."""
-	SAMPLE_ARGUMENTS_IN_PERPLEXITY = \
+	SAMPLE_ARGUMENTS_IN_NGRAM_PERPLEXITY = \
 		SAMPLE_ARGUMENTS_IN_BLEU.replace("Default: ``1000``.", "Default: ``10000``.")
 	SEED_ARGUMENTS = \
 		"""seed (int, optional): Random seed for sampling. Default: ``1229``."""
@@ -103,7 +103,7 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 		"""gen_key (str, optional): \
 			The key of generated sentences. Default: ``gen``."""
 	GEN_LOG_PROB_KEY_ARGUMENTS = \
-		"""gen_log_prob_key (str, optional): The key of **log** probability over words. \
+		"""gen_log_prob_key (str, optional): The key of predicted **log** probability over words. \
 			Default: ``gen_log_prob``."""
 	GENERATE_RARE_VOCAB_ARGUMENTS = \
 		"""generate_rare_vocab (bool, optional): Whether ``gen_log_prob`` contains :ref:`invalid vocab <vocabulary_ref>`. \
@@ -141,8 +141,8 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 
 	CPU_COUNT_ARGUMENTS = \
 		"""cpu_count (int, optional): Number of used cpu for multiprocessing. Multiprocessing will **NOT** be used \
-			when ``cpu_count`` is set to ``1`` or the dataset is small. Default: ``None``, which indicates \
-			the environment variable ``CPU_COUNT`` will be used	when it is set, \
+			when ``cpu_count`` is set to ``1`` or the dataset is small. Default: If ``None``, \
+			the environment variable ``CPU_COUNT`` will be used when available, \
 			or all available cpu will be used otherwise."""
 
 	def __init__(self, name: str, version: int):

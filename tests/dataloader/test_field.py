@@ -253,8 +253,8 @@ class BaseTestSentence(BaseTestField):
 	def base_test_init(self, sentence_field):
 		assert isinstance(sentence_field, Sentence)
 		assert isinstance(getattr(sentence_field, 'vocab', None), Vocab)
-		assert isinstance(getattr(sentence_field, 'vocab_from', None), dict)
-		for k, v in sentence_field.vocab_from.items():
+		assert isinstance(getattr(sentence_field, 'vocab_from_mappings', None), dict)
+		for k, v in sentence_field.vocab_from_mappings.items():
 			assert isinstance(k, str) and isinstance(v, str)
 		assert hasattr(sentence_field, 'max_sent_length')
 		assert sentence_field.max_sent_length is None or isinstance(sentence_field.max_sent_length, int)

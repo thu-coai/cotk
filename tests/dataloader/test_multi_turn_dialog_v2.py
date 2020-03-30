@@ -211,8 +211,6 @@ class TestSwitchboardCorpus(TestMultiTurnDialog):
 	def test_teacher_inference_metric(self, load_switchboardcorpus):
 		super().base_test_teacher_inference_metric(load_switchboardcorpus())
 
-	# TODO: fix bug
-	@pytest.mark.skip()
 	@pytest.mark.dependency()
 	def test_teacher_precision_recall_metric(self, load_switchboardcorpus):
 		dl = load_switchboardcorpus()

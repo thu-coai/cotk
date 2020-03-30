@@ -14,29 +14,43 @@ from .tokenizer import PretrainedTokenizer
 
 class Vocab(LoadClassInterface, metaclass=DocStringInheritor):
 	'''A class for storing vocabulary.
-	TODO: see explanation'''
+	This is an abstract base class.
+	It often works as a part of :class:`Field` or is shared between :class:`Field`.
+
+	See :ref:`introduction of vocabulary<vocabulary_ref>` for more information.
+
+	Arguments:
+
+		This class do not contains arguments for initialization.
+	'''
+
+	NOT_SPECIFIED_DOCS = r'''
+	If any argument is not specified,
+	the value will be first retrieved from :class:`VocabContext`. If still ``None``, default
+	value will be used.
+	'''
+
 	def __init__(self):
 		if self.__class__.__name__ == "Vocab":
-			raise NotImplementedError("This calss is an abstract class, use GeneralVocab instead.")
+			raise NotImplementedError("This class is an abstract class, use GeneralVocab instead.")
 		self._setting_hash: Optional[str] = None
 
 	def add_tokens(self, tokens: List[str], vocab_from: str) -> None:
 		'''Add tokens for this vocabulary instance, the tokens will be used for building
 		vocabulary list. Must be called before :meth:`.build_vocab`.
-		See TODO: explain the vocab_from.
 
 		Arguments:
 			tokens (List[str]): A list of tokens to add to the vocabulary.
-			vocab_from (str): One of ``train``, ``test``, ``extra`` or ``default``. \
-				If ``train``, the tokens are from the training data. \
-				If ``test``, the tokens are from the validation data or test data. \
-				If ``ignore`` or ``default``, the tokens are from extra data.
+			vocab_from (str): One of ``train``, ``test``, ``extra``.
+
+				* ``train``: The tokens are from the training data. Frequent vocabs are selected from tokens of this type.
+				* ``test``: The tokens are from the validation data or test data. Rare vocabs are selected from tokens of this type.
+				* ``extra``: The tokens are from extra data. The tokens of this type will not selected as frequent or rare vocabs.
 		'''
 		raise NotImplementedError
 
 	def build_vocab(self):
 		'''Building the vocabulary list according to the tokens from :meth:`.add_tokens`.
-		See TODO: explain how to build vocab.
 		'''
 		raise NotImplementedError
 
@@ -80,7 +94,7 @@ class Vocab(LoadClassInterface, metaclass=DocStringInheritor):
 
 	@property
 	def all_vocab_list(self):
-		'''list: The list of frequent words and rare words. {_VOCAB_MORE_DOCSTRING}
+		'''list: The list of frequent words and rare words. Frequent words are always in the front of the list. {_VOCAB_MORE_DOCSTRING}
 		'''
 		raise NotImplementedError
 
@@ -97,7 +111,7 @@ class Vocab(LoadClassInterface, metaclass=DocStringInheritor):
 
 	def get_special_tokens_id(self, name: str) -> int:
 		'''Get id of special token specifying the general name.
-		Raise KeyError if no such token in this instance. {_VOCAB_MORE_DOCSTRING}
+		Raise ``KeyError`` if no such token in this instance. {_VOCAB_MORE_DOCSTRING}
 
 		Arguments:
 			name (str): the general name, must be one of the following,
@@ -107,22 +121,22 @@ class Vocab(LoadClassInterface, metaclass=DocStringInheritor):
 
 	@property
 	def pad_id(self) -> int:
-		'''int: The id of pad token. Raise KeyError if no pad token in this instance. {_VOCAB_MORE_DOCSTRING}
+		'''int: The id of pad token. Raise ``KeyError`` if no pad token in this instance. {_VOCAB_MORE_DOCSTRING}
 		'''
 		return self.get_special_tokens_id("pad")
 	@property
 	def unk_id(self) -> int:
-		'''int: The id of unk token. Raise KeyError if no unk token in this instance. {_VOCAB_MORE_DOCSTRING}
+		'''int: The id of unk token. Raise ``KeyError`` if no unk token in this instance. {_VOCAB_MORE_DOCSTRING}
 		'''
 		return self.get_special_tokens_id("unk")
 	@property
 	def go_id(self) -> int:
-		'''int: The id of go token. Raise KeyError if no go token in this instance. {_VOCAB_MORE_DOCSTRING}
+		'''int: The id of go token. Raise ``KeyError`` if no go token in this instance. {_VOCAB_MORE_DOCSTRING}
 		'''
 		return self.get_special_tokens_id("go")
 	@property
 	def eos_id(self) -> int:
-		'''int: The id of eos token. Raise KeyError if no eos token in this instance. {_VOCAB_MORE_DOCSTRING}
+		'''int: The id of eos token. Raise ``KeyError`` if no eos token in this instance. {_VOCAB_MORE_DOCSTRING}
 		'''
 		return self.get_special_tokens_id("eos")
 
@@ -141,23 +155,28 @@ class Vocab(LoadClassInterface, metaclass=DocStringInheritor):
 
 class GeneralVocab(Vocab):
 	'''Bases: :class:`.dataloader.Vocab`
+
 	A vocabulary class for general use.
 
-	If any argument is not specified,
-	the value will be first retrieved from :class:`VocabContext`. If still ``None``, default
-	value will be used.
+	{NOT_SPECIFIED_DOCS}
 
 	Arguments:
-		min_frequent_vocab_times (int, optional): Tokens from training data appeared \
-			more than ``min_frequent_vocab_times`` will be regarded as frequent words. \
-			If None, it will be ``0``.
-		min_rare_vocab_times (int, optional): Tokens from training data or test data \
-			appeared more than ``min_rare_vocab_times`` will be regarded as rare words \
-			(frequent word excluded). If None, it will be ``0``.
-		special_tokens_mapping (OrderedDict, optional): {SPECIAL_TOKEN_DOCS_WITH_DEFAULT}
-		special_appeared_in_data (bool, optional): If the string of special tokens will \
-			appear in the data. If None, it will be ``False``.
+			{MIN_FREQUENT_VOCAB_TIMES_DOCS}{MIN_FREQUENT_VOCAB_TIMES_DEFAULT}
+			{MIN_RARE_VOCAB_TIMES_DOCS}{MIN_RARE_VOCAB_TIMES_DEFAULT}
+			special_tokens_mapping (OrderedDict, optional): {SPECIAL_TOKEN_DOCS_WITH_DEFAULT}
+			special_appeared_in_data (bool, optional): If the string of special tokens will
+					appear in the data. Default: If not specified, it will be ``False``.
 	'''
+
+	MIN_FREQUENT_VOCAB_TIMES_DOCS = r"""
+			min_frequent_vocab_times (int, optional): Tokens from training data appeared
+					no less than ``min_frequent_vocab_times`` will be regarded as frequent words."""
+	MIN_FREQUENT_VOCAB_TIMES_DEFAULT = r"""Default: ``0``"""
+	MIN_RARE_VOCAB_TIMES_DOCS = r"""
+			min_rare_vocab_times (int, optional): Tokens from training data or test data
+					appeared more than ``min_rare_vocab_times`` will be regarded as rare words
+					(frequent word excluded). """
+	MIN_RARE_VOCAB_TIMES_DEFAULT = r"""Default: ``0``"""
 
 	SPECIAL_TOKEN_DOCS_WITH_DEFAULT = Vocab.SPECIAL_TOKEN_DOCS + \
 			''' If None, it will be ``OrderedDict([("pad", "<pad>"), ("unk", "<unk>"), ("go", "<go>"), ("eos", "<eos>")])``.'''
@@ -317,7 +336,7 @@ class GeneralVocab(Vocab):
 			self.train_tokens.extend(tokens)
 		elif vocab_from == "test":
 			self.test_tokens.extend(tokens)
-		elif vocab_from in ["extra", "default"]:
+		elif vocab_from == "extra":
 			pass
 		else:
 			raise ValueError("Unknown vocab_from: %s, only supports frequent, rare, extra or default" % vocab_from)
@@ -364,7 +383,6 @@ class GeneralVocab(Vocab):
 		self.test_tokens = None
 		self.mode = "finish"
 
-	_VOCAB_MORE_DOCSTRING = ""
 	def get_special_tokens_id(self, name) -> int:
 		try:
 			return self.word2id[self.special_tokens_mapping[name]] # type: ignore
@@ -401,22 +419,20 @@ class GeneralVocab(Vocab):
 
 	@property
 	def frequent_vocab_list(self):
-		'''list: The list of frequent words. Special tokens are always in the front of the list.
-		'''
 		return self._all_vocab_list[:self._frequent_vocab_size] # type: ignore
 
 	@property
 	def all_vocab_list(self):
-		'''list: The list of frequent and rare words. Frequent words are always in the front of the list.
-		'''
 		return self._all_vocab_list[:] # type: ignore
 
 	def get_special_tokens_mapping(self):
 		return self.special_tokens_mapping
 
 class PretrainedVocab(Vocab):
-	'''Use the vocabulary from a pretrained tokenizer in transformers package.
-	This class is usually used for pretrained models, and it do not have rare words.
+	'''Bases: :class:`.dataloader.Vocab`
+
+	Use the vocabulary from a pretrained tokenizer in ``transformers`` package.
+	This class is usually used for pretrained models, and it **do NOT** have rare words.
 
 	Arguments:
 		tokenizer (``transformers.PretrainedTokenizer``): A pretrained tokenizer from transformers package.
@@ -452,16 +468,10 @@ class PretrainedVocab(Vocab):
 
 	@property
 	def frequent_vocab_list(self):
-		'''list: The list of vocabulary list. This class do not have rare words, thus the return value
-		is always the same with :meth:`all_vocab_list`.
-		'''
 		return self.convert_ids_to_tokens(list(range(self.frequent_vocab_size)))
 
 	@property
 	def all_vocab_list(self):
-		'''list: The list of vocabulary list. This class do not have rare words, thus the return value
-		is always the same with :meth:`frequent_vocab_list`.
-		'''
 		return self.frequent_vocab_list
 
 	def get_special_tokens_mapping(self):
@@ -474,7 +484,6 @@ class PretrainedVocab(Vocab):
 				res[new_key[idx]] = value
 		return res
 
-	_VOCAB_MORE_DOCSTRING = ""
 	def get_special_tokens_id(self, name):
 		try:
 			return self.convert_tokens_to_ids([self.get_special_tokens_mapping()[name]])[0]
@@ -482,7 +491,15 @@ class PretrainedVocab(Vocab):
 			raise KeyError("No such special token in this class")
 
 class SimpleVocab(Vocab):
-	"""A simple implementation of :class:Vocab. It doesn't us any special tokens and it doesn't care about frequency of tokens."""
+	"""Bases: :class:`.dataloader.Vocab`
+
+	A very simple vocabulary class. No rare vocabs or special tokens.
+	Used by :class:`SparseLabel`.
+
+	Arguments:
+			This class do not contains arguments for initialization.
+
+	"""
 	def __init__(self):
 		super().__init__()
 		self._setting_hash = hashlib.sha256(
@@ -497,8 +514,8 @@ class SimpleVocab(Vocab):
 		if self.mode == "init":
 			for token, num in Counter(tokens).items():
 				self._token_counter[token] += num
-	add_tokens.__doc__ = Vocab.add_tokens.__doc__ + """
-	
+
+	add_tokens.__doc__ = Vocab.add_tokens.__doc__ + r"""
 	Notes:
 		Since frequency is not important in this class, argument `vocab_from` has no effect.
 	"""
@@ -536,9 +553,6 @@ class SimpleVocab(Vocab):
 
 	@property
 	def frequent_vocab_list(self):
-		'''list: The list of vocabulary list. This class do not have rare words. Thus the return value
-		is always the same with :meth:`all_vocab_list`.
-		'''
 		return self._all_vocab_list
 
 	@property
@@ -555,4 +569,3 @@ class SimpleVocab(Vocab):
 		return hashlib.sha256(
 			dumps([self._all_vocab_list])
 		).hexdigest()
-

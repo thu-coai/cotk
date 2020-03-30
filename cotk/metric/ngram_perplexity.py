@@ -16,7 +16,7 @@ class NgramFwBwPerplexityMetric(MetricBase):
 	    {MetricBase.NGRAM_ARGUMENTS}
 	    {MetricBase.TOKENIZER_ARGUMENTS}
 		{MetricBase.GEN_KEY_ARGUMENTS}
-		{MetricBase.SAMPLE_ARGUMENTS_IN_PERPLEXITY}
+		{MetricBase.SAMPLE_ARGUMENTS_IN_NGRAM_PERPLEXITY}
 		{MetricBase.SEED_ARGUMENTS}
 		{MetricBase.CPU_COUNT_ARGUMENTS}
 
