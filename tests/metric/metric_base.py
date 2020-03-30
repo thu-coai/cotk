@@ -29,12 +29,12 @@ class FakeDataLoader(LanguageProcessing):
 		vocab = GeneralVocab.from_predefined(all_vocab_list, 8)
 		toker = SimpleTokenizer('space', ['<pad>', '<unk>', '<go>', '<eos>'])
 		sent = SentenceDefault(toker, vocab, convert_to_lower_letter=True)
-		fields = {set_name: {'sent': sent} for set_name in set_names}
+		fields = {set_name: [('sent', sent)] for set_name in set_names}
 
 		with FieldContext.set_parameters(vocab=GeneralVocab.from_predefined(all_vocab_list, 8), weak=True) as field_context:
 
 			fieldcontents: Dict[str, OrderedDictType[str, _FieldContent]] = {}
-			self.fields: Dict[str, OrderedDictType[str, Field]] = {}
+			self.fields: "OrderedDict[str, OrderedDictType[str, Field]]" = {}
 			if isinstance(fields, OrderedDict):
 				fields = {set_name: fields for set_name in ["train", "dev", "test"]}
 			if isinstance(fields, dict):
@@ -160,7 +160,7 @@ class FakeMultiDataloader(MultiTurnDialog):
 		vocab = GeneralVocab.from_predefined(all_vocab_list, 8)
 		toker = SimpleTokenizer('space', ['<pad>', '<unk>', '<go>', '<eos>'])
 		sent = SessionDefault(toker, vocab, convert_to_lower_letter=True)
-		fields = {set_name: {'session': sent} for set_name in set_names}
+		fields = {set_name: [('session', sent)] for set_name in set_names}
 
 		with FieldContext.set_parameters(vocab=GeneralVocab.from_predefined(all_vocab_list, 8),
 										 weak=True) as field_context:
@@ -461,10 +461,10 @@ def version_test(metric_class, dataloader=None):
 				tmp_toker = SimpleTokenizer('space', ['<pad>', '<unk>', '<go>', '<eos>'])
 				if isinstance(dataloader, FakeMultiDataloader):
 					tmp_sent = SessionDefault(tmp_toker, tmp_vocab, convert_to_lower_letter=True)
-					tmp_fields = {set_name: {'session': tmp_sent} for set_name in tmp_set_names}
+					tmp_fields = {set_name: [('session', tmp_sent)] for set_name in tmp_set_names}
 				else:
 					tmp_sent = SentenceDefault(tmp_toker, tmp_vocab, convert_to_lower_letter=True)
-					tmp_fields = {set_name: {'sent': tmp_sent} for set_name in tmp_set_names}
+					tmp_fields = {set_name: [('sent', tmp_sent)] for set_name in tmp_set_names}
 
 				tmp_dataloader = dataloader.simple_create(tmp_file_id, tmp_fields)
 				if isinstance(dataloader, FakeMultiDataloader):
