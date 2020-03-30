@@ -11,7 +11,7 @@ def setup_module():
 	random.seed(0)
 	np.random.seed(0)
 
-pytestmark = pytest.mark.skip("all tests still WIP")
+#pytestmark = pytest.mark.skip("all tests still WIP")
 
 bleu_precision_recall_test_parameter = generate_testcase(\
 	(zip(test_argument), "add"),
@@ -133,7 +133,7 @@ class TestEmbSimilarityPrecisionRecallMetric():
 		dataloader = FakeMultiDataloader()
 		emb = {}
 		emb_unequal = {}
-		for word in dataloader.all_vocab_list[:dataloader.valid_vocab_len]:
+		for word in dataloader.all_vocab_list[:dataloader.frequent_vocab_size]:
 			vec = []
 			for j in range(5):
 				vec.append(random.random())
@@ -188,7 +188,7 @@ class TestEmbSimilarityPrecisionRecallMetric():
 		dataloader = FakeMultiDataloader()
 
 		emb = {}
-		for word in dataloader.all_vocab_list[:dataloader.valid_vocab_len]:
+		for word in dataloader.all_vocab_list[:dataloader.frequent_vocab_size]:
 			vec = []
 			for j in range(5):
 				vec.append(random.random())

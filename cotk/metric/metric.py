@@ -204,7 +204,7 @@ class MetricChain(MetricBase):
 	Todo: Give more examples to combining forward and close
 	'''
 	_name = 'MetricChain'
-	_version = 1
+	_version = 2
 	def __init__(self):
 		super().__init__(self._name, self._version)
 		self.metric_list = []

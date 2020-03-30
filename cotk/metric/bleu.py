@@ -60,7 +60,7 @@ class BleuCorpusMetric(MetricBase):
 		...	    gen_key: [[10, 1028, 479, 285, 220, 3], [851, 17, 2451, 3]]
 		...	    # gen_key: [["I", "love", "java", "very", "much", "<eos>"], ["python", "is", "excellent", "<eos>"]],
 		... }
-		>>> metric.forword(data)
+		>>> metric.forward(data)
 		>>> metric.close()
 		{'bleu': 0.08582363099612991,
 		'bleu hashvalue': '70e019630fef24d9477034a3d941a5349fcbff5a3dc6978a13ea3d85290114fb'}
@@ -68,7 +68,7 @@ class BleuCorpusMetric(MetricBase):
 	'''
 
 	_name = 'BleuCorpusMetric'
-	_version = 1
+	_version = 2
 
 	@hooks.hook_metric
 	def __init__(self, dataloader: "LanguageProcessing", ngram: int =4, *, tokenizer: Union[None, Tokenizer, str] = None, \
@@ -238,14 +238,14 @@ class SelfBleuCorpusMetric(MetricBase):
 		...	    gen_key: [[10, 64, 851, 3], [10, 48, 851, 3]],
 		...	    # gen_key: [["I", "like", "python", "<eos>"], ["I", "use", "python", "<eos>"]],
 		... }
-		>>> metric.forword(data)
+		>>> metric.forward(data)
 		>>> metric.close()
 		{'self-bleu': 0.13512001548070346,
 		'self-bleu hashvalue': '53cf55829c1b080c86c392c846a5d39a54340c70d838ec953f952aa6731118fb'}
 	'''
 
 	_name = 'SelfBleuCorpusMetric'
-	_version = 1
+	_version = 2
 
 	@hooks.hook_metric
 	def __init__(self, dataloader: "LanguageProcessing", ngram: int = 4, *, \
@@ -390,7 +390,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 		...	    gen_key: [[10, 64, 851, 3], [10, 48, 851, 3]],
 		...	    # gen_key: [["I", "like", "python", "<eos>"], ["I", "use", "python", "<eos>"]],
 		... }
-		>>> metric.forword(data)
+		>>> metric.forward(data)
 		>>> metric.close()
 		{'fw-bleu': 0.007688528488990184,
  		 'bw-bleu': 0.0012482612634667945,
@@ -399,7 +399,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 	'''
 
 	_name = 'FwBwBleuCorpusMetric'
-	_version = 1
+	_version = 2
 
 	@hooks.hook_metric
 	def __init__(self, dataloader: "LanguageProcessing", \
@@ -590,14 +590,14 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 		...     # multi_turn_gen_key = [[["python", "is", "excellent", "<eos>"], ["PHP", "is", "best", "<eos>"]],
 		...     # 	[["I", "like", "natural", "language", "processing", "<eos>"]]]
 		... }
-		>>> metric.forword(data)
+		>>> metric.forward(data)
 		>>> metric.close()
 		{'bleu': 0.12081744577265555,
 		'bleu hashvalue': 'c65b44c454dee5a8d393901644c7f1acfdb847bae3ab03823cb5b9f643958960'}
 	'''
 
 	_name = 'MultiTurnBleuCorpusMetric'
-	_version = 1
+	_version = 2
 
 	@hooks.hook_metric
 	def __init__(self, dataloader: "LanguageProcessing", ignore_smoothing_error: bool = False,\
@@ -653,8 +653,8 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 			gen_session = gen[i]
 			ref_session = reference_allvocabs[i]
 			for j in range(turn_length):
-				self.hyps.append(list(self.dataloader.trim(gen_session[j])))
-				self.refs.append([list(self.dataloader.trim(ref_session[j])[1:])])
+				self.hyps.append(list(self.dataloader.trim_in_ids(gen_session[j])))
+				self.refs.append([list(self.dataloader.trim_in_ids(ref_session[j])[1:])])
 
 	@hooks.hook_metric_close
 	def close(self) -> Dict[str, Any]:

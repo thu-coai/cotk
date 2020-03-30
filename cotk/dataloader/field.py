@@ -1025,7 +1025,7 @@ class SparseLabel(Field):
 			... 	except StopIteration:
 			... 		break
 			>>> field_content.process_before_vocab()
-			>>> field.vocab.build_vocab()
+			>>> field.get_vocab().build_vocab()
 			>>> data = field_content.get_data()
 			>>> data
 			{'id': [0, 2, 1, 0], 'str': ['Java', 'Python', 'Cpp', 'Java']}

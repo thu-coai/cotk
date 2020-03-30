@@ -13,7 +13,7 @@ def setup_module():
 	random.seed(0)
 	np.random.seed(0)
 
-pytestmark = pytest.mark.skip("all tests still WIP")
+#pytestmark = pytest.mark.skip("all tests still WIP")
 
 single_turn_dialog_recorder_test_parameter = generate_testcase(\
 	(zip(test_argument), "add"),
@@ -96,7 +96,7 @@ class TestMultiTurnDialogRecorder:
 		for i, resp_turn in enumerate(data[resp_key]):
 			resp_now = []
 			for j, resp in enumerate(resp_turn):
-				t = dataloader.trim(resp[1:])
+				t = dataloader.trim_in_ids(resp[1:])
 				if data[turn_length] is None:
 					if len(t) == 0:
 						break
@@ -108,7 +108,7 @@ class TestMultiTurnDialogRecorder:
 		for i, gen_turn in enumerate(data[gen_key]):
 			gen_now = []
 			for j, gen in enumerate(gen_turn):
-				t = dataloader.trim(gen)
+				t = dataloader.trim_in_ids(gen)
 				if data[turn_length] is None:
 					if len(t) == 0:
 						break
