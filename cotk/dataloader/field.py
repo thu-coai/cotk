@@ -227,18 +227,25 @@ class Sentence(Field):
 	:class:`Sentence` and :class:`SentenceGPT2`.
 
 	{INIT_DOCSTRING}
+
+	{SENTENCE_INPUT_FORMAT}
 	'''
 
 	INIT_DOCSTRING = r'''
 	{Field.NOT_SPECIFIED_DOCS}
 
 	Arguments:
-			{Sentence.TOKENIZER_DOCS}{Sentence.TOKENIZER_DEFAULT}
-			{Sentence.VOCAB_DOCS}{Sentence.VOCAB_DEFAULT}
-			{Sentence.VOCAB_FROM_MAPPINGS_DOCS}{Sentence.VOCAB_FROM_MAPPINGS_DEFAULT}
-			{Sentence.MAX_SENT_LENGTH_DOCS}{Sentence.MAX_SENT_LENGTH_DEFAULT}
-			{Sentence.CONVERT_TO_LOWER_LETTER_DOCS}{Sentence.CONVERT_TO_LOWER_LETTER_DEFAULT}
+			{Sentence.TOKENIZER_DOCS} {Sentence.TOKENIZER_DEFAULT}
+			{Sentence.VOCAB_DOCS} {Sentence.VOCAB_DEFAULT}
+			{Sentence.VOCAB_FROM_MAPPINGS_DOCS} {Sentence.VOCAB_FROM_MAPPINGS_DEFAULT}
+			{Sentence.MAX_SENT_LENGTH_DOCS} {Sentence.MAX_SENT_LENGTH_DEFAULT}
+			{Sentence.CONVERT_TO_LOWER_LETTER_DOCS} {Sentence.CONVERT_TO_LOWER_LETTER_DEFAULT}
 		'''
+
+	SENTENCE_INPUT_FORMAT = r"""
+	Input Formats
+		This field read one line of sentence per sample.
+	"""
 
 	TOKENIZER_DOCS = r"""
 			tokenizer (:class:`Tokenizer`, str, optional): How to tokenize sentence. if ``str``, see :ref:`tokenizer<tokenizer_ref>` for
@@ -504,6 +511,8 @@ class SentenceDefault(Sentence):
 	A common use field for sentence.
 
 	{INIT_DOCSTRING}
+
+	{SENTENCE_INPUT_FORMAT}
 	'''
 	INIT_DOCSTRING = Sentence.INIT_DOCSTRING.replace(":class:Vocab", ":class:GeneralVocab")
 
@@ -589,6 +598,8 @@ class SentenceGPT2(Sentence):
 	A field for sentence in the format of GPT2.
 
 	{INIT_DOCSTRING}
+
+	{SENTENCE_INPUT_FORMAT}
 	'''
 
 	INIT_DOCSTRING = Sentence.INIT_DOCSTRING.replace(":class:Vocab", ":class:PretrainedVocab")
@@ -758,7 +769,15 @@ class Session(Sentence):
 
 			max_turn_length (int, optional): Set the maximum turn length of a session. The left sentences are ignored.
 				Default: If ``None``, don't cut sessions.
+
+	{SESSION_INPUT_FORMAT}
 	"""
+
+	SESSION_INPUT_FORMAT = r"""
+	Input Format
+		This field read multiple line of sentences per sample, until a blank line.
+	"""
+
 	def __init__(self, tokenizer: Union[None, Tokenizer, str] = None,
 				 vocab: Optional[Vocab] = None,
 				 vocab_from_mappings: Optional[Dict[str, str]] = None,
@@ -845,6 +864,8 @@ class SessionDefault(Session):
 	A common use field for sessions.
 
 	{INIT_DOCSTRING}
+
+	{SESSION_INPUT_FORMAT}
 	'''
 	INIT_DOCSTRING = Sentence.INIT_DOCSTRING.replace(":class:Vocab", ":class:GeneralVocab")
 
@@ -922,6 +943,9 @@ class DenseLabel(Field):
 	Arguments:
 
 		This class do not contains arguments for initialization.
+
+	Input Format
+		This field reads one line per sample. The line must be an integer.
 	"""
 	def _create(self, set_name: str) -> "_FieldContent":
 		return _DenseLabelContent(self)
@@ -1002,6 +1026,9 @@ class SparseLabel(Field):
 
 		vocab (:class:`SimpleVocab`, optional): The vocab to store all the labels.
 			If ``None``, a :class:`SimpleVocab` is automatically created.
+
+	Input Format
+		This field reads one line per sample. The line can be an arbitary string.
 	"""
 	def __init__(self, vocab: Optional[SimpleVocab] = None):
 		super().__init__()

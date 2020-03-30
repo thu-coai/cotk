@@ -132,6 +132,8 @@ class LanguageGeneration(LanguageProcessing):
 		* :class:`.metric.NgramFwBwPerplexityMetric`
 		* :class:`.metric.LanguageGenerationRecorder`
 
+		See the above class for details of arguments.
+
 		Arguments:
 			{GEN_KEY_ARGUMENTS}
 			{SAMPLE_ARGUMENTS_IN_BLEU}
