@@ -228,7 +228,7 @@ class SwitchboardCorpus(MultiTurnDialog):
 			max_sent_length=max_sent_length,
 			max_turn_length=max_turn_length,
 			convert_to_lower_letter=False,
-			vocab_from={**SessionDefault.DEFAULT_VOCAB_FROM, 'multi_ref': 'test'}):
+			vocab_from_mappings={**SessionDefault.DEFAULT_VOCAB_FROM_MAPPINGS, 'multi_ref': 'test'}):
 			super().__init__(file_id, fields)
 		self.set_default_field('train', 'session')
 
