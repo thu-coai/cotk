@@ -10,11 +10,13 @@ class DocStringInheritor(type):
 	A meta class. It make the class:
 
 	* Docstring can inherit the parent classes.
-	* {STRING_DOCS} in docs will be replaced by self.STRING_DOCS
-	* {BaseClassName.STRING_DOCS} in docs will be replaced by BaseClassName.STRING_DOCS
-	* If the docstring iherited from the parent class Base, {_STRING_DOCS} use the value of self._STRING_DOCS,
-	  but {STRING_DOCS} (without underscore prefix) will use the value of Base._STRING_DOCS
-	* The replacement can be nested
+	* {STRING_DOCS} in docs will be replaced by self.STRING_DOCS or BaseClass.STRING_DOCS. (choose the first available one)
+	* {BaseClassName.STRING_DOCS} in docs will be replaced by BaseClassName.STRING_DOCS. (BaseClassName can be itself)
+	* If the docstring iherited from the parent class Base, {_STRING_DOCS} try to use the value of self._STRING_DOCS first
+	  (if not existed, then trying BASE._STRING_DOCS),
+	  but {STRING_DOCS} (without underscore prefix) will use the value of Base.STRING_DOCS
+	* The replacement can be nested. But only {BaseClassName.STRING_DOCS} or {_STRING_DOCS} are allowed in the nested replacement,
+	  for avoiding ambiguous use.
 
 	A variation on
 	http://groups.google.com/group/comp.lang.python/msg/26f7b4fcb4d66c95
@@ -47,23 +49,33 @@ class DocStringInheritor(type):
 						return getattr(mro_cls, attr_name)
 				raise KeyError("No such attr.")
 
-		def replace_for_clsdict(matched):
-			attr_name = matched.group(1)
-			try:
-				return find_attr(attr_name)
-			except ValueError as err:
-				if err.args[0].startswith("No bases"):
-					raise ValueError("Can't find %s when interpreting docstring of class %s, because the class doesn't have a baseclass named %s." \
-						% (attr_name, name, attr_name.split(".")[0]))
-				else:
-					raise
-			except (AttributeError, KeyError):
-				raise ValueError("Can't find %s when interpreting docstring of class %s, please check whether the CONSTANT exists." \
-					% (attr_name, name))
-
-		def replace_for(attr):
+		def replace_for_clsdict(first):
 			def replace(matched):
 				attr_name = matched.group(1)
+				if not first:
+					if "." not in attr_name and not attr_name.startswith("_"):
+						raise ValueError(("%s are not allowed in nested replacement when interpreting docstring of class %s, "
+							"try to use BaseClassName.ATTR or _ATTR instead.") % (attr_name, name))
+				try:
+					return find_attr(attr_name)
+				except ValueError as err:
+					if err.args[0].startswith("No bases"):
+						raise ValueError("Can't find %s when interpreting docstring of class %s, because the class doesn't have a baseclass named %s." \
+							% (attr_name, name, attr_name.split(".")[0]))
+					else:
+						raise
+				except (AttributeError, KeyError):
+					raise ValueError("Can't find %s when interpreting docstring of class %s, please check whether the CONSTANT exists." \
+						% (attr_name, name))
+			return replace
+
+		def replace_for(attr, first):
+			def replace(matched):
+				attr_name = matched.group(1)
+				if not first:
+					if "." not in attr_name and not attr_name.startswith("_"):
+						raise ValueError("%s are not allowed in nested replacement when interpreting docstring of class %s, "
+							"try to use BaseClassName.ATTR or _ATTR instead." % (attr_name, name))
 				try:
 					return find_attr(attr_name)
 				except ValueError as err:
@@ -86,18 +98,22 @@ class DocStringInheritor(type):
 					clsdict['__doc__'] = mro_cls.META_DOC
 					break
 		# second, subtitute CONSTANT with _ prefix
+		first = True
 		if clsdict.get('__doc__'):
 			while True:
-				doc = re.sub(r'\{\b((\w*\.)?[A-Z][A-Z_]*?)\}', replace_for_clsdict, clsdict['__doc__'])
+				doc = re.sub(r'\{\b((\w*\.)?[A-Z][A-Z_]*?)\}', replace_for_clsdict(first), clsdict['__doc__'])
+				first = False
 				if doc == clsdict['__doc__']:
 					break
 				clsdict['__doc__'] = doc
 		# save docstring now as META_DOC, before the final subtitution
 		clsdict['META_DOC'] = clsdict.get('__doc__')
 		# final, do substitution for CONSTANT
+		first = True
 		if clsdict.get('__doc__'):
 			while True:
-				doc = re.sub(r'\{\b((\w*\.)?[A-Z_]+?)\}', replace_for_clsdict, clsdict['__doc__'])
+				doc = re.sub(r'\{\b((\w*\.)?[A-Z_]+?)\}', replace_for_clsdict(first), clsdict['__doc__'])
+				first = False
 				if doc == clsdict['__doc__']:
 					break
 				clsdict['__doc__'] = doc
@@ -107,7 +123,7 @@ class DocStringInheritor(type):
 		# modify attribute docstring
 		for attr, attribute in clsdict.items():
 
-			if isinstance(attribute, staticmethod):
+			if isinstance(attribute, (staticmethod, classmethod)):
 				doc = attribute.__func__.__doc__
 			else:
 				doc = attribute.__doc__
@@ -122,9 +138,11 @@ class DocStringInheritor(type):
 					doc = ""
 
 			# second, subtitute CONSTANT with _ prefix
+			first = True
 			while True:
 				# else do substitution for CONSTANT
-				new_doc = re.sub(r'\{\b(((\w*\.)?)[A-Z][A-Z_]*?)\}', replace_for(attr), doc)
+				new_doc = re.sub(r'\{\b(((\w*\.)?)[A-Z][A-Z_]*?)\}', replace_for(attr, first), doc)
+				first = False
 				if doc == new_doc:
 					break
 				doc = new_doc
@@ -133,9 +151,11 @@ class DocStringInheritor(type):
 			meta_doc[attr] = doc
 
 			# final, do substitution for CONSTANT
+			first = True
 			while True:
 				# else do substitution for CONSTANT
-				new_doc = re.sub(r'\{\b(((\w*\.)?)[A-Z_]+?)\}', replace_for(attr), doc)
+				new_doc = re.sub(r'\{\b(((\w*\.)?)[A-Z_]+?)\}', replace_for(attr, first), doc)
+				first = False
 				if doc == new_doc:
 					break
 				doc = new_doc
@@ -143,7 +163,7 @@ class DocStringInheritor(type):
 			# set all doc
 			if not doc:
 				doc = None
-			if isinstance(attribute, staticmethod):
+			if isinstance(attribute, (staticmethod, classmethod)):
 				if doc == attribute.__func__.__doc__:
 					continue
 				else:

@@ -14,12 +14,10 @@ if False: # for type check # pylint: disable=using-constant-test
 class SentenceClassification(LanguageProcessing):
 	r"""Base class for sentence classification datasets. This is an abstract class.
 
-	Arguments:{ARGUMENTS}
+	Arguments:
 	"""
 
 	_version = 2
-
-	ARGUMENTS = LanguageProcessing.ARGUMENTS
 
 	def get_batch(self, set_name, indexes):
 		'''Get a batch of specified `indexes`.
@@ -100,7 +98,7 @@ class SST(SentenceClassification):
 			min_rare_vocab_times (int):  A cut-off threshold of invalid tokens. All tokens appear
 					not less than `min_rare_vocab_times` in the **whole dataset** (except valid words) will be
 					marked as rare words. Otherwise, they are unknown words, both in training or
-					testing stages. Default: 0 (No unknown words).{ARG_TOKENIZER}
+					testing stages. Default: 0 (No unknown words).
 
 	Refer to :class:`.SentenceClassification` for attributes and methods.
 
@@ -110,7 +108,6 @@ class SST(SentenceClassification):
 		[2] Lin T Y, Maire M, Belongie S, et al. Microsoft COCO: Common Objects in Context. ECCV 2014.
 
 	'''
-	ARG_TOKENIZER = Sentence.ARG_TOKENIZER
 
 	@hooks.hook_dataloader
 	def __init__(self, file_id, min_frequent_vocab_times=10, \

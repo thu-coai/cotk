@@ -6,7 +6,7 @@ your model from one dataset to other datasets.
 """
 
 from .tokenizer import Tokenizer, SimpleTokenizer, PretrainedTokenizer
-from .vocab import Vocab, GeneralVocab, PretrainedVocab
+from .vocab import Vocab, GeneralVocab, PretrainedVocab, SimpleVocab
 from .field import Field, Sentence, SentenceDefault, SentenceGPT2, Session, SessionDefault, DenseLabel, SparseLabel
 from .context import Context, FieldContext, VocabContext
 from .dataloader import Dataloader, LanguageProcessing
@@ -17,8 +17,8 @@ from .sentence_classification import SentenceClassification, SST
 
 __all__ = [ \
 	'Tokenizer', 'SimpleTokenizer', 'PretrainedTokenizer', \
-	'Vocab', 'GeneralVocab', 'PretrainedVocab', \
-	'Field', 'Sentence', 'SentenceDefault', 'SentenceGPT2','Session', 'SessionDefault', 'DenseLabel', 'SparseLabel', \
+	'Vocab', 'GeneralVocab', 'PretrainedVocab', 'SimpleVocab',\
+	'Field', 'Sentence', 'SentenceDefault', 'SentenceGPT2', 'Session', 'SessionDefault', 'DenseLabel', 'SparseLabel', \
 	'Context', 'FieldContext', 'VocabContext', \
 	'Dataloader', 'LanguageProcessing', \
 	'LanguageGeneration', 'MSCOCO', \

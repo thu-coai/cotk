@@ -32,13 +32,13 @@ class LanguageProcessing(Dataloader):
 	During the initialization of a dataloader, :class:`Vocab`, :class:`Tokenizer` or :class:`Field` may be created.
 	See :ref:`how to create a dataloader<customized_tasks_ref>`.
 
-	Arguments:{ARGUMENTS}{FIELD_DETAILS}
+	Arguments:{FILE_ID_DOCS}{FIELD_DETAILS}
 
 	"""
 
-	ARGUMENTS = r"""
-			file_id (str): A string indicating the dataset. It can be local path ("./data"), a resource name
-				(resources://dataset), or an url (http://test.com/dataset.zip).
+	FILE_ID_DOCS = r"""
+			file_id (str): A string indicating the source (path) of the dataset. It can be local path (``"./data"``), a resource name
+				(``"resources://dataset"``), or an url (``"http://test.com/dataset.zip"``).
 				See :meth:`cotk.file_utils.get_resource_file_path` for further details."""
 
 	FIELD_DETAILS = r"""
@@ -49,21 +49,21 @@ class LanguageProcessing(Dataloader):
 
 						* A ``data format`` should be an ``OrderedDict`` or a ``List[Tuple]`` can be converted to ``OrderedDict``.
 						* The ``key`` of ``data format`` is the name of a Field (used by :meth:`.get_batch`),
-						  and the ``value`` is either a class name of a Field or a :class:`Field` object.
+							and the ``value`` is either a class name of a Field or a :class:`Field` object.
 						* Examples:
 
 							>>> postField = SentenceDefault(...)
 							>>> respField = SentenceDefault(...)
 							>>> data_format = [("post", postField), ("resp", respField)]
 
-						  or
+							or
 
 							>>> data_format = [("post", "SentenceDefault"), ("resp", "SentenceDefault")]
 						* Examples:
 
 							>>> fields = data_format
 
-						  equals to
+							equals to
 
 							>>> fields = {"train": data_format, "dev": data_format, "test": data_format}
 
@@ -71,11 +71,32 @@ class LanguageProcessing(Dataloader):
 
 					>>> fields = {"train": data_format, "extra": data_format}
 
-				* See :ref:`how to create a dataloader<customized_tasks_ref>`.
-				"""
+				* See :ref:`how to create a dataloader<customized_tasks_ref>`."""
 
 	FIELD_REF = r"""
 			fields (List, OrderedDict, Dict): See initialization of :class:`LanguageProcessing` for explanation. """
+
+	SHARED_ARGUMENTS = r'''{LanguageProcessing.FILE_ID_DOCS} {_FILE_ID_DEFAULT}
+			{LanguageProcessing.TOKENIZER_DOCS} {_TOKENIZER_DEFAULT}
+			{LanguageProcessing.MAX_SENT_LENGTH_DOCS} {_MAX_SENT_LENGTH_DEFAULT}
+			{LanguageProcessing.CONVERT_TO_LOWER_LETTER_DOCS} {_CONVERT_TO_LOWER_LETTER_DEFAULT}
+			{LanguageProcessing.MIN_FREQUENT_VOCAB_TIMES_DOCS} {_MIN_FREQUENT_VOCAB_TIMES_DEFAULT}
+			{LanguageProcessing.MIN_RARE_VOCAB_TIMES_DOCS} {_MIN_RARE_VOCAB_TIMES_DEFAULT}
+			{LanguageProcessing.PRETRAINED_DOCS} {_PRETAINED_DEFAULT}'''
+	_FILE_ID_DEFAULT = ""
+	TOKENIZER_DOCS = Sentence.TOKENIZER_DOCS
+	_TOKENIZER_DEFAULT = Sentence.TOKENIZER_DEFAULT
+	MAX_SENT_LENGTH_DOCS = Sentence.MAX_SENT_LENGTH_DOCS
+	_MAX_SENT_LENGTH_DEFAULT = Sentence.MAX_SENT_LENGTH_DEFAULT
+	CONVERT_TO_LOWER_LETTER_DOCS = Sentence.CONVERT_TO_LOWER_LETTER_DOCS
+	_CONVERT_TO_LOWER_LETTER_DEFAULT = Sentence.CONVERT_TO_LOWER_LETTER_DEFAULT
+	MIN_FREQUENT_VOCAB_TIMES_DOCS = GeneralVocab.MIN_FREQUENT_VOCAB_TIMES_DOCS
+	_MIN_FREQUENT_VOCAB_TIMES_DEFAULT = GeneralVocab.MIN_FREQUENT_VOCAB_TIMES_DEFAULT
+	MIN_RARE_VOCAB_TIMES_DOCS = GeneralVocab.MIN_RARE_VOCAB_TIMES_DOCS
+	_MIN_RARE_VOCAB_TIMES_DEFAULT = GeneralVocab.MIN_RARE_VOCAB_TIMES_DEFAULT
+	PRETRAINED_DOCS = r'''
+			pretrained (str, optional): Use :ref:`pretrained field<pretrained_field_ref>` instead of :class:`SentenceDefault`.'''
+	_PRETAINED_DEFAULT = "Default: If ``None``, no pretrained field used."
 
 	def __init__(self, file_id: str, \
 				 fields: Union["OrderedDict[str, Union[str, Field]]", List[Tuple[str, Union[str, Field]]],\
@@ -122,8 +143,8 @@ class LanguageProcessing(Dataloader):
 		'''A simple way to create a dataloader. Instead of using :class:`VocabContext`
 		and :class:`FieldContext`, specifying all the possible parameters here.
 
-		Arguments:{ARGUMENTS}{FIELD_REF}
-			**kwargs: can be any arguments that will be passed to :class:`Vocab` and :class`Field`.
+		Arguments:{FILE_ID_DOCS}{FIELD_REF}
+			**kwargs: Arguments passed to created :class:`Vocab` and :class:`Field`.
 		'''
 		with VocabContext.set_parameters(**kwargs):
 			with FieldContext.set_parameters(**kwargs):
@@ -290,50 +311,21 @@ class LanguageProcessing(Dataloader):
 
 	def get_default_vocab(self) -> Vocab:
 		'''Get the default :class:`Vocab` in this dataloader.
-		TODO:
-		# If there is only one vocabulary in the dataloader,
-		# return it; otherwise, it can be set by :meth:`set_default_vocab` or :meth:`.set_default_field`.
+		It can be set by :meth:`.set_default_field`.
 		'''
 		vocab = self.get_default_field().get_vocab()
 		if vocab is None:
 			raise ValueError("This field do not have vocab")
 		return vocab
 
-	# def set_default_vocab(self, obj: Vocab):
-	# 	'''Set the default vocabulary for this dataloader.
-	# 	TODO: find the related function.
-
-	# 	Arguments:
-	# 		obj (:class:`Vocab`): the default vocabulary instance.
-	# 	'''
-	# 	try:
-	# 		self.default_vocab_id = self.vocabs.index(obj)
-	# 	except ValueError:
-	# 		raise ValueError("obj must be one of the vocabulary instance in this dataloader.")
-
 	def get_default_tokenizer(self) -> Tokenizer:
 		'''Get the default :class:`Tokenizer` in this dataloader.
-		TODO:
-		# If there is only one tokenizer in the dataloader,
-		# return it; otherwise, it can be set by :meth:`set_default_tokenizer` or :meth:`.set_default_field`.
+		It can be set by :meth:`.set_default_field`.
 		'''
 		tokenizer = self.get_default_field().get_tokenizer()
 		if tokenizer is None:
 			raise ValueError("This field do not have tokenizer")
 		return tokenizer
-		# if self.default_tokenizer_id is None:
-		# 	raise RuntimeError("The dataloader has multiple tokenizers. \
-		# 		Specify the default tokenizers by set_default_tokenizer.")
-		# return self.tokenizers[self.default_tokenizer_id]
-
-	# def set_default_tokenizer(self, obj: BaseTokenizer):
-	# 	'''Set the default tokenizer instance for this dataloader.
-	# 	TODO: find the related function.
-
-	# 	Arguments:
-	# 		obj (:class:`BaseTokenizer`): the default vocabulary instance.
-	# 	'''
-	# 	self.default_tokenizer_id = self.tokenizers.index(obj)
 
 	def get_default_field(self) -> Field:
 		'''Get the default :class:`Field` in this dataloader.
@@ -344,7 +336,7 @@ class LanguageProcessing(Dataloader):
 				Specify the default field by set_default_field.")
 		return self.fields[self.default_field_set_name][self.default_field_name]
 
-	SET_NAME_DESCRIPTION = '''set_name (str): The name of set. For example: "train", "dev", "test".'''
+	SET_NAME_DESCRIPTION = '''set_name (str): The name of set. For example: ``"train"``, ``"dev"``, ``"test"``.'''
 	FIELD_NAME_DESCRIPTION = '''field_name (str): The name of field.'''
 
 	def set_default_field(self, set_name: str, field_name: str):
@@ -398,9 +390,10 @@ class LanguageProcessing(Dataloader):
 		return self.fields[set_name][field_name]
 
 	def get_general_hash(self) -> str:
-		'''General hash, identifying all details
+		'''General hash. Identifying all details in dataloader,
 		including raw data before processed, tokenized data, vocabulary, and settings.
-		#TODO: write explaination of hash
+
+		See :ref:`dataloader hash<dataloader_hash_ref>` for explaination.
 		'''
 		general_hash = sha256()
 		general_hash.update(dumps(self._raw_data_hash))
@@ -410,32 +403,36 @@ class LanguageProcessing(Dataloader):
 		return general_hash.hexdigest()
 
 	def get_raw_data_hash(self) -> str:
-		'''Raw data hash, identifying raw data before processed.
-		#TODO: see explaination of hash
+		'''Raw data hash. Identifying raw data before processed.
+
+		See :ref:`dataloader hash<dataloader_hash_ref>` for explaination.
 		'''
 		return self._raw_data_hash
 
 	def get_data_hash(self) -> str:
-		'''Data hash, identifying data after processed (tokenized).
-		#TODO: see explaination of hash
+		'''Data hash. Identifying data after processed (tokenized).
+
+		See :ref:`dataloader hash<dataloader_hash_ref>` for explaination.
 		'''
 		return self._data_hash
 
 	def get_vocab_hash(self) -> str:
-		'''Vocab hash, identifying vocabulary.
-		#TODO: see explaination of hash
+		'''Vocab hash. Identifying vocabulary.
+
+		See :ref:`dataloader hash<dataloader_hash_ref>` for explaination.
 		'''
 		return self._vocab_hash
 
 	def get_setting_hash(self) -> str:
 		'''Setting hash, identifying settings to create the data loader.
-		#TODO: see explaination of hash
+
+		See :ref:`dataloader hash<dataloader_hash_ref>` for explaination.
 		'''
 		return self._setting_hash
 
 	def restart(self, set_name, batch_size=None, shuffle=True):
 		'''Initialize batches. This function be called before :func:`get_next_batch`
-		or an epoch is end.
+		or an epoch is end. See :meth:`get_next_batch` for examples.
 
 		Arguments:
 			{SET_NAME_DESCRIPTION}
@@ -461,18 +458,21 @@ class LanguageProcessing(Dataloader):
 						len(self.index[set_name]) // batch_size_div, \
 						len(self.index[set_name]) % batch_size_div))
 
-	_GET_BATCH_MORE_DOC = "Return a dict containing all the data from each field."
+	_GET_BATCH_MORE_DOC = "Return a merged dict containing all the data from each field by calling :meth:`.field.get_batch`. " \
+		"See examples in subclasses for the return value of predefined tasks."
 	_GET_BATCH_EXAMPLE = ""
 	def get_batch(self, set_name: str, indexes: List[int]) -> Dict[str, Any]:
-		'''Get a batch of data with specified `indexes`.
+		'''Get a batch of data with specified ``indexes``.
 		{_GET_BATCH_MORE_DOC}
 
-		See :meth:`get_next_batch`, :meth:`get_batches`, :meth:`get_all_batch` for other way to get data.
+		:meth:`get_next_batch`, :meth:`get_batches`, :meth:`get_all_batch` provide other methods to get batched data,
+		Their return values are consistent with this methods.
 
 		Arguments:
 			{SET_NAME_DESCRIPTION}
 			indexes (list): a list of specified indexes of batched data.
-			{_GET_BATCH_EXAMPLE}
+
+		{_GET_BATCH_EXAMPLE}
 		'''
 		if set_name not in self.fields:
 			raise ValueError("No set named %s." % set_name)
@@ -481,15 +481,27 @@ class LanguageProcessing(Dataloader):
 			res.update(field_obj.get_batch(field_name, self.data[set_name][field_name], indexes)) #pylint: disable=protected-access
 		return res
 
+	IGNORE_LEFT_SAMPLES = "ignore_left_samples (bool): If the number of the samples is not divisible by ``batch_size``, " \
+			"ignore the left samples less than ``batch_size`` " \
+			"Setting it to ``True`` make that every batch will have the same number of samples. " \
+			"Default: ``False``."
 	def get_next_batch(self, set_name, ignore_left_samples=False) -> Optional[Dict[str, Any]]:
 		'''Get next batch. It can be called only after Initializing batches (:func:`restart`).
 		Return a dict like :func:`get_batch`, or None if the epoch is end.
 
 		Arguments:
 			{SET_NAME_DESCRIPTION}
-			ignore_left_samples (bool): If the number of left samples is not equal to
-				``batch_size``, ignore them. This make sure all batches have same number of samples.
-				Default: ``False``
+			{IGNORE_LEFT_SAMPLES}
+
+		Examples:
+
+			>>> dataloader.restart("train")
+			>>> while True:
+			>>>     data = dataloader.get_next_batch("train")
+			>>>     if data:
+			>>>         break
+            >>>     print(data)
+
 		'''
 		if set_name not in self.fields:
 			raise ValueError("No set named %s." % set_name)
@@ -512,16 +524,14 @@ class LanguageProcessing(Dataloader):
 
 	def get_batches(self, set_name, batch_size=None, shuffle=True,
 			ignore_left_samples=False) -> Iterable[Dict[str, Any]]:
-		'''An iterator over batches. It first call :func:`restart`, and then :func:`get_next_batch`
-		until no more data is available. Returns an iterator where each element is like :func:`get_batch`.
+		'''An iterable generator over batches. It first call :func:`restart`, and then :func:`get_next_batch`
+		until no more data is available. Returns an iterable generator where each element is like :func:`get_batch`.
 
 		Arguments:
 			{SET_NAME_DESCRIPTION}
 			batch_size (int, optional): default: ``None``.  Use ``batch_size`` by default.
 			shuffle (bool): whether to shuffle the data. Default: ``True``.
-			ignore_left_samples (bool): If the number of left samples is not equal to
-				``batch_size``, ignore them. This make sure all batches have same number of samples.
-				Default: ``False``.
+			{IGNORE_LEFT_SAMPLES}
 		'''
 		self.restart(set_name, batch_size, shuffle)
 		while True:
@@ -530,10 +540,11 @@ class LanguageProcessing(Dataloader):
 				break
 			yield res
 
-	def get_all_batch(self, set_name):
+	def get_all_batch(self, set_name) -> Dict[str, List[Any]]:
 		r'''Concatenate all batches to a single dict, where padding will not be applied.
-		Returns a dict like :func:`get_batch`, but all the values are not padded
-		and their type will be converted to list.
+
+		Returns a dict like :func:`get_batch` with all valid ``indexes``,
+		but all the sentences are not padded and their type will be converted to list.
 		Exactly, this function called :func:`get_batch` where ``len(indexes)==1`` multiple times
 		and concatenate all the values in the returned dicts.
 
@@ -552,8 +563,8 @@ class LanguageProcessing(Dataloader):
 		return res
 
 	# copy some functions from vocab
-	_VOCAB_MORE_DOCSTRING = '''It calls the method with the identical name of the :class:`Vocab` instance,\
-		from ``self.get_default_vocab()``.'''
+	_VOCAB_MORE_DOCSTRING = '''It calls the method of the identical name in the :class:`Vocab` instance,\
+		from :meth:`.get_default_vocab()`.'''
 	frequent_vocab_size = copy_property(get_default_vocab, Vocab, "frequent_vocab_size")
 	all_vocab_size = copy_property(get_default_vocab, Vocab, "all_vocab_size")
 	frequent_vocab_list = copy_property(get_default_vocab, Vocab, "frequent_vocab_list")
@@ -565,8 +576,8 @@ class LanguageProcessing(Dataloader):
 	go_id = copy_property(get_default_vocab, Vocab, "go_id")
 	eos_id = copy_property(get_default_vocab, Vocab, "eos_id")
 
-	_SENTENCE_MORE_DOCSTRING = '''It calls the method with the identical name of the :class:`Sentence` instance,\
-		from ``self.get_default_field()``.'''
+	_SENTENCE_MORE_DOCSTRING = '''It calls the method of the identical name in the :class:`Sentence` instance,\
+		from :meth:`.get_default_field()`.'''
 	tokenize = copy_func(get_default_field, Sentence, "tokenize")
 	tokenize_sentences = copy_func(get_default_field, Sentence, "tokenize_sentences")
 	convert_tokens_to_ids = copy_func(get_default_field, Sentence, "convert_tokens_to_ids")
