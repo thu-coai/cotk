@@ -260,7 +260,7 @@ Tokenizer
 * :class:`SimpleTokenizer`: A simple tokenizer for general use in ``CoTK``, supporting ``space`` or ``nltk`` tokenization.
 * :class:`PretrainedTokenizer`: A pretrained Tokenizer from the ``transformers`` package. For example, tokenizer for ``GPT2``.
 
-When creating a dataloader, it often receives ``str`` or :class`Tokenizer`.
+When creating a dataloader, it often receives ``str`` or :class:`Tokenizer`.
 If ``str``, the following arguments are acceptable:
 
 * ``space``: Split by spaces.

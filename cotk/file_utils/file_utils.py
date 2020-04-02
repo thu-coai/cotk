@@ -117,22 +117,23 @@ def _get_resource(file_id, cache_dir=CACHE_DIR, config_dir=CONFIG_DIR):
 
 	src_name = src_name or 'default'
 	res_type = res_type or config.get('type', 'Default')
-	LOGGER.info('name: %s', res_name)
-	LOGGER.info('source: %s', src_name)
-	LOGGER.info('processor type: %s', res_type)
 
-	if config['type'] != res_type:
-		raise ValueError("res_type {} differs with res_type {}".format(res_type, config['type']))
-
-	resource_processor = ResourceProcessor.load_class(res_type + 'ResourceProcessor')\
-			(cache_dir, config_dir)
-	if resource_processor is None:
+	resource_processor_class = ResourceProcessor.load_class(res_type + 'ResourceProcessor')
+	if resource_processor_class is None:
 		raise RuntimeError("No resources type named %sResourcePreprocessor" % res_type)
+	resource_processor = resource_processor_class(cache_dir, config_dir)
+
 	if src_name not in config['link']:
 		raise ValueError("source {} wrong".format(src_name))
 	url = config['link'][src_name]
 	cache_path = os.path.join(cache_dir, _url_to_filename(res_name))
 	meta_path = os.path.join(cache_dir, _url_to_filename(res_name) + '.json')
+
+	LOGGER.info('downloading resources')
+	LOGGER.info('name: %s', res_name)
+	LOGGER.info('source: %s', src_name)
+	LOGGER.info('url: %s', url)
+	LOGGER.info('processor: %s', res_type)
 
 	if not os.path.exists(meta_path):
 		with tempfile.NamedTemporaryFile()  as temp_file:
@@ -214,7 +215,12 @@ def _load_local_data(local_path):
 	res_type = res_type or 'Default'
 	LOGGER.info('local path: %s', local_path)
 	LOGGER.info('processor type: %s', res_type)
-	resource_processor = ResourceProcessor.load_class(res_type + 'ResourceProcessor')()
+
+	resource_processor_class = ResourceProcessor.load_class(res_type + 'ResourceProcessor')
+	if resource_processor_class is None:
+		raise RuntimeError("No resources type named %sResourcePreprocessor" % res_type)
+	resource_processor = resource_processor_class()
+
 	if local_path.endswith(".zip"):
 		local_path = resource_processor.preprocess(local_path)
 	return resource_processor.postprocess(local_path)
@@ -258,10 +264,10 @@ def import_local_resources(file_id, local_path, cache_dir=CACHE_DIR, \
 			shutil.copyfileobj(open(local_path, 'rb'), cache_file)
 
 		res_type = config.get('type', 'Default')
-		resource_processor = ResourceProcessor.load_class(res_type + 'ResourceProcessor') \
-				(cache_dir, config_dir)
-		if resource_processor is None:
+		resource_processor_class = ResourceProcessor.load_class(res_type + 'ResourceProcessor')
+		if resource_processor_class is None:
 			raise RuntimeError("No resources type named %sResourcePreprocessor" % res_type)
+		resource_processor = resource_processor_class(cache_dir, config_dir)
 
 		cache_path = resource_processor.preprocess(cache_path)
 		meta = {'local_path': cache_path, 'hashtag': local_hashtag}

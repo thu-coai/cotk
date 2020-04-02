@@ -158,12 +158,14 @@ class GeneralVocab(Vocab):
 
 	A vocabulary class for general use.
 
+	This class always have the following 4 speical tokens: ``pad``, ``unk``, ``go``, ``eos``.
+
 	{NOT_SPECIFIED_DOCS}
 
 	Arguments:
-			{MIN_FREQUENT_VOCAB_TIMES_DOCS}{MIN_FREQUENT_VOCAB_TIMES_DEFAULT}
-			{MIN_RARE_VOCAB_TIMES_DOCS}{MIN_RARE_VOCAB_TIMES_DEFAULT}
-			special_tokens_mapping (OrderedDict, optional): {SPECIAL_TOKEN_DOCS_WITH_DEFAULT}
+			{MIN_FREQUENT_VOCAB_TIMES_DOCS} {MIN_FREQUENT_VOCAB_TIMES_DEFAULT}
+			{MIN_RARE_VOCAB_TIMES_DOCS} {MIN_RARE_VOCAB_TIMES_DEFAULT}
+			{SPECIAL_TOKEN_DOCS} {SPECIAL_TOKEN_DEFAULT}
 			special_appeared_in_data (bool, optional): If the string of special tokens will
 					appear in the data. Default: If not specified, it will be ``False``.
 	'''
@@ -178,8 +180,11 @@ class GeneralVocab(Vocab):
 					(frequent word excluded). """
 	MIN_RARE_VOCAB_TIMES_DEFAULT = r"""Default: ``0``"""
 
-	SPECIAL_TOKEN_DOCS_WITH_DEFAULT = Vocab.SPECIAL_TOKEN_DOCS + \
-			''' If None, it will be ``OrderedDict([("pad", "<pad>"), ("unk", "<unk>"), ("go", "<go>"), ("eos", "<eos>")])``.'''
+	SPECIAL_TOKEN_DOCS = r"""
+			special_tokens_mapping (OrderedDict, optional): {Vocab.SPECIAL_TOKEN_DOCS}
+					It must at least contains ``pad``, ``unk``, ``go``, ``eos``.
+					All the value of special tokens cannot be the same."""
+	SPECIAL_TOKEN_DEFAULT = r"""Default: If ``None``, it will be ``OrderedDict([("pad", "<pad>"), ("unk", "<unk>"), ("go", "<go>"), ("eos", "<eos>")]``."""
 
 	def __init__(self, min_frequent_vocab_times: Optional[int] = None, \
 			min_rare_vocab_times: Optional[int] = None, \
@@ -200,6 +205,13 @@ class GeneralVocab(Vocab):
 		self.special_tokens_mapping = filled_special_tokens or OrderedDict(
 			[("pad", "<pad>"), ("unk", "<unk>"), ("go", "<go>"), ("eos", "<eos>")]
 		)
+
+		if {"pad", "unk", "go", "eos"}.difference(set(self.special_tokens_mapping.keys())):
+			raise ValueError("Special tokens should at least contains 4 tokens: pad, unk, go, eos.")
+		if set(self.special_tokens_mapping.keys()).difference({"pad", "unk", "go", "eos", "sep", "cls", "mask"}):
+			raise ValueError("Special tokens should not contains keys other than pad, unk, go, eos, sep, cls, mask.")
+		if len(set(self.special_tokens_mapping.values())) != len(set(self.special_tokens_mapping.keys())):
+			raise ValueError("All the value of special tokens cannot be the same.")
 
 		self.mode = "init"
 		self.train_tokens: Optional[List[str]] = []
@@ -227,11 +239,10 @@ class GeneralVocab(Vocab):
 
 		Arguments:
 			vocab_list (List[str]): A list of all vocabulary.
-			frequent_vocab_size (int): the length of the frequent words. \
-				The frequent word must be in the front of the ``vocab_list``.
-			special_tokens_mapping (OrderedDict, optional): {SPECIAL_TOKEN_DOCS_WITH_DEFAULT} \
-				Notice special tokens should be in the front of the ``vocab_list`` (included in frequent words, \
-				ordered sensitive).
+			frequent_vocab_size (int): the length of the frequent words.
+					The frequent word must be in the front of the ``vocab_list``.
+			{SPECIAL_TOKEN_DOCS} Special tokens MUST be in the front of the ``frequent_vocab_list`` (ordered sensitive).
+					{SPECIAL_TOKEN_DEFAULT}
 		'''
 		vocab = GeneralVocab(special_tokens_mapping=special_tokens_mapping)
 		special_values = list(vocab.get_special_tokens_mapping().values())
@@ -288,8 +299,8 @@ class GeneralVocab(Vocab):
 
 		Arguments:
 			frequent_vocab_list (List[str]): A list of frequent vocabulary.
-			special_tokens_mapping (OrderedDict, optional): {SPECIAL_TOKEN_DOCS_WITH_DEFAULT} \
-				Notice special tokens should be in the front of the ``frequent_vocab_list`` (ordered sensitive).
+			{SPECIAL_TOKEN_DOCS} Special tokens MUST be in the front of the ``frequent_vocab_list`` (ordered sensitive).
+					{SPECIAL_TOKEN_DEFAULT}
 		'''
 
 		vocab = GeneralVocab(special_tokens_mapping=special_tokens_mapping)
@@ -433,6 +444,9 @@ class PretrainedVocab(Vocab):
 
 	Use the vocabulary from a pretrained tokenizer in ``transformers`` package.
 	This class is usually used for pretrained models, and it **do NOT** have rare words.
+
+	Unlike :class:`GeneralVocab`, this class do not always have ``pad``, ``unk``, ``go``, ``eos``.
+	Some special tokens may refer to the same token.
 
 	Arguments:
 		tokenizer (``transformers.PretrainedTokenizer``): A pretrained tokenizer from transformers package.

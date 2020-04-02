@@ -3,7 +3,6 @@ r"""
 loading wordvector automatically.
 """
 
-from .wordvector import WordVector
-from .gloves import Glove
+from .wordvector import WordVector, GeneralWordVector, Glove
 
-__all__ = ["WordVector", "Glove"]
+__all__ = ["WordVector", "GeneralWordVector", "Glove"]

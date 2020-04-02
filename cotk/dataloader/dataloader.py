@@ -49,7 +49,7 @@ class LanguageProcessing(Dataloader):
 
 						* A ``data format`` should be an ``OrderedDict`` or a ``List[Tuple]`` can be converted to ``OrderedDict``.
 						* The ``key`` of ``data format`` is the name of a Field (used by :meth:`.get_batch`),
-							and the ``value`` is either a class name of a Field or a :class:`Field` object.
+						  and the ``value`` is either a class name of a Field or a :class:`Field` object.
 						* Examples:
 
 							>>> postField = SentenceDefault(...)
