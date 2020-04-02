@@ -575,7 +575,7 @@ class SentenceDefault(Sentence):
 		data_id, data_str = data["id"], data["str"]
 		batch_size = len(indexes)
 		res[name + "_length"] = np.array([len(data_id[i]) for i in indexes], dtype=int)
-		res_sent = res[name] = np.zeros((batch_size, np.max(res[name + "_length"])), dtype=int)
+		res_sent = res[name] = np.ones((batch_size, np.max(res[name + "_length"])), dtype=int) * self.vocab.pad_id
 		for i, j in enumerate(indexes):
 			sent = data_id[j]
 			res_sent[i, :len(sent)] = sent

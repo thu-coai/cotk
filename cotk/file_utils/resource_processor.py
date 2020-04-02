@@ -266,11 +266,17 @@ class GloveResourceProcessor(ResourceProcessor):
 			dim = filename.split('.')[-2]
 			if dim != name and self.cache_dir is not None and self.config_dir is not None:
 				self.other_gloves.append(["resources://Glove%s" % (dim), \
-										local_path, self.cache_dir, self.config_dir])
+										local_path])
 				continue
 			sub_dir = os.path.join(dst_dir, dim)
 			os.makedirs(sub_dir, exist_ok=True)
-			os.rename(os.path.join(dst_dir, filename), os.path.join(sub_dir, 'glove.txt'))
+
+			with open(os.path.join(dst_dir, filename)) as f:
+				with open(os.path.join(sub_dir, 'wordvec.txt'), 'w') as g:
+					for line in f:
+						word, wordvec = line.strip().split(" ", 1)
+						g.write(word + "\n")
+						g.write(wordvec + "\n")
 		return dst_dir
 
 	def basepostprocess(self, local_path, name):
@@ -278,7 +284,7 @@ class GloveResourceProcessor(ResourceProcessor):
 		'''
 		from .file_utils import import_local_resources
 		for glove in self.other_gloves:
-			import_local_resources(*glove, ignore_exist_error=True)
+			import_local_resources(glove[0], glove[1], self.cache_dir, self.config_dir, ignore_exist_error=True)
 		self.other_gloves = []
 		return os.path.join(local_path, name)
 

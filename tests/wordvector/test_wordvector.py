@@ -4,8 +4,7 @@ import pytest
 import numpy as np
 from cotk.dataloader import LanguageGeneration, MSCOCO
 from cotk.metric import MetricBase
-from cotk.wordvector.wordvector import WordVector
-from cotk.wordvector.gloves import Glove
+from cotk.wordvector import WordVector, Glove
 import logging
 
 def setup_module():
@@ -77,14 +76,7 @@ class TestWordVector():
 			if 'and' in wordvec:
 				assert (wordvec['and'][-2:] == [0.011807, 0.059703]).all()
 			if 'of' in wordvec:
-				assert (wordvec['of'][-2:] == [-0.29183, -0.046533]).all()	
-
-		wv = WordVector()
-		with pytest.raises(Exception):
-			wv.load_matrix(n_dims, vocab_list)
-		
-		with pytest.raises(Exception):
-			wv.load_dict(vocab_list)
+				assert (wordvec['of'][-2:] == [-0.29183, -0.046533]).all()
 
 
 @pytest.fixture

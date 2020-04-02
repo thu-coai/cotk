@@ -26,9 +26,9 @@ class TestFileUtils():
 			get_resource_file_path('resources://coai', cache_dir=cache_dir, config_dir='wrongpath')
 		assert "not found" in str(excinfo.value)
 
-		with pytest.raises(ValueError) as excinfo:
+		with pytest.raises(RuntimeError) as excinfo:
 			get_resource_file_path('resources://coai#wrongtype', cache_dir=cache_dir, config_dir=config_dir)
-		assert "differs with res_type" in str(excinfo.value)
+		assert "No resources type" in str(excinfo.value)
 
 		with pytest.raises(ValueError) as excinfo:
 			get_resource_file_path('resources://coai@wronglink', cache_dir=cache_dir, config_dir=config_dir)

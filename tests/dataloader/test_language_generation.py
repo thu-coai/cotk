@@ -22,7 +22,7 @@ class TestLanguageGeneration():
 			LanguageGeneration("./tests/dataloader/dummy_mscoco#MSCOCO", pretrained='none')
 		with pytest.raises(ValueError):
 			LanguageGeneration("./tests/dataloader/dummy_mscoco#MSCOCO", pretrained='gpt2')
-		
+
 		assert isinstance(dl, LanguageGeneration)
 		assert isinstance(dl.file_id, str)
 		assert isinstance(dl.file_path, str)

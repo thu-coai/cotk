@@ -24,7 +24,7 @@ class TestSingleTurnDialog():
 			SingleTurnDialog("./tests/dataloader/dummy_opensubtitles#OpenSubtitles", pretrained='none')
 		with pytest.raises(ValueError):
 			SingleTurnDialog("./tests/dataloader/dummy_opensubtitles#OpenSubtitles", pretrained='gpt2')
-			
+
 		assert isinstance(dl, SingleTurnDialog)
 		assert isinstance(dl.file_id, str)
 		assert isinstance(dl.file_path, str)
