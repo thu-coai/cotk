@@ -171,7 +171,7 @@ class PerplexityMetric(MetricBase):
 			# perform full check to assert the probability is valid
 			if self.full_check:
 				expsum = np.sum(np.exp(gen_now[:resp_len-1]), -1)
-				if not np.allclose(expsum, [1] * (resp_len - 1)):
+				if not np.allclose(expsum, [1] * (resp_len - 1), rtol=1e-3):
 					raise ValueError("data[gen_log_prob_key] must be processed after log_softmax.")
 
 			if not self.generate_rare_vocab:
@@ -219,7 +219,7 @@ class PerplexityMetric(MetricBase):
 
 			# perform full check to assert the probability is valid
 			expsum = gen_now.exp().sum(-1)
-			if not expsum.allclose(torch.ones_like(expsum)):
+			if not expsum.allclose(torch.ones_like(expsum, rtol=1e-3)):
 				raise ValueError("data[gen_log_prob_key] must be processed after log_softmax.")
 
 			if not self.generate_rare_vocab:
