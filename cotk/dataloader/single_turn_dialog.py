@@ -70,30 +70,42 @@ class SingleTurnDialog(LanguageProcessing):
 
 			* **post_length** (:class:`numpy.ndarray`): A 1-d array, the length of post in each batch. \
 				Size: ``[batch_size]``
-			* **post** (:class:`numpy.ndarray`): A 2-d padded array containing words of id form in posts. \
-				Only provide valid words. ``unk_id`` will be used if a word is not valid. \
+			* **post** (:class:`numpy.ndarray`): A 2-d padded array containing tokens of id form in posts. \
+				Only provide frequent tokens. ``unk_id`` will be used for a rare token. \
 				Size: ``[batch_size, max(sent_length)]``
-			* **post_allvocabs** (:class:`numpy.ndarray`): A 2-d padded array containing words of id \
-				form in posts. Provide both valid and invalid vocabs. \
+			* **post_allvocabs** (:class:`numpy.ndarray`): A 2-d padded array containing tokens of id \
+				form in posts. Provide both frequent and rare vocabs. \
 				Size: ``[batch_size, max(sent_length)]``
+			* **post_str** (:class:`List[str]`): A list containing raw posts \
+				before tokenizing, converting to ids, or padding. \
+				Do not contain any special tokens. \
+				Size: ``[batch_size]``
 			* **resp_length** (:class:`numpy.ndarray`): A 1-d array, the length of response in each batch. \
 				Size: ``[batch_size]``
-			* **resp** (:class:`numpy.ndarray`): A 2-d padded array containing words of id form \
-				in responses. Only provide valid vocabs. ``unk_id`` will be used if a word is not valid. \
+			* **resp** (:class:`numpy.ndarray`): A 2-d padded array containing tokens of id form \
+				in responses. Only provide valid vocabs. ``unk_id`` will be used for a rare token. \
 				Size: ``[batch_size, max(sent_length)]``
 			* **resp_allvocabs** (:class:`numpy.ndarray`): \
-				A 2-d padded array containing words of id form in responses. \
+				A 2-d padded array containing tokens of id form in responses. \
 				Provide both valid and invalid vocabs. \
-				Size: ``[batch_size, max(sent_length)]``'''
+				Size: ``[batch_size, max(sent_length)]``
+			* **post_str** (:class:`List[str]`): A list containing raw responses \
+				before tokenizing, converting to ids, or padding. \
+				Do not contain any special tokens. \
+				Size: ``[batch_size]`` '''
 
 	_GET_BATCH_EXAMPLE = '''
 		Examples:
 			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you",
 			>>> #	"hello", "i", "am", "fine"]
-			>>> # vocab_size = 9
-			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you", "hello", "i"]
+			>>> # frequent_vocab_size = 9
+			>>> # frequent_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you", "hello", "i"]
 			>>> dataloader.get_batch('train', [0, 1])
 			{
+				"post_str": [
+					"are you fine",
+					"hello",
+				],
 				"post_allvocabs": numpy.array([
 					[2, 5, 6, 10, 3],  # first post:  <go> are you fine <eos>
 					[2, 7, 3, 0, 0],   # second post: <go> hello <eos> <pad> <pad>
@@ -102,6 +114,10 @@ class SingleTurnDialog(LanguageProcessing):
 					[2, 5, 6, 1, 3],   # first post:  <go> are you <unk> <eos>
 					[2, 7, 3, 0, 0],   # second post: <go> hello <eos> <pad> <pad>
 				]),
+				"resp_str": [
+					"i am fine",
+					"hello"
+				],
 				"resp_allvocabs": numpy.array([
 					[2, 8, 9, 10, 3],  # first response:  <go> i am fine <eos>
 					[2, 7, 3, 0, 0],   # second response: <go> hello <eos> <pad> <pad>

@@ -578,6 +578,8 @@ class LanguageProcessing(Dataloader):
 
 	_SENTENCE_MORE_DOCSTRING = '''It calls the method of the identical name in the :class:`Sentence` instance,\
 		from :meth:`.get_default_field()`.'''
+	_SESSION_MORE_DOCSTRING = '''It calls the method of the identical name in the :class:`Session` instance,\
+		from :meth:`.get_default_field()`.'''
 	tokenize = copy_func(get_default_field, Sentence, "tokenize")
 	tokenize_sentences = copy_func(get_default_field, Sentence, "tokenize_sentences")
 	convert_tokens_to_ids = copy_func(get_default_field, Sentence, "convert_tokens_to_ids")

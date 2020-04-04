@@ -57,20 +57,24 @@ class LanguageGeneration(LanguageProcessing):
 
 			* **sent_length** (:class:`numpy.ndarray`): A 1-d array, the length of sentence in each batch.
 			  Size: ``[batch_size]``
-			* **sent** (:class:`numpy.ndarray`): A 2-d padding array containing id of words.
-			  Only provide valid words. ``unk_id`` will be used if a word is not valid.
+			* **sent** (:class:`numpy.ndarray`): A 2-d padding array containing id of tokens.
+			  Only provide frequent tokens. ``unk_id`` will be used for a rare token.
 			  Size: ``[batch_size, max(sent_length)]``
-			* **sent_allvocabs** (:class:`numpy.ndarray`): A 2-d padding array containing id of words.
-			  Provide both valid and invalid words.
-			  Size: ``[batch_size, max(sent_length)]``'''
+			* **sent_allvocabs** (:class:`numpy.ndarray`): A 2-d padding array containing id of tokens.
+			  Provide both frequent and rare tokens.
+			  Size: ``[batch_size, max(sent_length)]``
+			* **sent_str** (:class:`List[str]`): A list containing raw sentences
+			  before tokenizing, converting to ids, or padding.
+			  Do not contain any special tokens.
+			  Size: ``[batch_size]``'''
 
 	_GET_BATCH_EXAMPLE = '''
 		Examples:
 
 			>>> # all_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you",
 			>>> #	"hello", "i", "am", "fine"]
-			>>> # vocab_size = 9
-			>>> # vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you", "hello", "i"]
+			>>> # frequent_vocab_size = 9
+			>>> # frequent_vocab_list = ["<pad>", "<unk>", "<go>", "<eos>", "how", "are", "you", "hello", "i"]
 			>>> dataloader.get_batch('train', [0, 1, 2])
 			{
 				"sent": numpy.array([
@@ -84,6 +88,11 @@ class LanguageGeneration(LanguageProcessing):
 					[2, 7, 3, 0, 0, 0],   # second sentence:  <go> hello <eos> <pad> <pad> <pad>
 					[2, 7, 8, 9, 10, 3]   # third sentence: <go> hello i am fine <eos>
 				]),
+				"sent_str": [
+					"how are you",
+					"hello",
+					"hello i am fine"
+				],
 			}'''
 
 	def get_batch(self, set_name: str, indexes: List[int] #pylint: disable=useless-super-delegation

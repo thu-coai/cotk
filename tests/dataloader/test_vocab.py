@@ -2,9 +2,6 @@ from collections import OrderedDict
 
 import pytest
 
-import sys
-sys.path.append('/home/zhengchujie/GitHub/cotk')
-
 from cotk.dataloader import Vocab, GeneralVocab, PretrainedVocab, SimpleVocab, PretrainedTokenizer
 
 def setup_module():
