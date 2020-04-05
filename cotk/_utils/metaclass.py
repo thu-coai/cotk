@@ -207,13 +207,17 @@ class LoadClassInterface:
 						class_name, inspect.getfile(result), inspect.getfile(subclass)))
 		return result
 
+def fix_doc(doc, cls):
+	cls_str = cls.__name__
+	return doc.replace("self.", cls_str.lower() + ".")
+
 def copy_func(target, cls, method_name):
 	method = getattr(cls, method_name)
 	assert callable(method)
 	@wraps(method)
 	def new_method(self, *args, **kwargs):
 		return getattr(target(self), method_name)(*args, **kwargs)
-	new_method.__doc__ = cls.META_DOC_FOR_ATTRIBUTES[method_name] # type: ignore
+	new_method.__doc__ = fix_doc(cls.META_DOC_FOR_ATTRIBUTES[method_name], cls) # type: ignore
 	return new_method
 
 def copy_property(target, cls, old_property_name):
@@ -223,5 +227,5 @@ def copy_property(target, cls, old_property_name):
 		setattr(target(self), old_property_name, a)
 	def new_property_fdel(self):
 		delattr(target(self), old_property_name)
-	doc = cls.META_DOC_FOR_ATTRIBUTES[old_property_name]
+	doc = fix_doc(cls.META_DOC_FOR_ATTRIBUTES[old_property_name], cls)
 	return property(new_property_fget, new_property_fset, new_property_fdel, doc) #type: ignore

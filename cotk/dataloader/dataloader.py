@@ -563,7 +563,7 @@ class LanguageProcessing(Dataloader):
 		return res
 
 	# copy some functions from vocab
-	_VOCAB_MORE_DOCSTRING = '''It calls the method of the identical name in the :class:`Vocab` instance,\
+	_VOCAB_MORE_DOCSTRING = '''It calls the identical method of the :class:`Vocab` instance ``vocab``,\
 		from :meth:`.get_default_vocab()`.'''
 	frequent_vocab_size = copy_property(get_default_vocab, Vocab, "frequent_vocab_size")
 	all_vocab_size = copy_property(get_default_vocab, Vocab, "all_vocab_size")
@@ -576,9 +576,9 @@ class LanguageProcessing(Dataloader):
 	go_id = copy_property(get_default_vocab, Vocab, "go_id")
 	eos_id = copy_property(get_default_vocab, Vocab, "eos_id")
 
-	_SENTENCE_MORE_DOCSTRING = '''It calls the method of the identical name in the :class:`Sentence` instance,\
+	_SENTENCE_MORE_DOCSTRING = '''It calls the identical method of the :class:`Sentence` instance ``sentence``,\
 		from :meth:`.get_default_field()`.'''
-	_SESSION_MORE_DOCSTRING = '''It calls the method of the identical name in the :class:`Session` instance,\
+	_SESSION_MORE_DOCSTRING = '''It calls the identical method of the :class:`Session` instance ``session``,\
 		from :meth:`.get_default_field()`.'''
 	tokenize = copy_func(get_default_field, Sentence, "tokenize")
 	tokenize_sentences = copy_func(get_default_field, Sentence, "tokenize_sentences")
