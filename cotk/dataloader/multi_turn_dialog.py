@@ -79,6 +79,8 @@ class MultiTurnDialog(LanguageProcessing):
 				"turn_length": np.array([4, 2]), # the number of turns in each session
 				"sent_length": np.array([np.array([3, 3, 5, 5]), np.array([6, 5])]), # length of sentences'''
 
+	_SESSION_MORE_DOCSTRING = '''It calls the identical method of the :class:`Session` instance ``session``,\
+		from :meth:`.get_default_field()`.'''
 
 	multi_turn_trim_in_ids = copy_func(LanguageProcessing.get_default_field, Session, 'multi_turn_trim_in_ids')
 	convert_multi_turn_tokens_to_ids = copy_func(LanguageProcessing.get_default_field, Session, 'convert_multi_turn_tokens_to_ids')
