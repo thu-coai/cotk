@@ -1,20 +1,28 @@
 import copy
 import random
 import operator
+import os
+import shutil
 import pytest
 from pytest_mock import mocker
 
 from version_test_base import base_test_version
+from cache_dir import CACHE_DIR
 
 from cotk.dataloader import PretrainedTokenizer, Field, Vocab, Tokenizer, LanguageGeneration, MSCOCO, Dataloader
 from cotk.metric import MetricBase
-
+from cotk.file_utils import file_utils
 
 def setup_module():
 	import random
 	random.seed(0)
 	import numpy as np
 	np.random.seed(0)
+	file_utils.CACHE_DIR = CACHE_DIR
+
+def teardown_module():
+	if os.path.isdir(CACHE_DIR):
+		shutil.rmtree(CACHE_DIR)
 
 class TestLanguageGeneration():
 	def base_test_init(self, dl):

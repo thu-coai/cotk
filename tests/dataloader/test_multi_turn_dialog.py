@@ -1,21 +1,31 @@
 import random
 from itertools import chain
 from collections import OrderedDict
+import os
+import shutil
 
 import pytest
 import numpy as np
 
 from cotk.dataloader import MultiTurnDialog, Session, SwitchboardCorpus, UbuntuCorpus
 from cotk.metric import MetricBase
+from cotk.dataloader.field import SentenceCandidateDefault, SentenceCandidateGPT2
+from cotk.file_utils import file_utils
 from cotk.wordvector import Glove
 from test_dataloader import BaseTestLanguageProcessing
 from version_test_base import base_test_version
 from test_field import CheckGetBatch
+from cache_dir import CACHE_DIR
 
 
 def setup_module():
 	random.seed(0)
 	np.random.seed(0)
+	file_utils.CACHE_DIR = CACHE_DIR
+
+def teardown_module():
+	if os.path.isdir(CACHE_DIR):
+		shutil.rmtree(CACHE_DIR)
 
 
 class TestMultiTurnDialog(BaseTestLanguageProcessing):
@@ -159,7 +169,7 @@ class TestSwitchboardCorpus(TestMultiTurnDialog):
 		assert len(dl.fields['multi_ref']) == 2
 		assert all(a == b for a, b in zip(dl.fields['multi_ref'].keys(), ['session', 'candidate']))
 		f1, f2 = dl.fields['multi_ref'].values()
-		assert isinstance(f1, Session) and isinstance(f2, SwitchboardCorpus.Candidate)
+		assert isinstance(f1, Session) and isinstance(f2, SentenceCandidateDefault if dl._pretrained is None else SentenceCandidateGPT2)
 
 	@pytest.mark.dependency()
 	def test_restart(self, load_switchboardcorpus):

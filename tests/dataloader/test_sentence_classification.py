@@ -1,11 +1,16 @@
+import os
+import shutil
+
 import pytest
 import numpy as np
 from cotk.dataloader import SentenceClassification, SST, Sentence
 from cotk.metric import MetricBase
+from cotk.file_utils import file_utils
 
 from test_dataloader import BaseTestLanguageProcessing
 from version_test_base import base_test_version
 from test_field import CheckGetBatch
+from cache_dir import CACHE_DIR
 
 
 def setup_module():
@@ -13,6 +18,11 @@ def setup_module():
 	random.seed(0)
 	import numpy as np
 	np.random.seed(0)
+	file_utils.CACHE_DIR = CACHE_DIR
+
+def teardown_module():
+	if os.path.isdir(CACHE_DIR):
+		shutil.rmtree(CACHE_DIR)
 
 class TestSentenceClassification(BaseTestLanguageProcessing):
 	def base_test_init(self, dl: SentenceClassification):

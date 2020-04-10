@@ -1,20 +1,21 @@
 """
 A module for multi turn dialog.
 """
+import warnings
 from collections import OrderedDict
-
 
 from .._utils.metaclass import copy_func
 from ..hooks import hooks
 from .dataloader import LanguageProcessing
-from .field import SessionDefault, Session, Sentence
-from .tokenizer import SimpleTokenizer
-from .vocab import GeneralVocab
-from .context import FieldContext
+from .field import Session, SessionGPT2, Field
+from .tokenizer import PretrainedTokenizer
+from .vocab import PretrainedVocab
+from .context import FieldContext, VocabContext
 from ..wordvector import Glove
 
-if False: # for type check # pylint: disable=using-constant-test
-	from ..metric import MetricChain #pylint: disable=unused-import
+if False:  # for type check # pylint: disable=using-constant-test
+	from ..metric import MetricChain  # pylint: disable=unused-import
+
 
 # pylint: disable=W0223
 class MultiTurnDialog(LanguageProcessing):
@@ -25,8 +26,8 @@ class MultiTurnDialog(LanguageProcessing):
 	Attributes:{ATTRIBUTES}
 
 	Notes:
-		During invoking `__init__` of it's subclass, :meth:`set_default_field` must be called,
-		 and a :class:`Session` field must be set as default field.
+		A :class:`Session` field must be set as default field. When invoking :meth:`__init__` of :class:`MultiTurnDialog`,
+		the default field, which may be reset in subclass, is set as self.fields['train']['session'].
 	"""
 
 	_version = 2
@@ -79,13 +80,62 @@ class MultiTurnDialog(LanguageProcessing):
 				"turn_length": np.array([4, 2]), # the number of turns in each session
 				"sent_length": np.array([np.array([3, 3, 5, 5]), np.array([6, 5])]), # length of sentences'''
 
+	@hooks.hook_dataloader
+	def __init__(self, file_id: str,
+				 tokenizer=None,
+				 max_sent_length=None,
+				 max_turn_length=None,
+				 convert_to_lower_letter=None,
+				 min_frequent_vocab_times=None,
+				 min_rare_vocab_times=None,
+				 fields=None,
+				 pretrained=None):
+		self._pretrained = pretrained
+
+		if pretrained is None:
+			if fields is None:
+				fields = OrderedDict([('session', 'SessionDefault')])
+			with FieldContext.set_parameters(tokenizer=tokenizer,
+											 max_sent_length=max_sent_length,
+											 convert_to_lower_letter=convert_to_lower_letter,
+											 max_turn_length=max_turn_length):
+				with VocabContext.set_parameters(min_rare_vocab_times=min_rare_vocab_times,
+											 	min_frequent_vocab_times=min_frequent_vocab_times):
+					super().__init__(file_id, fields)
+		elif pretrained == 'gpt2':
+			if fields is None:
+				fields = OrderedDict(['session', 'SessionGPT2'])
+			if not isinstance(tokenizer, PretrainedTokenizer):
+				raise ValueError("tokenize should be loaded first if you want a gpt2 dataloader")
+			vocab = PretrainedVocab(tokenizer.tokenizer)
+			with FieldContext.set_parameters(tokenizer=tokenizer,
+											 vocab=vocab,
+											 max_sent_length=max_sent_length,
+											 max_turn_length=max_turn_length,
+											 convert_to_lower_letter=convert_to_lower_letter):
+				super().__init__(file_id, fields)
+		else:
+			raise ValueError("No pretrained name %s" % pretrained)
+
+		self.set_default_field('train', 'session')
+
+		if pretrained == 'gpt2':
+			# check whether SessionGPT2 is used.
+			for set_name, set_fields in self.fields.items():
+				for field_name, field in set_fields.items():
+					if isinstance(field, Session) and not isinstance(field, SessionGPT2):
+						warnings.warn("If you want to use a gpt2 multi_turn_dialog, you'd better use %s instead of %s."
+									  % (SessionGPT2.__name__, type(field).__name__))
+
 	_SESSION_MORE_DOCSTRING = '''It calls the identical method of the :class:`Session` instance ``session``,\
 		from :meth:`.get_default_field()`.'''
 
-	multi_turn_trim_in_ids = copy_func(LanguageProcessing.get_default_field, Session, 'multi_turn_trim_in_ids')
-	convert_multi_turn_tokens_to_ids = copy_func(LanguageProcessing.get_default_field, Session, 'convert_multi_turn_tokens_to_ids')
-	convert_multi_turn_ids_to_tokens = copy_func(LanguageProcessing.get_default_field, Session, 'convert_multi_turn_ids_to_tokens')
 
+	multi_turn_trim_in_ids = copy_func(LanguageProcessing.get_default_field, Session, 'multi_turn_trim_in_ids')
+	convert_multi_turn_tokens_to_ids = copy_func(LanguageProcessing.get_default_field, Session,
+												 'convert_multi_turn_tokens_to_ids')
+	convert_multi_turn_ids_to_tokens = copy_func(LanguageProcessing.get_default_field, Session,
+												 'convert_multi_turn_ids_to_tokens')
 
 	def get_teacher_forcing_metric(self, multi_turn_gen_log_prob_key="multi_turn_gen_log_prob"):
 		'''Get metric for teacher-forcing.
@@ -104,9 +154,9 @@ class MultiTurnDialog(LanguageProcessing):
 		from ..metric import MetricChain, MultiTurnPerplexityMetric
 		metric = MetricChain()
 		metric.add_metric(MultiTurnPerplexityMetric(self, \
-			multi_turn_gen_log_prob_key=multi_turn_gen_log_prob_key, \
-			multi_turn_reference_len_key="sent_length", \
-			multi_turn_reference_allvocabs_key="sent_allvocabs"))
+													multi_turn_gen_log_prob_key=multi_turn_gen_log_prob_key, \
+													multi_turn_reference_len_key="sent_length", \
+													multi_turn_reference_allvocabs_key="sent_allvocabs"))
 		return metric
 
 	def get_inference_metric(self, multi_turn_gen_key="multi_turn_gen"):
@@ -127,16 +177,17 @@ class MultiTurnDialog(LanguageProcessing):
 		'''
 		from ..metric import MetricChain, MultiTurnBleuCorpusMetric, MultiTurnDialogRecorder
 		metric = MetricChain()
-		metric.add_metric(MultiTurnBleuCorpusMetric(self, multi_turn_gen_key=multi_turn_gen_key,\
-			multi_turn_reference_allvocabs_key="sent_allvocabs", turn_len_key="turn_length"))
-		metric.add_metric(MultiTurnDialogRecorder(self, multi_turn_gen_key=multi_turn_gen_key,\
-			multi_turn_reference_allvocabs_key="sent_allvocabs", turn_len_key="turn_length"))
+		metric.add_metric(MultiTurnBleuCorpusMetric(self, multi_turn_gen_key=multi_turn_gen_key, \
+													multi_turn_reference_allvocabs_key="sent_allvocabs",
+													turn_len_key="turn_length"))
+		metric.add_metric(MultiTurnDialogRecorder(self, multi_turn_gen_key=multi_turn_gen_key, \
+												  multi_turn_reference_allvocabs_key="sent_allvocabs",
+												  turn_len_key="turn_length"))
 		return metric
 
 
 # TODO: doc
 class UbuntuCorpus(MultiTurnDialog):
-
 	'''A dataloader for Ubuntu dataset.
 
 	Arguments:
@@ -173,17 +224,18 @@ class UbuntuCorpus(MultiTurnDialog):
 	)
 
 	@hooks.hook_dataloader
-	def __init__(self, file_id="resources://Ubuntu", min_frequent_vocab_times=10, \
-				 max_sent_length=50, max_turn_length=20, min_rare_vocab_times=0):
-		fields = OrderedDict([['session', 'SessionDefault']])
-		with FieldContext.set_parameters(
-			tokenizer=SimpleTokenizer('nltk'),
-			vocab=GeneralVocab(min_frequent_vocab_times, min_rare_vocab_times),
-			max_sent_length=max_sent_length,
-			max_turn_length=max_turn_length,
-			convert_to_lower_letter=True):
-			super().__init__(file_id, fields)
-		self.set_default_field('train', 'session')
+	def __init__(self, file_id="resources://Ubuntu", min_frequent_vocab_times=10,
+				 max_sent_length=50, max_turn_length=20, min_rare_vocab_times=0,
+				 tokenizer='nltk',
+				 pretrained=None):
+		super().__init__(file_id,
+						 tokenizer=tokenizer,
+						 max_sent_length=max_sent_length,
+						 max_turn_length=max_turn_length,
+						 convert_to_lower_letter=True,
+						 min_frequent_vocab_times=min_frequent_vocab_times,
+						 min_rare_vocab_times=min_rare_vocab_times,
+						 pretrained=pretrained)
 
 
 class SwitchboardCorpus(MultiTurnDialog):
@@ -210,32 +262,38 @@ class SwitchboardCorpus(MultiTurnDialog):
 		default_min_rare_vocab_times=0
 	)
 
-	class Candidate(SessionDefault):
-		def process_sessions(self, sessions, add_special=True, cut=False,
-						 only_frequent_word=False):
-			"""Don't cut sessions."""
-			return super().process_sessions(sessions, add_special, False, only_frequent_word)
-		process_sessions.__annotations__ = SessionDefault.process_sessions.__annotations__  # copy `__annotations__` attribute.
 
 	@hooks.hook_dataloader
 	def __init__(self, file_id="resources://SwitchboardCorpus", min_frequent_vocab_times=5, \
-				 max_sent_length=50, max_turn_length=1000, min_rare_vocab_times=0, tokenizer='nltk'):
-		fields = {
-			**{k: OrderedDict([['session', 'SessionDefault']]) for k in ['train', 'dev', 'test']},
-			'multi_ref': OrderedDict([['session', 'SessionDefault'], ['candidate', "Candidate"]])
-		}
+				 max_sent_length=50, max_turn_length=1000, min_rare_vocab_times=0, tokenizer='nltk',
+				 pretrained=None):
+		if pretrained is None:
+			fields = {
+				**{k: OrderedDict([['session', 'SessionDefault']]) for k in ['train', 'dev', 'test']},
+				'multi_ref': OrderedDict([['session', 'SessionDefault'], ['candidate', "SentenceCandidateDefault"]])
+			}
+		elif pretrained == 'gpt2':
+			fields = {
+				**{k: OrderedDict([['session', 'SessionGPT2']]) for k in ['train', 'dev', 'test']},
+				'multi_ref': OrderedDict([['session', 'SessionGPT2'], ['candidate', "SentenceCandidateGPT2"]])
+			}
+		else:
+			raise ValueError("No pretrained name %s" % pretrained)
+
 		with FieldContext.set_parameters(
-			tokenizer=tokenizer,
-			vocab=GeneralVocab(min_frequent_vocab_times, min_rare_vocab_times),
-			max_sent_length=max_sent_length,
-			max_turn_length=max_turn_length,
-			convert_to_lower_letter=False,
-			vocab_from_mappings={**SessionDefault.DEFAULT_VOCAB_FROM_MAPPINGS, 'multi_ref': 'test'}):
-			super().__init__(file_id, fields)
-		self.set_default_field('train', 'session')
+			vocab_from_mappings={**Field.DEFAULT_VOCAB_FROM_MAPPINGS, 'multi_ref': 'test'}):
+			super().__init__(file_id,
+							 tokenizer=tokenizer,
+							 max_sent_length=max_sent_length,
+							 max_turn_length=max_turn_length,
+							 convert_to_lower_letter=False,
+							 min_frequent_vocab_times=min_frequent_vocab_times,
+							 min_rare_vocab_times=min_rare_vocab_times,
+							 fields=fields,
+							 pretrained=pretrained)
 
 	def get_batch(self, set_name, indexes):
-		#'''{LanguageProcessing.GET_BATCH_DOC_WITHOUT_RETURNS}
+		# '''{LanguageProcessing.GET_BATCH_DOC_WITHOUT_RETURNS}
 		'''
 
 		Returns:
@@ -260,8 +318,8 @@ class SwitchboardCorpus(MultiTurnDialog):
 		'''
 		return super().get_batch(set_name, indexes)
 
-	def get_multi_ref_metric(self, generated_num_per_context=20, word2vec=None,\
-				multiple_gen_key="multiple_gen_key"):
+	def get_multi_ref_metric(self, generated_num_per_context=20, word2vec=None, \
+							 multiple_gen_key="multiple_gen_key"):
 		'''Get metrics for multiple references.
 
 		It contains:
@@ -283,10 +341,12 @@ class SwitchboardCorpus(MultiTurnDialog):
 			glove = Glove("resources://Glove300d")
 			word2vec = glove.load_dict(self.frequent_vocab_list)
 		for ngram in range(1, 5):
-			metric.add_metric(BleuPrecisionRecallMetric(self, ngram, generated_num_per_context,\
-			multiple_gen_key=multiple_gen_key))
+			metric.add_metric(BleuPrecisionRecallMetric(self, ngram, generated_num_per_context, \
+														multiple_gen_key=multiple_gen_key))
 		metric.add_metric(EmbSimilarityPrecisionRecallMetric(self, word2vec, \
-			'avg', generated_num_per_context, multiple_gen_key=multiple_gen_key))
+															 'avg', generated_num_per_context,
+															 multiple_gen_key=multiple_gen_key))
 		metric.add_metric(EmbSimilarityPrecisionRecallMetric(self, word2vec, \
-			'extrema', generated_num_per_context, multiple_gen_key=multiple_gen_key))
+															 'extrema', generated_num_per_context,
+															 multiple_gen_key=multiple_gen_key))
 		return metric

@@ -39,8 +39,9 @@ def _url_to_filename(url):
 	return filename
 
 
-def _get_config(res_name, config_dir=CONFIG_DIR):
+def _get_config(res_name, config_dir=None):
 	'''Get config(dict) by the name of resource'''
+	config_dir = config_dir or CONFIG_DIR
 	config_path = os.path.join(config_dir, res_name + '.json')
 	if not os.path.exists(config_path):
 		raise FileNotFoundError("file {} not found".format(config_path))
@@ -105,11 +106,13 @@ def _parse_file_id(file_id):
 	name = name[::-1]
 	return name, source, processor
 
-def _get_resource(file_id, cache_dir=CACHE_DIR, config_dir=CONFIG_DIR):
+def _get_resource(file_id, cache_dir=None, config_dir=None):
 	'''Get the resource with the given name.
 	If not cached, download it using the URL stored in config file.
 	If cached, check the hashtag.
 	'''
+	cache_dir = cache_dir or CACHE_DIR
+	config_dir = config_dir or CONFIG_DIR
 	os.makedirs(cache_dir, exist_ok=True)
 
 	res_name, src_name, res_type = _parse_file_id(file_id)
@@ -171,9 +174,10 @@ def _get_resource(file_id, cache_dir=CACHE_DIR, config_dir=CONFIG_DIR):
 	LOGGER.info('resource cached at %s', cache_path)
 	return cache_path
 
-def _download_data(url, cache_dir=CACHE_DIR):
+def _download_data(url, cache_dir=None):
 	r'''If not cached, download the resource using url.
 	'''
+	cache_dir = cache_dir or CACHE_DIR
 	os.makedirs(cache_dir, exist_ok=True)
 
 	url, _, res_type = _parse_file_id(url)
@@ -209,8 +213,10 @@ def _download_data(url, cache_dir=CACHE_DIR):
 	LOGGER.info('resource cached at %s', cache_path)
 	return cache_path
 
-def _load_local_data(local_path):
+def _load_local_data(local_path, cache_dir=None, config_dir=None):
 	'''Import temporary resources from local'''
+	cache_dir = cache_dir or CACHE_DIR
+	config_dir = config_dir or CONFIG_DIR
 	local_path, _, res_type = _parse_file_id(local_path)
 	res_type = res_type or 'Default'
 	LOGGER.info('local path: %s', local_path)
@@ -219,16 +225,18 @@ def _load_local_data(local_path):
 	resource_processor_class = ResourceProcessor.load_class(res_type + 'ResourceProcessor')
 	if resource_processor_class is None:
 		raise RuntimeError("No resources type named %sResourcePreprocessor" % res_type)
-	resource_processor = resource_processor_class()
+	resource_processor = resource_processor_class(cache_dir=cache_dir, config_dir=config_dir)
 
 	if local_path.endswith(".zip"):
 		local_path = resource_processor.preprocess(local_path)
 	return resource_processor.postprocess(local_path)
 
 
-def get_resource_file_path(file_id, cache_dir=CACHE_DIR, config_dir=CONFIG_DIR):
+def get_resource_file_path(file_id, cache_dir=None, config_dir=None):
 	'''Get file_path of resource of all types
 	'''
+	cache_dir = cache_dir or CACHE_DIR
+	config_dir = config_dir or CONFIG_DIR
 	if file_id.startswith('resources://'):
 		res_id = file_id[12:]
 		return _get_resource(res_id, cache_dir, config_dir)
@@ -237,11 +245,13 @@ def get_resource_file_path(file_id, cache_dir=CACHE_DIR, config_dir=CONFIG_DIR):
 		return _download_data(url, cache_dir)
 	else:
 		local_path = file_id
-		return _load_local_data(local_path)
+		return _load_local_data(local_path, cache_dir, config_dir)
 
-def import_local_resources(file_id, local_path, cache_dir=CACHE_DIR, \
-	config_dir=CONFIG_DIR, ignore_exist_error=False):
+def import_local_resources(file_id, local_path, cache_dir=None, \
+	config_dir=None, ignore_exist_error=False):
 	'''Import benchmark from local, if hashtag checked, save to cache.'''
+	cache_dir = cache_dir or CACHE_DIR
+	config_dir = config_dir or CONFIG_DIR
 	os.makedirs(cache_dir, exist_ok=True)
 
 	if not file_id.startswith('resources://'):
@@ -281,9 +291,10 @@ def import_local_resources(file_id, local_path, cache_dir=CACHE_DIR, \
 	else:
 		raise ValueError("bad hashtag of {}".format(res_name))
 
-def load_file_from_url(url, force=False, cache_dir=CACHE_DIR):
+def load_file_from_url(url, force=False, cache_dir=None):
 	'''See cotk.downloader.load_file_from_url.
 	'''
+	cache_dir = cache_dir or CACHE_DIR
 
 	parts = urlparse(url)
 	filename = os.path.basename(parts.path)

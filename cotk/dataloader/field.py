@@ -220,6 +220,26 @@ class _SentenceContent(_FieldContent):
 		_GET_BATCH_DATA_DOCSTRING = 'data (Dict[str, Any]): the object returned by :meth:`_SentenceContent.get_data`. '\
 			"data['str'] is raw sentences. data['id'] is the ids of tokenized sentences."
 
+
+class _InfiniteLength:
+	"""Infinite length. A special value for `max_sent_length` and `max_turn_length`, which means that the sent_length
+	and turn_length is unlimited.
+	"""
+	__instance = None
+
+	def __new__(cls, *args, **kwargs):
+		# Singleton
+		if cls.__instance is None:
+			obj = cls.__instance = object.__new__(cls)
+		else:
+			obj = cls.__instance
+		return obj
+
+	def __repr__(self):
+		return 'INFINITE_LENGTH'
+
+	__str__ = __repr__
+
 class Sentence(Field):
 	'''Bases: :class:`.dataloader.Field`
 
@@ -261,17 +281,20 @@ class Sentence(Field):
 				is used for test."""
 	VOCAB_FROM_MAPPINGS_DEFAULT = r"""Default: See :ref:`the table<vocab_from_ref>` for default value."""
 	MAX_SENT_LENGTH_DOCS = r'''
-			max_sent_length (int, optional): All sentences longer than ``max_sent_length`` will be shortened
-					to first ``max_sent_length`` tokens.'''
-	MAX_SENT_LENGTH_DEFAULT = r'''Default: If ``None``, do not cut the sentence.'''
+			max_sent_length (int, _InfiniteLength, optional): All sentences longer than ``max_sent_length`` will be shortened
+					to first ``max_sent_length`` tokens. If it's ``None`` or ``Sentence.INFINITE_LENGTH``, sentences won't be
+					shortened no matter how long they are.'''
+	MAX_SENT_LENGTH_DEFAULT = r'''Default: ``None``.'''
 	CONVERT_TO_LOWER_LETTER_DOCS = r'''
 			convert_to_lower_letter (bool, optional): Whether convert all the tokens to lower case after tokenization.'''
 	CONVERT_TO_LOWER_LETTER_DEFAULT = r'''Default: ``False``.'''
 
+	INFINITE_LENGTH = _InfiniteLength()
+
 	def __init__(self, tokenizer: Union[None, Tokenizer, str] = None, \
 			vocab: Optional[Vocab] = None, \
 			vocab_from_mappings: Optional[Dict[str, str]] = None, \
-			max_sent_length: Optional[int] = None, \
+			max_sent_length: Union[int, _InfiniteLength, None] = None, \
 			convert_to_lower_letter: Optional[bool] = None):
 
 		if self.__class__.__name__ == "Sentence":
@@ -288,6 +311,8 @@ class Sentence(Field):
 			self.vocab_from_mappings: Dict[str, str] = FieldContext.get("vocab_from_mappings", Field.DEFAULT_VOCAB_FROM_MAPPINGS)
 			self.max_sent_length: int = FieldContext.get("max_sent_length", None)
 			self.convert_to_lower_letter: bool = FieldContext.get("convert_to_lower_letter", False)
+			if self.max_sent_length == Sentence.INFINITE_LENGTH:
+				self.max_sent_length = None  # max_sent_length is used for slice. So, None means that sent_length is unlimited.
 
 		self.tokenizer: Tokenizer
 		if isinstance(filled_tokenizer, str):
@@ -456,7 +481,7 @@ class Sentence(Field):
 		sentences = [self.convert_tokens_to_ids(tokens, add_special=add_special, only_frequent_word=only_frequent_word) for tokens in sentences]
 		# list of list of id
 
-		if cut:
+		if cut and self.max_sent_length is not None:
 			before_lengths = [len(sentence) for sentence in sentences]
 			sentences = [sentence[:self.max_sent_length] for sentence in sentences]
 			after_lengths = [len(sentence) for sentence in sentences]
@@ -529,7 +554,7 @@ class SentenceDefault(Sentence):
 	def __init__(self, tokenizer: Union[None, Tokenizer, str] = None, \
 			vocab: Optional[Vocab] = None, \
 			vocab_from_mappings: Optional[Dict[str, str]] = None, \
-			max_sent_length: Optional[int] = None, \
+			max_sent_length: Union[int, None, _InfiniteLength] = None, \
 			convert_to_lower_letter: Optional[bool] = None):
 
 		super().__init__(tokenizer=tokenizer, \
@@ -624,10 +649,10 @@ class SentenceGPT2(Sentence):
 
 	INIT_DOCSTRING = Sentence.INIT_DOCSTRING.replace(":class:Vocab", ":class:PretrainedVocab")
 
-	def __init__(self, tokenizer: Union[None, Tokenizer] = None, \
+	def __init__(self, tokenizer: Union[None, PretrainedTokenizer] = None, \
 			vocab: Optional[PretrainedVocab] = None, \
 			vocab_from_mappings: Optional[Dict[str, str]] = None, \
-			max_sent_length: Optional[int] = None, \
+			max_sent_length: Union[int, None, _InfiniteLength] = None, \
 			convert_to_lower_letter: Optional[bool] = None):
 
 		super().__init__(tokenizer=tokenizer, \
@@ -775,8 +800,11 @@ class Session(Sentence):
 
 	{Sentence.INIT_DOCSTRING}
 
-			max_turn_length (int, optional): Set the maximum turn length of a session. The left sentences are ignored.
-				Default: If ``None``, don't cut sessions.
+			max_turn_length (int, _InfiniteLength, optional): Set the maximum turn length of a session.
+				If it's an integer, any session, whose turn length is more than ``max_turn_length`` is shortened to
+				first ``max_sent_length`` turns. The left turns are ignored.
+				If it's ``None`` or ``Sentence.INFINITE_LENGTH``, sessions won't be shortened and all turns are remained.
+				Default: ``None``.
 
 	{SESSION_INPUT_FORMAT}
 	"""
@@ -789,15 +817,17 @@ class Session(Sentence):
 	def __init__(self, tokenizer: Union[None, Tokenizer, str] = None,
 				 vocab: Optional[Vocab] = None,
 				 vocab_from_mappings: Optional[Dict[str, str]] = None,
-				 max_sent_length: Optional[int] = None,
+				 max_sent_length: Union[int, None, _InfiniteLength] = None,
 				 convert_to_lower_letter: Optional[bool] = None,
-				 max_turn_length: Optional[int] = None,):
+				 max_turn_length: Union[int, None, _InfiniteLength] = None,):
 		if type(self) == Session:
 			raise NotImplementedError(
 				"%s is an abstract class. Please use %s instead." % (Session.__name__, SessionDefault.__name__))
 		super().__init__(tokenizer, vocab, vocab_from_mappings, max_sent_length, convert_to_lower_letter)
 		with FieldContext.set_parameters(max_turn_length=max_turn_length):
-			max_turn_length = FieldContext.get('max_turn_length')
+			max_turn_length = FieldContext.get('max_turn_length', None)
+			if max_turn_length == Sentence.INFINITE_LENGTH:
+				max_turn_length = None  # max_turn_length is used for slice. So, None means that turn_length is unlimited.
 		if max_turn_length is not None:
 			msg = "max_turn_length must be None or a positive integer"
 			if not isinstance(max_turn_length, int):
@@ -846,7 +876,7 @@ class Session(Sentence):
 		"""
 		# Cut sessions.
 		# If a session's turn length > `self.max_turn_length`, retain the first `self.max_turn_length` sentences and discard the rest.
-		if cut:
+		if cut and self.max_turn_length is not None:
 			turn_length_before_cut = list(map(len, sessions))
 			max_turn_length_before_cut = max(turn_length_before_cut)
 			sessions = [session[:self.max_turn_length] for session in sessions]
@@ -860,7 +890,7 @@ class Session(Sentence):
 		sentences: List[TokenizedSentenceType]
 		session_length: List[int]
 		sentences, session_lengths = chain_sessions(sessions)
-		processed_sessions = self.process_sentences(sentences, add_special, cut, only_frequent_word)
+		processed_sessions = self.process_sentences(sentences, add_special=add_special, only_frequent_word=only_frequent_word, cut=cut)
 		processed_sessions = restore_sessions(processed_sessions, session_lengths)
 		return processed_sessions
 
@@ -1032,6 +1062,122 @@ class SessionDefault(Session):
 		return res
 
 
+class SessionGPT2(Session):
+	'''Bases: :class:`.dataloader.Session`, :class:`.dataloader.Field`
+
+	A field for session in the format of GPT2.
+
+	{INIT_DOCSTRING}
+
+	{SESSION_INPUT_FORMAT}
+	'''
+	INIT_DOCSTRING = Sentence.INIT_DOCSTRING.replace(":class:Vocab", ":class:PretrainedVocab")
+
+	def __init__(self, tokenizer: Union[None, PretrainedTokenizer] = None,
+				 vocab: Optional[PretrainedVocab] = None,
+				 vocab_from_mappings: Optional[Dict[str, str]] = None,
+				 max_sent_length: Union[int, None, _InfiniteLength] = None,
+				 convert_to_lower_letter: Optional[bool] = None,
+				 max_turn_length: Union[int, None, _InfiniteLength] = None,):
+		super().__init__(tokenizer, vocab, vocab_from_mappings, max_sent_length, convert_to_lower_letter, max_turn_length)
+		if not isinstance(self.tokenizer, PretrainedTokenizer) or not self.tokenizer.get_tokenizer_class() != "GPT2Tokenizer":
+			raise ValueError("You have to specify a pretrained tokenizer compatible with gpt2")
+		self.inner_tokenizer = self.tokenizer.tokenizer
+		if not isinstance(self.vocab, PretrainedVocab):
+			raise ValueError("You have to specify a PretrainedVocab for SentenceGPT2 field")
+		self.vocab: PretrainedVocab
+
+	add_special_to_ids = SentenceGPT2.add_special_to_ids
+	remove_special_in_ids = SentenceGPT2.remove_special_in_ids
+	trim_in_ids = SentenceGPT2.trim_in_ids
+
+	_GET_BATCH_DATA_DOCSTRING = SessionDefault._GET_BATCH_DATA_DOCSTRING
+	# TODO: update return value of get_batch. I have trouble with `GPT2Tokenizer.from_pretrained('gpt2')`
+	# the following codes in Examples haven't been run.
+	_GET_BATCH_EXAMPLE = r"""
+	Examples:
+		>>> from transformers.tokenization_gpt2 import GPT2Tokenizer
+		>>> from cotk.dataloader.tokenizer import PretrainedTokenizer
+		>>> tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+		>>> field = SessionGPT2(PretrainedTokenizer(tokenizer))
+		>>> field_content = field._create('train')
+		>>> dataset = iter(['How are you?\n', "I'm fine. Thank you! And you?\n", "I'm fine, too.\n", "\n", "How to install CoTk?\n", "pip install cotk.\n", "\n"])
+		>>> while True:
+		... 	try:
+		... 		field_content.read_next(dataset)
+		... 	except StopIteration:
+		... 		break
+		>>> field_content.process_before_vocab()
+		>>> field.vocab.build_vocab()
+		>>> data = field_content.get_data()
+		>>> data
+		{'id': [[[2, 8, 18, 6, 5, 3],
+				[2, 9, 7, 12, 10, 4, 17, 6, 13, 15, 6, 5, 3],
+				[2, 9, 7, 12, 10, 14, 22, 4, 3]],
+			   [[2, 8, 21, 11, 16, 5, 3], [2, 20, 11, 19, 4, 3]]],
+		  'str': [['How are you?', "I'm fine. Thank you! And you?", "I'm fine, too."],
+			  ['How to install CoTk?', 'pip install cotk.']]}
+		>>> batch_data = field.get_batch('session', data, [1])
+		>>> batch_data
+		{'session_turn_length': array([2]),
+		  'session_sent_length': [[7, 6]],
+		  'session': array([[[ 2,  8, 21, 11, 16,  5,  3],
+						 [ 2, 20, 11, 19,  4,  3,  0]]]),
+		  'session_allvocabs': array([[[ 2,  8, 21, 11, 16,  5,  3],
+						 [ 2, 20, 11, 19,  4,  3,  0]]]),
+		  'session_str': [['How to install CoTk?', 'pip install cotk.']]}
+		>>> # 'session_turn_length' (`name` + '_turn_length') is a :class:`np.ndarray` object with shape == (batch size, ). Each element is the length of corresponding sssion.
+		>>> # 'session_sent_length' (`name` + '_sent_length') is List[List[int]]. Each integer is the length of corresponding sentence.
+		>>> # 'session' (`name`) is a :class:`np.ndarray` object with shape == (batch size, max turn length, max sentence length).
+		>>>				# batch_data['session'][i, j] is a sentence. batch_data['session'][i, j, k] is an id.
+		>>>				# If `self.max_turn_length` is not None and j >= `self.max_turn_length` or `self.max_sent_length` is not None and k >= `self.max_sent_length`,
+		>>>				# batch_data['session'][i, j, k] is `self.eos_id`.
+		>>> # 'session_allvocabs' (`name` + '_allvocabs') is the same with 'session'."""
+
+
+	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
+		res = {}
+		data_id, data_str = data['id'], data['str']
+		batch_size = len(indexes)
+		turn_lengths = res[name + "_turn_length"] = np.array([len(data_id[i]) for i in indexes], dtype=int)
+		res[name + "_sent_length"] = [[len(sent) for sent in data_id[i]] for i in indexes]
+		max_sent_length = max(map(max, res[name + "_sent_length"]))
+		res_session = res[name] = np.ones((batch_size, turn_lengths.max(), max_sent_length), dtype=int) * self.vocab.eos_id
+		for i, j in enumerate(indexes):
+			session = data_id[j]
+			session = [list(sent) + [self.vocab.eos_id] * (max_sent_length - len(sent)) for sent in session]
+			res_session[i, :len(session)] = np.array(session, dtype=int)
+		res[name + "_allvocabs"] = res_session.copy()
+		res[name + "_str"] = [data_str[i] for i in indexes]
+		return res
+
+
+class SentenceCandidateDefault(SessionDefault):
+	"""Bases: :class:`.dataloader.Field`.
+	A Field for candidate. Several sentences represent candidate answers of a dialog task.
+	"""
+	def __init__(self, tokenizer: Union[None, Tokenizer, str] = None,
+				 vocab: Optional[Vocab] = None,
+				 vocab_from_mappings: Optional[Dict[str, str]] = None,
+				 max_sent_length: Union[int, None, _InfiniteLength] = None,
+				 convert_to_lower_letter: Optional[bool] = None):
+		super().__init__(tokenizer, vocab, vocab_from_mappings, max_sent_length, convert_to_lower_letter,
+						 max_turn_length=Sentence.INFINITE_LENGTH)
+
+
+class SentenceCandidateGPT2(SessionGPT2):
+	"""Bases: :class:`.dataloader.Field`.
+	A Field for candidate. Several sentences represent candidate answers of a dialog task. These sentences are in the format of GPT2.
+	"""
+	def __init__(self, tokenizer: Union[None, Tokenizer, str] = None,
+				 vocab: Optional[Vocab] = None,
+				 vocab_from_mappings: Optional[Dict[str, str]] = None,
+				 max_sent_length: Union[int, None, _InfiniteLength] = None,
+				 convert_to_lower_letter: Optional[bool] = None):
+		super().__init__(tokenizer, vocab, vocab_from_mappings, max_sent_length, convert_to_lower_letter,
+						 max_turn_length=Sentence.INFINITE_LENGTH)
+
+
 class DenseLabel(Field):
 	"""Bases: :class:`.dataloader.Field`
 
@@ -1135,7 +1281,10 @@ class SparseLabel(Field):
 	"""
 	def __init__(self, vocab: Optional[SimpleVocab] = None):
 		super().__init__()
-		self.vocab = vocab if vocab is not None else SimpleVocab()
+		with FieldContext.set_parameters(vocab=vocab):
+			self.vocab = FieldContext.get('vocab')
+			if not isinstance(self.vocab, SimpleVocab):
+				raise TypeError("vocab for SparseLabel must be a SimpleVocab object.")
 
 	def get_vocab(self) -> Optional[Vocab]:
 		return self.vocab
