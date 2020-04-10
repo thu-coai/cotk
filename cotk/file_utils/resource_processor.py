@@ -4,6 +4,7 @@ import os
 import zipfile
 import shutil
 import json
+import hashlib
 from itertools import chain
 from .._utils.metaclass import LoadClassInterface
 
@@ -69,6 +70,15 @@ class BaseResourceProcessor(ResourceProcessor):
 		'''
 		return local_path
 
+	def get_temp_dir(self, filepath: str):
+		"""Get a temp directory, in which some temporary files may be saved.
+		The temp directory is a subdirectory of `self.cache_dr` and is named after the hash value of argument `filepath`,
+		so that the same `filepath` has the same corresponding temp directory.
+		"""
+		abs_path = os.path.abspath(filepath)
+		hash_value = hashlib.sha256(abs_path.encode('utf-8')).hexdigest()
+		return os.path.join(self.cache_dir, hash_value + '_temp')
+
 #TODO: merge the following Processor because of duplicate codes
 class MSCOCOResourceProcessor(BaseResourceProcessor):
 	'''Processor for MSCOCO dataset
@@ -80,7 +90,7 @@ class MSCOCOResourceProcessor(BaseResourceProcessor):
 
 	def postprocess(self, local_path):
 		local_path = super().postprocess(local_path)
-		new_local_path = os.path.join(local_path, 'processed')
+		new_local_path = self.get_temp_dir(local_path)
 		os.makedirs(new_local_path, exist_ok=True)
 		for key in ['train', 'dev', 'test']:
 			local_file = os.path.join(local_path, 'mscoco_%s.txt' % key)
@@ -99,7 +109,7 @@ class OpenSubtitlesResourceProcessor(BaseResourceProcessor):
 
 	def postprocess(self, local_path):
 		local_path = super().postprocess(local_path)
-		new_local_path = os.path.join(local_path, 'processed')
+		new_local_path = self.get_temp_dir(local_path)
 		os.makedirs(new_local_path, exist_ok=True)
 		for key in ['train', 'test', 'dev']:
 			post_path = os.path.join(local_path, 'opensub_pair_%s.post' % key)
@@ -125,7 +135,7 @@ class UbuntuResourceProcessor(BaseResourceProcessor):
 	def postprocess(self, local_path):
 		import csv
 		local_path = super().postprocess(local_path)
-		new_local_path = os.path.join(local_path, 'processed')
+		new_local_path = self.get_temp_dir(local_path)
 		os.makedirs(new_local_path, exist_ok=True)
 		for key in ['train', 'dev', 'test']:
 			local_file = os.path.join(local_path, 'ubuntu_corpus_%s.csv' % key)
@@ -159,7 +169,7 @@ class SwitchboardCorpusResourceProcessor(BaseResourceProcessor):
 
 	def postprocess(self, local_path):
 		local_path = super().postprocess(local_path)
-		new_local_path = os.path.join(local_path, 'processed')
+		new_local_path = self.get_temp_dir(local_path)
 		os.makedirs(new_local_path, exist_ok=True)
 
 		for key in ['train', 'test', 'dev', 'multi_ref']:
@@ -237,7 +247,7 @@ class SSTResourceProcessor(BaseResourceProcessor):
 
 	def postprocess(self, local_path):
 		local_path = super().postprocess(local_path)
-		new_local_path = os.path.join(local_path, 'processed')
+		new_local_path = self.get_temp_dir(local_path)
 		os.makedirs(new_local_path, exist_ok=True)
 
 		for key in ['train', 'test', 'dev']:

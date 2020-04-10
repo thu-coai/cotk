@@ -4,17 +4,27 @@ except ImportError:
 	from collections.abc import Iterator
 
 from itertools import chain
+import os
+import shutil
 import random
 import numpy as np
 import pytest
+from cotk.file_utils import file_utils
 from cotk.dataloader.field import Field, _FieldContent, Sentence, Session, DenseLabel, SparseLabel, SessionDefault, \
 	SentenceDefault, SentenceGPT2
+from cotk.dataloader import SimpleVocab
 from cotk.dataloader import Vocab, Tokenizer, GeneralVocab
+from cache_dir import CACHE_DIR
 
 
 def setup_module():
 	random.seed(7)
 	np.random.seed(7)
+	file_utils.CACHE_DIR = CACHE_DIR
+
+def teardown_module():
+	if os.path.isdir(CACHE_DIR):
+		shutil.rmtree(CACHE_DIR)
 
 
 class DummyDataset:
@@ -79,6 +89,8 @@ def load_dataset(field: Field, dataset: Iterator, set_name='train') -> _FieldCon
 
 
 class CheckGetBatch:
+	UNK_ID = 1  # the same with vocab.py
+
 	@classmethod
 	def check_result_of_sentence_get_batch(cls, sentence_field, field_name, data, indexes, result):
 		assert isinstance(result, dict)
@@ -94,6 +106,7 @@ class CheckGetBatch:
 		assert isinstance(result.get(field_name + '_allvocabs', None), np.ndarray)
 		assert len(result[field_name + '_allvocabs'].shape) == 2 and result[field_name + '_allvocabs'].shape[0] == len(
 			indexes)
+		assert (result[field_name + '_allvocabs'] == cls.UNK_ID).sum() == 0
 
 	@classmethod
 	def check_result_of_session_get_batch(cls, session_field, field_name, data, indexes, result):
@@ -110,6 +123,7 @@ class CheckGetBatch:
 		assert isinstance(result.get(field_name + '_allvocabs', None), np.ndarray)
 		assert len(result[field_name + '_allvocabs'].shape) == 3 and result[field_name + '_allvocabs'].shape[
 			0] == len(indexes)
+		assert (result[field_name + '_allvocabs'] == cls.UNK_ID).sum() == 0
 		assert isinstance(result.get(field_name + '_str', None), list)
 		assert isinstance(result[field_name + '_str'][0], list)
 		assert isinstance(result[field_name + '_str'][0][0], str)
@@ -286,15 +300,21 @@ class TestSentence(BaseTestSentence):
 		super().base_test_get_batch(get_sentence_field(), 'sent', DummyDataset.get_sentence_iterator)
 
 
-@pytest.fixture
-def get_session_field():
+def get_session_field(tokenizer='space', min_frequent_vocab_times=0, min_rare_vocab_times=0):
 	def _get_session_field():
-		return SessionDefault('space', GeneralVocab(), convert_to_lower_letter=True)
+		return SessionDefault(tokenizer,
+							  GeneralVocab(min_frequent_vocab_times=min_frequent_vocab_times, min_rare_vocab_times=min_rare_vocab_times),
+							  convert_to_lower_letter=True)
 
 	return _get_session_field
 
 
+all_get_session_fields = [get_session_field(), get_session_field(tokenizer='nltk', min_frequent_vocab_times=2),
+					  get_session_field(min_rare_vocab_times=2)]
+
+
 class TestSession(BaseTestSentence):
+	@pytest.mark.parametrize('get_session_field', all_get_session_fields)
 	def test_init(self, get_session_field):
 		session_field: Session = get_session_field()
 		super().base_test_init(session_field)
@@ -302,11 +322,13 @@ class TestSession(BaseTestSentence):
 		assert hasattr(session_field, 'max_turn_length')
 		assert session_field.max_turn_length is None or isinstance(session_field.max_turn_length, int)
 
+	@pytest.mark.parametrize('get_session_field', all_get_session_fields)
 	def test_load_dataset(self, get_session_field):
 		session_field = get_session_field()
 		session_field_content = super().base_test_load_dataset(session_field, DummyDataset.get_session_iterator())
 		assert session_field_content._original_data == DummyDataset.sessions
 
+	@pytest.mark.parametrize('get_session_field', all_get_session_fields)
 	def test_get_setting_hash(self, get_session_field):
 		session_field: Session = get_session_field()
 		super().base_get_setting_hash(session_field, [session_field.get_vocab()])
@@ -314,6 +336,7 @@ class TestSession(BaseTestSentence):
 		load_dataset(session_field, DummyDataset.get_session_iterator())
 		assert setting_hash == session_field._get_setting_hash([session_field.get_vocab()])
 
+	@pytest.mark.parametrize('get_session_field', all_get_session_fields)
 	def test_get_batch(self, get_session_field):
 		super().base_test_get_batch(get_session_field(), 'session', DummyDataset.get_session_iterator)
 
@@ -353,7 +376,7 @@ class TestDenseLabel(BaseTestField):
 @pytest.fixture
 def get_sparse_label_field():
 	def _get_sparse_label_field():
-		return SparseLabel()
+		return SparseLabel(SimpleVocab())
 
 	return _get_sparse_label_field
 

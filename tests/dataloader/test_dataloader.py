@@ -1,6 +1,8 @@
 import copy
 import random
 import operator
+import os
+import shutil
 from collections import OrderedDict
 from typing import List
 
@@ -11,6 +13,15 @@ import numpy as np
 
 from cotk.dataloader import GeneralVocab, SimpleTokenizer, SentenceDefault, LanguageProcessing, \
 	Field, Vocab, Tokenizer, FieldContext, VocabContext
+from cotk.file_utils import file_utils
+from cache_dir import CACHE_DIR
+
+def setup_module():
+	file_utils.CACHE_DIR = CACHE_DIR
+
+def teardown_module():
+	if os.path.isdir(CACHE_DIR):
+		shutil.rmtree(CACHE_DIR)
 
 class BaseTestLanguageProcessing:
 	"""Test :class:`LanguageProcessing` or it's subclass."""
