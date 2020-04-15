@@ -48,11 +48,8 @@ class GeneralWordVector(WordVector):
 
 	def __init__(self, file_id):
 		super().__init__()
-		if file_id is not None:
-			self.file_id = file_id
-			self.file_path = get_resource_file_path(file_id)
-		else:
-			self.file_id = self.file_path = None
+		self.file_id = file_id
+		self.file_path = get_resource_file_path(file_id)
 
 	def _load_raw_word2vec(self) -> Dict[str, str]:
 		'''Load raw word vectors from file.
@@ -67,10 +64,10 @@ class GeneralWordVector(WordVector):
 			for i in range(0, len(lines), 2):
 				word = lines[i].strip()
 				vec = lines[i+1].strip()
-				raw_word2vec[word] = vec
+				raw_word2vec[word] = np.fromstring(vec, sep=" ")
 		return raw_word2vec
 
-	def load_matrix(self, n_dims: int, vocab_list: List[str], mean: float = 0.0, std: float = 0.1, \
+	def load_matrix(self, n_dims: int, vocab_list: List[str], mean: float = None, std: float = None, \
 			default_embeddings: Optional[Union[List, np.ndarray]] = None) -> np.ndarray:
 		r'''Load pretrained word vector and return a numpy 2-d array. The ith row is the feature
 		of the ith word in ``vocab_list``. If some feature is not included in pretrained
@@ -86,8 +83,10 @@ class GeneralWordVector(WordVector):
 			vocab_list (list): specify the vocab list used in data loader. If there
 				is any word not appeared in pretrained word vector, the embedding will be
 				initialized by ``default_embeddings`` or a normal distribution.
-			mean (float, optional): The mean of normal distribution. Default: 0.
-			std (float, optional): The standard deviation of normal distribution. Default: 0.1.
+			mean (float, optional): The mean of normal distribution. Default: if ``None``,
+				use the mean of word vector embedding.
+			std (float, optional): The standard deviation of normal distribution. Default:
+				if ``None``, use the standard deviation of word vector embedding.
 			default_embeddings (Any, optional): The default embeddings, it size should be
 				``[len(vocab_list), ndims]``. Default: None, which indicates initializing
 				the embeddings from the normal distribution with ``mean`` and ``std``
@@ -97,6 +96,8 @@ class GeneralWordVector(WordVector):
 
 			(:class:`numpy.ndarray`): A  2-d array. Size:``[len(vocab_list), n_dims]``.
 		'''
+		raw_word2vec = self._load_raw_word2vec()
+
 		if default_embeddings is not None:
 			if isinstance(default_embeddings, list):
 				default_embeddings = np.array(default_embeddings)
@@ -108,17 +109,21 @@ class GeneralWordVector(WordVector):
 
 			default_embeddings = default_embeddings.copy()
 		else:
+			all_embedding = np.stack(list(raw_word2vec.values()))
+			if mean is None:
+				mean = np.mean(all_embedding, axis=0)
+			if std is None:
+				std = np.std(all_embedding, axis=0)
 			default_embeddings = np.random.randn(len(vocab_list), n_dims) * std + mean
 
-		raw_word2vec = self._load_raw_word2vec()
 		oov_cnt = 0
 		have_warned = False
 		for i, vocab in enumerate(vocab_list):
-			str_vec = raw_word2vec.get(vocab, None)
-			if str_vec is None:
+			vec = raw_word2vec.get(vocab, None)
+			if vec is None:
 				oov_cnt += 1
 			else:
-				tmp = np.fromstring(str_vec, sep=" ")
+				tmp = vec
 				if len(tmp) != n_dims and not have_warned:
 					have_warned = True
 					if len(tmp) > n_dims:
@@ -126,7 +131,7 @@ class GeneralWordVector(WordVector):
 							The redundant dimension is trimmed." % (len(tmp), n_dims))
 					else:
 						print("Warning: Dimension of loaded wordvec is %d, but ``n_dims`` is set to %d. \
-							The extra dimension is initialized by normal distribution (mean=0, std=0.1)."\
+							The extra dimension is initialized by normal distribution."\
 							% (len(tmp), n_dims))
 				now_dims = min(len(tmp), n_dims)
 				default_embeddings[i, :now_dims] = tmp[:now_dims]
@@ -150,9 +155,9 @@ class GeneralWordVector(WordVector):
 
 		word2vec = {}
 		for vocab in vocab_list:
-			str_vec = raw_word2vec.get(vocab, None)
-			if str_vec is not None:
-				word2vec[vocab] = np.fromstring(str_vec, sep=" ")
+			vec = raw_word2vec.get(vocab, None)
+			if vec is not None:
+				word2vec[vocab] = vec
 		return word2vec
 
 
