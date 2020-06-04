@@ -28,6 +28,7 @@ def test_bleu_bug():
 		corpus_bleu(ref, gen, smoothing_function=SmoothingFunction().method3)
 
 bleu_test_parameter = generate_testcase(\
+    (zip(test_dataloader), "add"),
 	(zip(test_argument), "add"),
 	(zip(test_shape, test_type), "multi"),
 	(zip(test_batch_len), "add"),
@@ -51,14 +52,16 @@ class TestBleuCorpusMetric:
 		gens = replace_unk(gens)
 		return corpus_bleu(refs, gens, smoothing_function=SmoothingFunction().method3)
 
-	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
-	def test_hashvalue(self, to_list, pad):
+	@pytest.mark.parametrize('data_loader, to_list, pad', [['dataloader', True, False], ['field', True, True], ['dataloader', False, True]])
+	def test_hashvalue(self, data_loader, to_list, pad):
 		dataloader = FakeDataLoader()
 		reference_key, gen_key = self.default_keywords
 		key_list = [reference_key, gen_key]
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 								   to_list=to_list, pad=pad, \
 								   gen_len='non-empty', ref_len='non-empty')
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 		bcm = BleuCorpusMetric(dataloader)
 		bcm_shuffle = BleuCorpusMetric(dataloader)
 
@@ -85,8 +88,9 @@ class TestBleuCorpusMetric:
 
 			assert res['bleu hashvalue'] != res_unequal['bleu hashvalue']
 
-	@pytest.mark.parametrize('argument, shape, type, batch_len, gen_len, ref_len', bleu_test_parameter)
-	def test_close(self, argument, shape, type, batch_len, gen_len, ref_len):
+	@pytest.mark.parametrize('data_loader, argument, shape, type, batch_len, gen_len, ref_len', bleu_test_parameter)
+	def test_close(self, data_loader, argument, shape, type, batch_len, gen_len, ref_len):
+		# 'dataloader' or 'field'
 		# 'default' or 'custom'
 		# 'pad' or 'jag'
 		# 'list' or 'array'
@@ -100,6 +104,8 @@ class TestBleuCorpusMetric:
 								   to_list=(type == 'list'), pad=(shape == 'pad'), \
 								   gen_len=gen_len, ref_len=ref_len)
 		_data = copy.deepcopy(data)
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 		if argument == 'default':
 			bcm = BleuCorpusMetric(dataloader)
 		else:
@@ -132,11 +138,11 @@ class TestBleuCorpusMetric:
 
 
 self_bleu_test_parameter = generate_testcase( \
+	(zip(test_dataloader), "add"),
 	(zip(test_argument), "add"),
 	(zip(test_shape, test_type), "multi"),
 	(zip(["non-empty"]), "multi"),
-)
-
+	(zip([True, False]), "multi"))
 
 class TestSelfBleuCorpusMetric:
 	def get_self_bleu(self, dataloader, input, gen_key):
@@ -152,7 +158,8 @@ class TestSelfBleuCorpusMetric:
 				refs[:i] + refs[i + 1:], _refs[i], smoothing_function=SmoothingFunction().method1))
 		return 1.0 * sum(bleu_irl) / len(bleu_irl)
 
-	def test_hashvalue(self):
+	@pytest.mark.parametrize('data_loader', ['dataloader', 'field'])
+	def test_hashvalue(self, data_loader):
 		dataloader = FakeDataLoader()
 		gen_key = 'gen'
 		key_list = [gen_key]
@@ -160,6 +167,9 @@ class TestSelfBleuCorpusMetric:
 								   to_list=False, \
 								   pad=True, \
 								   gen_len='non-empty')
+
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 		bcm = SelfBleuCorpusMetric(dataloader)
 		bcm_shuffle = SelfBleuCorpusMetric(dataloader)
 		bcm_unequal = SelfBleuCorpusMetric(dataloader, sample=2)
@@ -181,12 +191,9 @@ class TestSelfBleuCorpusMetric:
 
 		assert res['self-bleu hashvalue'] != res_unequal['self-bleu hashvalue']
 
-	@pytest.mark.parametrize('argument, shape, type, gen_len, use_tqdm', generate_testcase( \
-		(zip(test_argument), "add"),
-		(zip(test_shape, test_type), "multi"),
-		(zip(["non-empty"]), "multi"),
-		(zip([True, False]), "multi")))
-	def test_close(self, argument, shape, type, gen_len, use_tqdm):
+	@pytest.mark.parametrize('data_loader, argument, shape, type, gen_len, use_tqdm', self_bleu_test_parameter)
+	def test_close(self, data_loader, argument, shape, type, gen_len, use_tqdm):
+		# 'dataloader' or 'field'
 		# 'default' or 'custom'
 		# 'pad' or 'jag'
 		# 'list' or 'array'
@@ -217,6 +224,8 @@ class TestSelfBleuCorpusMetric:
 										   gen_len=gen_len,
 										   batch=sample)
 				_data = copy.deepcopy(data)
+				if data_loader == 'field':
+					dataloader = dataloader.get_default_field()
 				if argument == 'default':
 					bcm = SelfBleuCorpusMetric(dataloader, sample=4000)
 				else:
@@ -253,6 +262,7 @@ class TestSelfBleuCorpusMetric:
 #		 bcm.close()
 
 fwbw_bleu_test_parameter = generate_testcase( \
+	(zip(test_dataloader), "add"),
 	(zip(test_argument), "add"),
 	(zip(test_shape, test_type), "multi"),
 	(zip(["non-empty"]), "multi"),
@@ -281,8 +291,8 @@ class TestFwBwBleuCorpusMetric:
 		bw_bleu = (1.0 * sum(bleu_irl_bw) / len(bleu_irl_bw))
 		return 2.0 * bw_bleu * fw_bleu / (fw_bleu + bw_bleu)
 
-	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True]])
-	def test_hashvalue(self, to_list, pad):
+	@pytest.mark.parametrize('data_loader, to_list, pad', [['dataloader', True, False], ['field', True, True]])
+	def test_hashvalue(self, data_loader, to_list, pad):
 		dataloader = FakeDataLoader()
 		reference_key, gen_key = ('resp_allvocabs', 'gen')
 		key_list = [reference_key, gen_key]
@@ -290,6 +300,8 @@ class TestFwBwBleuCorpusMetric:
 								   to_list=to_list, pad=pad, \
 								   gen_len='non-empty', ref_len='non-empty')
 
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 		# dataloader.data["test"][reference_key] = data[reference_key]
 		bcm = FwBwBleuCorpusMetric(dataloader, data[reference_key])
 		bcm.forward(data)
@@ -316,8 +328,9 @@ class TestFwBwBleuCorpusMetric:
 		res_unequal = bcm_unequal.close()
 		assert res['fw-bw-bleu hashvalue'] != res_unequal['fw-bw-bleu hashvalue']
 
-	@pytest.mark.parametrize('argument, shape, type, gen_len, ref_len, use_tqdm', fwbw_bleu_test_parameter)
-	def test_close(self, argument, shape, type, gen_len, ref_len, use_tqdm):
+	@pytest.mark.parametrize('data_loader, argument, shape, type, gen_len, ref_len, use_tqdm', fwbw_bleu_test_parameter)
+	def test_close(self, data_loader, argument, shape, type, gen_len, ref_len, use_tqdm):
+		# 'dataloader' or 'field'
 		# 'default' or 'custom'
 		# 'pad' or 'jag'
 		# 'list' or 'array'
@@ -353,6 +366,8 @@ class TestFwBwBleuCorpusMetric:
 										   gen_len=gen_len, ref_len=ref_len, batch=sample)
 				# dataloader.data["test"][reference_key] = data[reference_key]
 				_data = copy.deepcopy(data)
+				if data_loader == 'field':
+					dataloader = dataloader.get_default_field()
 				if argument == 'default':
 					bcm = FwBwBleuCorpusMetric(dataloader, data[reference_key], sample=sample)
 				else:
@@ -403,6 +418,7 @@ class TestFwBwBleuCorpusMetric:
 
 
 multi_bleu_test_parameter = generate_testcase( \
+	(zip(test_dataloader), "add"),
 	(zip(test_argument), "add"),
 	(zip(test_shape, test_type), "multi"),
 	(zip(test_batch_len), "add"),
@@ -429,15 +445,16 @@ class TestMultiTurnBleuCorpusMetric:
 		gens = replace_unk(gens)
 		return corpus_bleu(refs, gens, smoothing_function=SmoothingFunction().method3)
 
-	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
-	def test_hashvalue(self, to_list, pad):
+	@pytest.mark.parametrize('data_loader, to_list, pad', [['dataloader', True, False], ['field', True, True], ['dataloader', False, True]])
+	def test_hashvalue(self, data_loader, to_list, pad):
 		dataloader = FakeMultiDataloader()
 		reference_key, turn_len_key, gen_key = self.default_keywords
 		key_list = [reference_key, turn_len_key, gen_key]
 		data = dataloader.get_data(reference_key=reference_key, turn_len_key=turn_len_key, gen_key=gen_key, \
 								   to_list=to_list, pad=pad, ref_len='non-empty', \
 								   ref_vocab='non-empty')
-
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 		mtbcm = MultiTurnBleuCorpusMetric(dataloader)
 		mtbcm_shuffle = MultiTurnBleuCorpusMetric(dataloader)
 
@@ -467,8 +484,9 @@ class TestMultiTurnBleuCorpusMetric:
 
 			assert res['bleu hashvalue'] != res_unequal['bleu hashvalue']
 
-	@pytest.mark.parametrize('argument, shape, type, batch_len, gen_len, ref_len', multi_bleu_test_parameter)
-	def test_close(self, argument, shape, type, batch_len, gen_len, ref_len):
+	@pytest.mark.parametrize('data_loader, argument, shape, type, batch_len, gen_len, ref_len', multi_bleu_test_parameter)
+	def test_close(self, data_loader, argument, shape, type, batch_len, gen_len, ref_len):
+		# 'dataloader' or 'field'
 		# 'default' or 'custom'
 		# 'pad' or 'jag'
 		# 'list' or 'array'
@@ -482,6 +500,8 @@ class TestMultiTurnBleuCorpusMetric:
 								   to_list=(type == 'list'), pad=(shape == 'pad'), \
 								   gen_len=gen_len, ref_len=ref_len)
 		_data = copy.deepcopy(data)
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 		if argument == 'default':
 			mtbcm = MultiTurnBleuCorpusMetric(dataloader)
 		else:

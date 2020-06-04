@@ -279,6 +279,8 @@ class FakeMultiDataloader(MultiTurnDialog):
 					data[key] = np.array(data[key])
 		return data
 
+test_dataloader = ['dataloader', 'field']
+
 test_argument =  [ 'default',   'custom']
 
 test_shape =     [     'pad',      'jag',      'pad',      'jag']

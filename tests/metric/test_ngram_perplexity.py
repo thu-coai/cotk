@@ -70,14 +70,15 @@ class TestNgramLM():
 
 
 fwbw_perplexity_test_parameter = generate_testcase(\
+	(zip(test_dataloader), "add"),
 	(zip(test_argument), "add"),
 	(zip(test_shape, test_type), "multi"),
 	(zip(["non-empty"]), "multi"),
 	(zip(["non-empty"]), "multi")
 )
 class TestNgramFwBwPerplexityMetric():
-	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
-	def test_hashvalue(self, to_list, pad):
+	@pytest.mark.parametrize('data_loader, to_list, pad', [['dataloader', True, False], ['field', True, True], ['dataloader', False, True]])
+	def test_hashvalue(self, data_loader, to_list, pad):
 		dataloader = FakeDataLoader()
 		reference_key, gen_key = ('resp_allvocabs', 'gen')
 		key_list = [reference_key, gen_key]
@@ -85,6 +86,8 @@ class TestNgramFwBwPerplexityMetric():
 								   to_list=to_list, pad=pad, \
 								   gen_len='non-empty', ref_len='non-empty')
 
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 		# dataloader.data["test"][reference_key] = data[reference_key]
 		fpm = NgramFwBwPerplexityMetric(dataloader, reference_test_list = data[reference_key], \
 											ngram = 4)
@@ -100,7 +103,7 @@ class TestNgramFwBwPerplexityMetric():
 		assert res["fwppl hashvalue"] == res_shuffle["fwppl hashvalue"]
 		assert res["bwppl hashvalue"] == res_shuffle["bwppl hashvalue"]
 
-		for data_unequal in generate_unequal_data(data, key_list, dataloader.vocabs[0].pad_id, \
+		for data_unequal in generate_unequal_data(data, key_list, dataloader.pad_id, \
 												  reference_key, reference_is_3D=False):
 			# dataloader.data["test"][reference_key] = data_unequal[reference_key]
 			fpm_unequal = NgramFwBwPerplexityMetric(dataloader, reference_test_list = \
@@ -118,8 +121,9 @@ class TestNgramFwBwPerplexityMetric():
 		assert res["fwppl hashvalue"] != res_unequal["fwppl hashvalue"]
 		assert res["bwppl hashvalue"] != res_unequal["bwppl hashvalue"]
 
-	@pytest.mark.parametrize('argument, shape, type, gen_len, ref_len', fwbw_perplexity_test_parameter)
-	def test_close(self, argument, shape, type, gen_len, ref_len):
+	@pytest.mark.parametrize('data_loader, argument, shape, type, gen_len, ref_len', fwbw_perplexity_test_parameter)
+	def test_close(self, data_loader, argument, shape, type, gen_len, ref_len):
+		# 'dataloader' or 'field'
 		# 'default' or 'custom'
 		# 'pad' or 'jag'
 		# 'list' or 'array'
@@ -132,6 +136,8 @@ class TestNgramFwBwPerplexityMetric():
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 								   to_list=(type == 'list'), pad=(shape == 'pad'), \
 								   gen_len=gen_len, ref_len=ref_len)
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 		# dataloader.data["test"][reference_key] = data[reference_key]
 		if argument == 'default':
 			fpm = NgramFwBwPerplexityMetric(dataloader, reference_test_list = \

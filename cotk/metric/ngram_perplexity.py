@@ -20,28 +20,29 @@ class NgramFwBwPerplexityMetric(MetricBase):
 		{MetricBase.SEED_ARGUMENTS}
 		{MetricBase.CPU_COUNT_ARGUMENTS}
 
-	Here is an example:
+	Here is an example (to only show the format but not the exact value of results):
 
 		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
 		>>> gen_key = "gen"
-		>>> metric = cotk.metric.NgramFwBwPerplexityMetric(dl, 2, dl.get_all_batch('test')['sent'][0], gen_key=gen_key)
+		>>> metric = cotk.metric.NgramFwBwPerplexityMetric(dl, dl.get_all_batch('test')['session'][0].tolist(), 2, gen_key=gen_key)
 		>>> data = {
 		...	    gen_key: [[10, 1028, 479, 285, 220, 3], [851, 17, 2451, 3]]
 		...	    # gen_key: [["I", "love", "java", "very", "much", "<eos>"], ["python", "is", "excellent", "<eos>"]],
 		... }
-		>>> metric.forword(data)
+		>>> metric.forward(data)
 		>>> metric.close()
 		{'fwppl': 51.44751843841384,
  		 'bwppl': 138.954327895075,
- 		 'fw-bw-ppl': 75.0922901656957,
- 		 'fw-bw-ppl hashvalue': '2ea52377084692953f602e4ebad23e8a46e1c4bb527947d29a03c14b426efe67'}
+ 		 'fwppl hashvalue': '2ea52377084692953f602e4ebad23e8a46e1c4bb527947d29a03c14b426efe67',
+ 		 'bwppl hashvalue': '2ea52377084692953f602e4ebad23e8a46e1c4bb527947d29a03c14b426efe67'}
 	'''
 
 	_name = 'NgramFwBwPerplexityMetric'
 	_version = 2
 
 	@hooks.hook_metric
-	def __init__(self, dataloader: "LanguageProcessing", reference_test_list: List[Any], ngram: int = 4, *, \
+	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence", "Session"], \
+			reference_test_list: List[Any], ngram: int = 4, *, \
 			tokenizer: Union[None, Tokenizer, str] = None, gen_key: str = "gen", \
 			sample: int = 10000, seed: int = 1229, cpu_count: Optional[int] = None):
 		super().__init__(self._name, self._version)

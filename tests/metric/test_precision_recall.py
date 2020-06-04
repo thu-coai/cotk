@@ -14,6 +14,7 @@ def setup_module():
 #pytestmark = pytest.mark.skip("all tests still WIP")
 
 bleu_precision_recall_test_parameter = generate_testcase(\
+	(zip(test_dataloader), "add"),
 	(zip(test_argument), "add"),
 	(zip(test_shape, test_type), "multi"),
 	(zip(test_batch_len), "add"),
@@ -35,12 +36,15 @@ class TestBleuPrecisionRecallMetric():
 			bprm = BleuPrecisionRecallMetric(dataloader, 1, 3)
 			super(BleuPrecisionRecallMetric, bprm)._score(gen, reference)
 
-	def test_hashvalue(self):
+	@pytest.mark.parametrize('data_loader', ['dataloader', 'field'])
+	def test_hashvalue(self, data_loader):
 		dataloader = FakeMultiDataloader()
 		reference_key, gen_key = self.default_keywords
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 								   to_list=True, pad=False, \
 								   ref_len='non-empty', gen_len='non-empty', test_prec_rec=True)
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 		bprm = BleuPrecisionRecallMetric(dataloader, 4, 3)
 		assert bprm.candidate_allvocabs_key == reference_key
 		bprm_shuffle = BleuPrecisionRecallMetric(dataloader, 4, 3)
@@ -70,22 +74,31 @@ class TestBleuPrecisionRecallMetric():
 
 			assert res['BLEU-4 hashvalue'] != res_unequal['BLEU-4 hashvalue']
 
-	@pytest.mark.parametrize('argument, shape, type, batch_len, ref_len, gen_len, ngram', \
+	@pytest.mark.parametrize('data_loader, argument, shape, type, batch_len, ref_len, gen_len, ngram', \
 		bleu_precision_recall_test_parameter)
-	def test_close(self, argument, shape, type, batch_len, ref_len, gen_len, ngram):
+	def test_close(self, data_loader, argument, shape, type, batch_len, ref_len, gen_len, ngram):
 		dataloader = FakeMultiDataloader()
 
 		if ngram not in range(1, 5):
 			with pytest.raises(ValueError, match=r"ngram should belong to \[1, 4\]"):
-				bprm = BleuPrecisionRecallMetric(dataloader, ngram, 3)
+				if data_loader == 'dataloader':
+					bprm = BleuPrecisionRecallMetric(dataloader, ngram, 3)
+				else:
+					bprm = BleuPrecisionRecallMetric(dataloader.get_default_field(), ngram, 3)
 			return
 
 		if argument == 'default':
 			reference_key, gen_key = self.default_keywords
-			bprm = BleuPrecisionRecallMetric(dataloader, ngram, 3)
+			if data_loader == 'dataloader':
+				bprm = BleuPrecisionRecallMetric(dataloader, ngram, 3)
+			else:
+				bprm = BleuPrecisionRecallMetric(dataloader.get_default_field(), ngram, 3)
 		else:
 			reference_key, gen_key = ('rk', 'gk')
-			bprm = BleuPrecisionRecallMetric(dataloader, ngram, 3, reference_key, gen_key)
+			if data_loader == 'dataloader':
+				bprm = BleuPrecisionRecallMetric(dataloader, ngram, 3, reference_key, gen_key)
+			else:
+				bprm = BleuPrecisionRecallMetric(dataloader.get_default_field(), ngram, 3, reference_key, gen_key)
 
 		# TODO: might need adaptation of dataloader.get_data for test_prec_rec
 		# turn_length is not generated_num_per_context conceptually
@@ -111,6 +124,7 @@ class TestBleuPrecisionRecallMetric():
 
 
 emb_similarity_precision_recall_test_parameter = generate_testcase( \
+	(zip(test_dataloader), "add"),
 	(zip(test_argument), "add"),
 	(zip(test_shape, test_type), "multi"),
 	(zip(test_batch_len), "add"),
@@ -129,7 +143,8 @@ class TestEmbSimilarityPrecisionRecallMetric():
 	default_gen_key = 'multiple_gen'
 	default_keywords = (default_reference_key, default_gen_key)
 
-	def test_hashvalue(self):
+	@pytest.mark.parametrize('data_loader', ['dataloader', 'field'])
+	def test_hashvalue(self, data_loader):
 		dataloader = FakeMultiDataloader()
 		emb = {}
 		emb_unequal = {}
@@ -147,6 +162,9 @@ class TestEmbSimilarityPrecisionRecallMetric():
 								   to_list=True, pad=False, \
 								   ref_len='non-empty', gen_len='non-empty', \
 								   ref_vocab='valid_vocab', gen_vocab='valid_vocab', test_prec_rec=True)
+
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 		espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, 'avg', 3)
 		espr_shuffle = EmbSimilarityPrecisionRecallMetric(dataloader, emb, 'avg', 3)
 
@@ -180,10 +198,10 @@ class TestEmbSimilarityPrecisionRecallMetric():
 		res_unequal = espr_unequal.close()
 		assert res['avg-bow hashvalue'] != res_unequal['avg-bow hashvalue']
 
-	@pytest.mark.parametrize('argument, shape, type, batch_len, ref_len, gen_len, ' \
+	@pytest.mark.parametrize('data_loader, argument, shape, type, batch_len, ref_len, gen_len, ' \
 							 'ref_vocab, gen_vocab, emb_mode, emb_type, emb_len', \
 							 emb_similarity_precision_recall_test_parameter)
-	def test_close(self, argument, shape, type, batch_len, ref_len, gen_len, \
+	def test_close(self, data_loader, argument, shape, type, batch_len, ref_len, gen_len, \
 							 ref_vocab, gen_vocab, emb_mode, emb_type, emb_len):
 		dataloader = FakeMultiDataloader()
 
@@ -201,26 +219,41 @@ class TestEmbSimilarityPrecisionRecallMetric():
 
 		if emb_type != 'dict':
 			with pytest.raises(ValueError, match="invalid type"):
-				espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
+				if data_loader == 'dataloader':
+					espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
+				else:
+					espr = EmbSimilarityPrecisionRecallMetric(dataloader.get_default_field(), emb, emb_mode, 3)
 			return
 		else:
 			if emb_len == 'unequal':
 				with pytest.raises(ValueError, match="word embeddings have inconsistent embedding size or are empty"):
-					espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
+					if data_loader == 'dataloader':
+						espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
+					else:
+						espr = EmbSimilarityPrecisionRecallMetric(dataloader.get_default_field(), emb, emb_mode, 3)
 				return
 		if emb_mode not in ['avg', 'extrema']:
 			with pytest.raises(ValueError, match="mode should be 'avg' or 'extrema'."):
-				espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
+				if data_loader == 'dataloader':
+					espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
+				else:
+					espr = EmbSimilarityPrecisionRecallMetric(dataloader.get_default_field(), emb, emb_mode, 3)
 			return
 
 		if argument == 'default':
 			reference_key, gen_key = self.default_keywords
-			print(emb)
-			espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
+			if data_loader == 'dataloader':
+				espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3)
+			else:
+				espr = EmbSimilarityPrecisionRecallMetric(dataloader.get_default_field(), emb, emb_mode, 3)
 		else:
 			reference_key, gen_key = ('rk', 'gk')
-			espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3, \
-													  reference_key, gen_key)
+			if data_loader == 'dataloader':
+				espr = EmbSimilarityPrecisionRecallMetric(dataloader, emb, emb_mode, 3, \
+													  	reference_key, gen_key)
+			else:
+				espr = EmbSimilarityPrecisionRecallMetric(dataloader.get_default_field(), emb, emb_mode, 3, \
+														reference_key, gen_key)
 
 		# TODO: might need adaptation of dataloader.get_data for test_prec_rec
 		# turn_length is not generated_num_per_context conceptually

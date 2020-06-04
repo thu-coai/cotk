@@ -5,7 +5,7 @@ import numpy as np
 from ..hooks import hooks
 from .metric import MetricBase
 from ..dataloader import LanguageProcessing
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Union
 
 class AccuracyMetric(MetricBase):
 	'''Metric for calculating accuracy.
@@ -39,7 +39,7 @@ class AccuracyMetric(MetricBase):
 	_version = 2
 
 	@hooks.hook_metric
-	def __init__(self, dataloader: "LanguageProcessing",\
+	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence", "Session"],\
 			label_key: str="label", prediction_key: str="prediction"):
 		super().__init__(self._name, self._version)
 		self.dataloader = dataloader

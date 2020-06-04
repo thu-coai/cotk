@@ -1,7 +1,7 @@
 """
 Containing some recorders.
 """
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 import numpy as np
 from .metric import MetricBase
 
@@ -37,7 +37,7 @@ class SingleTurnDialogRecorder(MetricBase):
 		...     gen_key: [[10, 64, 2019, 3], [851, 17, 4124, 3]],
 		...     # gen_key: [["I", "like", "PHP", "<eos>"], ["python", "is", "powerful", "<eos>"]]
 		... }
-		>>> metric.forword(data)
+		>>> metric.forward(data)
 		>>> metric.close()
 		{'post': [['I', 'like', 'python'], ['I', 'use', 'python']],
  		 'resp': [['I', 'prefer', 'java'], ['python', 'is', 'excellent']],
@@ -46,7 +46,8 @@ class SingleTurnDialogRecorder(MetricBase):
 
 	_name = 'SingleTurnDialogRecorder'
 	_version = 2
-	def __init__(self, dataloader: "LanguageProcessing", post_allvocabs_key: str = "post_allvocabs", \
+	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence", "Session"], \
+			post_allvocabs_key: str = "post_allvocabs", \
 			resp_allvocabs_key: str = "resp_allvocabs", gen_key: str = "gen"):
 		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
@@ -117,7 +118,7 @@ class MultiTurnDialogRecorder(MetricBase):
 	'''A metric-like class for recording generated sentences and references.
 
 	Arguments:
-		{MetricBase.DATALOADER_ARGUMENTS}
+		{MetricBase.MULTI_TURN_DATALOADER_ARGUMENTS}
 		multi_turn_reference_allvocabs_key (str, optional): The key of dialog references with \
 			:ref:`allvocabs <vocabulary_ref>`. Default: ``multi_turn_ref_allvocabs``.
 		{MetricBase.MULTI_TURN_GEN_KEY_ARGUMENTS}
@@ -131,7 +132,7 @@ class MultiTurnDialogRecorder(MetricBase):
 		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
 		>>> metric = cotk.metric.MultiTurnDialogRecorder(dl,
 		...     multi_turn_reference_allvocabs_key=multi_turn_reference_allvocabs_key,
-		...     multi_turn_gen_key＝multi_turn_gen_key,
+		...     multi_turn_gen_key=multi_turn_gen_key,
 		...     turn_len_key=turn_len_key)
 		>>> data = {
 		...	    multi_turn_reference_allvocabs_key: [[[2, 10, 64, 851, 3], [2, 10, 64, 479, 3]], [[2, 10, 64, 279, 1460, 3]]],
@@ -145,7 +146,7 @@ class MultiTurnDialogRecorder(MetricBase):
 		...     # multi_turn_gen_key = [[["python", "is", "excellent", "<eos>"], ["PHP", "is", "best", "<eos>"]],
 		...     # 	[["I", "like", "natural", "language", "processing", "<eos>"]]]
 		... }
-		>>> metric.forword(data)
+		>>> metric.forward(data)
 		>>> metric.close()
 		{'reference': [[['I', 'like', 'python'], ['I', 'like', 'java']],
 		 [['I', 'like', 'machine', 'learning']]],
@@ -156,7 +157,7 @@ class MultiTurnDialogRecorder(MetricBase):
 	'''
 	_name = 'MultiTurnDialogRecorder'
 	_version = 2
-	def __init__(self, dataloader: "LanguageProcessing",
+	def __init__(self, dataloader: Union["LanguageProcessing", "Session"],
 			multi_turn_reference_allvocabs_key: str = "multi_turn_ref_allvocabs", \
 			multi_turn_gen_key: str = "multi_turn_gen", \
 			turn_len_key: str = "turn_length"):
@@ -245,13 +246,13 @@ class LanguageGenerationRecorder(MetricBase):
 		...	    gen_key: [[2, 10, 64, 851, 3], [2, 10, 48, 851, 3]],
 		...	    # gen_key: [["<go>", "I", "like", "python", "<eos>"], ["<go>", "I", "use", "python", "<eos>"]],
 		... }
-		>>> metric.forword(data)
+		>>> metric.forward(data)
 		>>> metric.close()
 		{'gen': [['<go>', 'I', 'like', 'python'], ['<go>', 'I', 'use', 'python']]}
 	'''
 	_name = 'LanguageGenerationRecorder'
 	_version = 2
-	def __init__(self, dataloader: "LanguageProcessing", gen_key: str = "gen"):
+	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence", "Session"], gen_key: str = "gen"):
 		super().__init__(self._name, self._version)
 		self.dataloader = dataloader
 		self.gen_key = gen_key
