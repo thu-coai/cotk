@@ -71,10 +71,10 @@ class BleuCorpusMetric(MetricBase):
 	_version = 2
 
 	@hooks.hook_metric
-	def __init__(self, dataloader: "LanguageProcessing", ngram: int =4, *, tokenizer: Union[None, Tokenizer, str] = None, \
-			reference_num: Optional[int] = 1, ignore_smoothing_error: bool = False,\
-			reference_allvocabs_key: str = "ref_allvocabs", gen_key: str = "gen", \
-			reference_str_key: str = "ref_str"):
+	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence", "Session"], ngram: int =4, *, \
+			tokenizer: Union[None, Tokenizer, str] = None, reference_num: Optional[int] = 1, \
+			ignore_smoothing_error: bool = False, reference_allvocabs_key: str = "ref_allvocabs", \
+			gen_key: str = "gen", reference_str_key: str = "ref_str"):
 		super().__init__(self._name, self._version)
 		#self._hash_ordered_data(self.ngram)
 		self.dataloader = dataloader
@@ -248,7 +248,7 @@ class SelfBleuCorpusMetric(MetricBase):
 	_version = 2
 
 	@hooks.hook_metric
-	def __init__(self, dataloader: "LanguageProcessing", ngram: int = 4, *, \
+	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence", "Session"], ngram: int = 4, *, \
 		tokenizer: Union[None, Tokenizer, str] = None, \
 		gen_key: str = "gen", \
 		sample: int = 1000, \
@@ -298,6 +298,8 @@ class SelfBleuCorpusMetric(MetricBase):
 		'''Return a dict which contains
 
 			* **self-bleu**: self-bleu value.
+			* **self-bleu hashvalue**: hash value for self-bleu metric, same hash value stands
+			  for same evaluation settings.
 		'''
 		res = super().close()
 		if not self.hyps:
@@ -384,7 +386,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 		>>> dl = cotk.dataloader.UbuntuCorpus('resources://Ubuntu_small')
 		>>> gen_key = 'gen'
 		>>> metric = cotk.metric.FwBwBleuCorpusMetric(dl,
-		...	    reference_test_list=dl.get_all_batch('test')['sent'][0],
+		...	    reference_test_list=dl.get_all_batch('test')['session'][0].tolist(),
 		...	    gen_key=gen_key)
 		>>> data = {
 		...	    gen_key: [[10, 64, 851, 3], [10, 48, 851, 3]],
@@ -402,7 +404,7 @@ class FwBwBleuCorpusMetric(MetricBase):
 	_version = 2
 
 	@hooks.hook_metric
-	def __init__(self, dataloader: "LanguageProcessing", \
+	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence", "Session"], \
 			reference_test_list: List[Any], ngram: int = 4, *, \
 			tokenizer: Union[None, Tokenizer, str] = None, \
 			gen_key: str = "gen", \
@@ -453,7 +455,9 @@ class FwBwBleuCorpusMetric(MetricBase):
 	def close(self) -> Dict[str, Any]:
 		'''Return a dict which contains
 
-			* **fwbwbleu**: fw/bw bleu value.
+			* **fw-bleu**: fw bleu value.
+			* **bw-bleu**: bw bleu value.
+			* **fw-bw-bleu**: harmony mean of fw/bw bleu value.
 			* **fw-bw-bleu hashvalue**: hash value for fwbwbleu metric, same hash value stands
 			  for same evaluation settings.
 		'''
@@ -600,7 +604,8 @@ class MultiTurnBleuCorpusMetric(MetricBase):
 	_version = 2
 
 	@hooks.hook_metric
-	def __init__(self, dataloader: "LanguageProcessing", ignore_smoothing_error: bool = False,\
+	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence", "Session"], \
+					ignore_smoothing_error: bool = False,\
 					multi_turn_reference_allvocabs_key: str = "reference_allvocabs", \
 					multi_turn_gen_key: str = "multi_turn_gen", \
 					turn_len_key: str = "turn_length" \

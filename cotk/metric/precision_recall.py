@@ -1,7 +1,7 @@
 """
 Containing some classes and functions about precision and recall evaluating results of models.
 """
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 from itertools import chain
 import numpy as np
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
@@ -27,7 +27,7 @@ class _PrecisionRecallMetric(MetricBase):
 
 
 	def __init__(self, name: str, version: int, \
-				 dataloader: "LanguageProcessing", \
+				 dataloader: Union["LanguageProcessing", "Sentence", "Session"], \
 				 generated_num_per_context: int, \
 				 candidate_allvocabs_key: str = 'candidate_allvocabs', \
 				 multiple_gen_key: str = 'multiple_gen'):
@@ -156,7 +156,7 @@ class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
 		...     multiple_gen_key: [[[10, 64, 479, 3], [10, 48, 2019, 3]]],
 		...     # multiple_gen_key: [[["I", "like", "java", "<eos>"], ["I", "use", "PHP", "<eos>"]]],
 		... }
-		>>> metric.forword(data)
+		>>> metric.forward(data)
 		>>> metric.close()
 		{'BLEU-2 precision': 0.12909944355487823,
  		 'BLEU-2 recall': 0.12909944355487823,
@@ -167,7 +167,7 @@ class BleuPrecisionRecallMetric(_PrecisionRecallMetric):
 	_version = 2
 
 	@hooks.hook_metric
-	def __init__(self, dataloader: "LanguageProcessing", \
+	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence", "Session"], \
 				 ngram: int, \
 				 generated_num_per_context: int, \
 				 candidates_allvocabs_key: str = 'candidate_allvocabs', \
@@ -236,14 +236,14 @@ class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
 		>>> candidate_allvocabs_key = 'candidate_allvocabs'
 		>>> multiple_gen_key='multiple_gen'
 		>>> wordvector = cotk.wordvector.Glove()
-		>>> metric = cotk.metric.EmbSimilarityPrecisionRecallMetric(dl, wordvector.load_dict(dl.all_vocab_list()), 'avg', 2)
+		>>> metric = cotk.metric.EmbSimilarityPrecisionRecallMetric(dl, wordvector.load_dict(dl.all_vocab_list), 'avg', 2)
 		>>> data = {
 		...	    candidate_allvocabs_key: [[[10, 64, 851], [10, 48, 851]]],
 		...	    # candidate_allvocabs_key: [[["I", "like", "python"], ["I", "use", "python"]]],
 		...     multiple_gen_key: [[[10, 64, 479, 3], [10, 48, 2019, 3]]],
 		...     # multiple_gen_key: [[["I", "like", "java", "<eos>"], ["I", "use", "PHP", "<eos>"]]],
 		... }
-		>>> metric.forword(data)
+		>>> metric.forward(data)
 		>>> metric.close()
 		>>> # metric.close() returns a dict like this.
 		>>>	# {'avg-bow precision': 0.0,
@@ -255,7 +255,7 @@ class EmbSimilarityPrecisionRecallMetric(_PrecisionRecallMetric):
 	_version = 2
 
 	@hooks.hook_metric
-	def __init__(self, dataloader: "LanguageProcessing", \
+	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence", "Session"], \
 				 word2vec: Dict[str, Any], \
 				 mode: str, \
 				 generated_num_per_context: int, \

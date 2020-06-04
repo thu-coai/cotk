@@ -13,7 +13,11 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 	'''
 
 	DATALOADER_ARGUMENTS = \
-		"""dataloader (:class:`.dataloader.LanguageProcessing`): A language generation dataloader."""
+		"""dataloader (:class:`.dataloader.LanguageProcessing`, :class:`.dataloader.Sentence`, :class:`.dataloader.Session`): \
+		 A language generation dataloader."""
+	MULTI_TURN_DATALOADER_ARGUMENTS = \
+		"""dataloader (:class:`.dataloader.LanguageProcessing`, :class:`.dataloader.Session`): \
+		 A language generation dataloader."""
 	NGRAM_ARGUMENTS = \
 		"""ngram (int, optional): The order of ngram to calculate metrics like BLEU and Perplexity. Default: ``4``."""
 	TOKENIZER_ARGUMENTS = \

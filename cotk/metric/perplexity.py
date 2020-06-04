@@ -31,16 +31,16 @@ class PerplexityMetric(MetricBase):
 		>>> reference_len_key="ref_length"
 		>>> gen_log_prob_key="gen_log_prob"
 		>>> metric = cotk.metric.PerplexityMetric(dl,
-		...	    reference_allvocabs_key="ref_allvocabs",
-		...	    reference_len_key="ref_length",
-		...	    gen_log_prob_key="gen_log_prob")
+		...	    reference_allvocabs_key=reference_allvocabs_key,
+		...	    reference_len_key=reference_len_key,
+		...	    gen_log_prob_key=gen_log_prob_key)
 		>>> data = {
 		...	    reference_allvocabs_key: [[2, 10, 64, 851, 3], [2, 10, 48, 851, 3]],
 		...	    # reference_allvocabs_key: [["<go>", "I", "like", "python", "<eos>"], ["<go>", "I", "use", "python", "<eos>"]],
 		...     reference_len_key: [5, 5],
 		...     gen_log_prob_key: [[[-11.31, -11.31,  -0.69, ..., -11.31, -11.31, -11.31],...],...] # shape == (batch, length, vocab_size)
 		... }
-		>>> metric.forword(data)
+		>>> metric.forward(data)
 		>>> metric.close()
 		{'perplexity': 81458.00000000006,
  		 'perplexity hashvalue': '7f9b88b8f9996f5d49a512258f250fbc56adee714952b2c696c0b36cce36f648'}
@@ -50,7 +50,7 @@ class PerplexityMetric(MetricBase):
 	_version = 2
 
 	@hooks.hook_metric
-	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence"], \
+	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence", "Session"], \
 					   reference_allvocabs_key: str = "ref_allvocabs", \
 					   reference_len_key: str = "ref_length", \
 					   gen_log_prob_key: str = "gen_log_prob", \
@@ -380,7 +380,7 @@ class MultiTurnPerplexityMetric(MetricBase):
 		...	    multi_turn_reference_len_key: [[5, 5], [6]],
 		...	    multi_turn_gen_log_prob_key: [[[[-11.30784283, -11.30784283,  -0.69312263, ..., -11.30784283, -11.30784283, -11.30784283], ...], ...], ...]
 		... }
-		>>> metric.forword(data)
+		>>> metric.forward(data)
 		>>> metric.close()
 		{'perplexity': 81458.00000000006,
  		 'perplexity hashvalue': '3a7647507f2e0d05a235c1d3a29515dc8885650884d625a5b76d305541dca685'}
@@ -390,7 +390,7 @@ class MultiTurnPerplexityMetric(MetricBase):
 	_version = 2
 
 	@hooks.hook_metric
-	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence"], \
+	def __init__(self, dataloader: Union["LanguageProcessing", "Sentence", "Session"], \
 					   multi_turn_reference_allvocabs_key: str = "multi_turn_ref_allvocabs", \
 					   multi_turn_reference_len_key: str = "multi_turn_ref_length", \
 					   multi_turn_gen_log_prob_key: str = "multi_turn_gen_log_prob", \

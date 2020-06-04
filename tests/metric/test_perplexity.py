@@ -15,6 +15,7 @@ def setup_module():
 #pytestmark = pytest.mark.skip("all tests still WIP")
 
 perplexity_test_parameter = generate_testcase(\
+	(zip(test_dataloader), "add"),
 	(zip(test_argument), "add"),
 	(zip(test_shape, test_type), "multi"),
 	(zip(test_batch_len), "add"),
@@ -28,6 +29,7 @@ perplexity_test_parameter = generate_testcase(\
 
 
 perplexity_test_engine_parameter = generate_testcase(\
+	(zip(test_dataloader), "add"),
 	(zip(test_ref_vocab), "multi"),
 	(zip(test_gen_prob_vocab), "multi"),
 )
@@ -64,8 +66,8 @@ class TestPerplexityMetric():
 				length_sum += 1
 		return np.exp(word_loss / length_sum)
 
-	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
-	def test_hashvalue(self, to_list, pad):
+	@pytest.mark.parametrize('data_loader, to_list, pad', [['dataloader', True, False], ['field', True, True], ['dataloader', False, True]])
+	def test_hashvalue(self, data_loader, to_list, pad):
 		dataloader = FakeDataLoader()
 		reference_key, reference_len_key, gen_prob_key = self.default_keywords
 		key_list = [reference_key, reference_len_key, gen_prob_key]
@@ -75,6 +77,8 @@ class TestPerplexityMetric():
 								   gen_prob_check='no_check', ref_len='non-empty', \
 								   ref_vocab='non-empty', gen_prob_vocab='all_vocab', \
 								   resp_len='>=2')
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 		pm = PerplexityMetric(dataloader, generate_rare_vocab=True, full_check=False)
 		pm_shuffle = PerplexityMetric(dataloader, generate_rare_vocab=True, full_check=False)
 
@@ -93,7 +97,7 @@ class TestPerplexityMetric():
 
 		assert same_dict(res, res_shuffle, False)
 
-		for data_unequal in generate_unequal_data(data, key_list, dataloader.vocabs[0].pad_id, \
+		for data_unequal in generate_unequal_data(data, key_list, dataloader.pad_id, \
 												  reference_key, reference_len_key, \
 												  reference_is_3D=False):
 			pm_unequal = PerplexityMetric(dataloader, generate_rare_vocab=True, full_check=False)
@@ -103,8 +107,8 @@ class TestPerplexityMetric():
 
 			assert res['perplexity hashvalue'] != res_unequal['perplexity hashvalue']
 
-	@pytest.mark.parametrize("ref_vocab, gen_prob_vocab", perplexity_test_engine_parameter)
-	def test_same_result_with_pytorch_engine(self, ref_vocab, gen_prob_vocab):
+	@pytest.mark.parametrize("data_loader, ref_vocab, gen_prob_vocab", perplexity_test_engine_parameter)
+	def test_same_result_with_pytorch_engine(self, data_loader, ref_vocab, gen_prob_vocab):
 		dataloader = FakeDataLoader()
 		reference_key, reference_len_key, gen_prob_key = self.default_keywords
 		data = dataloader.get_data(reference_key=reference_key, \
@@ -113,6 +117,8 @@ class TestPerplexityMetric():
 								   gen_prob_check='no_check', ref_len='non-empty', \
 								   ref_vocab=ref_vocab, gen_prob_vocab=gen_prob_vocab, \
 								   resp_len='>=2')
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 		pm = PerplexityMetric(dataloader, generate_rare_vocab=gen_prob_vocab == "all_vocab", full_check=False)
 		pm_shuffle = PerplexityMetric(dataloader, generate_rare_vocab=gen_prob_vocab == "all_vocab", full_check=False)
 		pm_shuffle2 = PerplexityMetric(dataloader, generate_rare_vocab=gen_prob_vocab == "all_vocab", full_check=False)
@@ -140,9 +146,9 @@ class TestPerplexityMetric():
 		assert np.isclose(res['perplexity'], res_shuffle2['perplexity'])
 
 	@pytest.mark.parametrize( \
-		'argument, shape, type, batch_len, check, ref_len, ref_vocab, gen_prob_vocab, resp_len, include_invalid', \
+		'data_loader, argument, shape, type, batch_len, check, ref_len, ref_vocab, gen_prob_vocab, resp_len, include_invalid', \
 		perplexity_test_parameter)
-	def test_close(self, argument, shape, type, batch_len, check, \
+	def test_close(self, data_loader, argument, shape, type, batch_len, check, \
 				   ref_len, ref_vocab, gen_prob_vocab, resp_len, include_invalid):
 		# 'default' or 'custom'
 		# 'pad' or 'jag'
@@ -160,6 +166,8 @@ class TestPerplexityMetric():
 								   ref_vocab=ref_vocab, gen_prob_vocab=gen_prob_vocab, \
 								   resp_len=resp_len)
 		_data = copy.deepcopy(data)
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 		if argument == 'default':
 			pm = PerplexityMetric(dataloader, generate_rare_vocab=include_invalid, full_check=(check == 'full_check'))
 		else:
@@ -194,6 +202,7 @@ class TestPerplexityMetric():
 		version_test(PerplexityMetric, dataloader=FakeDataLoader())
 
 multiperplexity_test_parameter = generate_testcase(\
+	(zip(test_dataloader), "add"),
 	(zip(test_argument), "add"),
 	(zip(test_shape, test_type), "multi"),
 	(zip(test_batch_len), "add"),
@@ -239,8 +248,8 @@ class TestMultiTurnPerplexityMetric:
 					length_sum += 1
 		return np.exp(word_loss / length_sum)
 
-	@pytest.mark.parametrize('to_list, pad', [[True, False], [True, True], [False, True]])
-	def test_hashvalue(self, to_list, pad):
+	@pytest.mark.parametrize('data_loader, to_list, pad', [['dataloader', True, False], ['field', True, True], ['dataloader', False, True]])
+	def test_hashvalue(self, data_loader, to_list, pad):
 		dataloader = FakeMultiDataloader()
 		reference_key, reference_len_key, gen_prob_key = self.default_keywords
 		key_list = [reference_key, reference_len_key, gen_prob_key]
@@ -250,6 +259,9 @@ class TestMultiTurnPerplexityMetric:
 								   gen_prob_check='no_check', ref_len='non-empty', \
 								   ref_vocab='non-empty', gen_prob_vocab='valid_vocab', \
 								   resp_len=">=2")
+
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 
 		mtpm = MultiTurnPerplexityMetric(dataloader, generate_rare_vocab=False, full_check=False)
 		mtpm_shuffle = MultiTurnPerplexityMetric(dataloader, generate_rare_vocab=False, full_check=False)
@@ -280,10 +292,11 @@ class TestMultiTurnPerplexityMetric:
 			assert res['perplexity hashvalue'] != res_unequal['perplexity hashvalue']
 
 	@pytest.mark.parametrize( \
-		'argument, shape, type, batch_len, check, ref_len, ref_vocab, gen_prob_vocab, resp_len, include_invalid', \
+		'data_loader, argument, shape, type, batch_len, check, ref_len, ref_vocab, gen_prob_vocab, resp_len, include_invalid', \
 		multiperplexity_test_parameter)
-	def test_close(self, argument, shape, type, batch_len, check, \
+	def test_close(self, data_loader, argument, shape, type, batch_len, check, \
 				   ref_len, ref_vocab, gen_prob_vocab, resp_len, include_invalid):
+		# 'dataloader' or 'field'
 		# 'default' or 'custom'
 		# 'pad' or 'jag'
 		# 'list' or 'array'
@@ -300,6 +313,9 @@ class TestMultiTurnPerplexityMetric:
 								   ref_vocab=ref_vocab, gen_prob_vocab=gen_prob_vocab, \
 								   resp_len = resp_len)
 		_data = copy.deepcopy(data)
+
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 		if argument == 'default':
 			mtpm = MultiTurnPerplexityMetric(dataloader, \
 											 	generate_rare_vocab=include_invalid, full_check=(check=='full_check'))

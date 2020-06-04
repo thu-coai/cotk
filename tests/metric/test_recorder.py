@@ -16,6 +16,7 @@ def setup_module():
 #pytestmark = pytest.mark.skip("all tests still WIP")
 
 single_turn_dialog_recorder_test_parameter = generate_testcase(\
+	(zip(test_dataloader), "add"),
 	(zip(test_argument), "add"),
 	(zip(test_shape, test_type), "multi"),
 	(zip(test_batch_len), "add"),
@@ -45,8 +46,8 @@ class TestSingleTurnDialogRecorder():
 
 		return ans
 
-	@pytest.mark.parametrize('argument, shape, type, batch_len, gen_len, ref_len', single_turn_dialog_recorder_test_parameter)
-	def test_close(self, argument, shape, type, batch_len, gen_len, ref_len):
+	@pytest.mark.parametrize('data_loader, argument, shape, type, batch_len, gen_len, ref_len', single_turn_dialog_recorder_test_parameter)
+	def test_close(self, data_loader, argument, shape, type, batch_len, gen_len, ref_len):
 		# 'default' or 'custom'
 		# 'pad' or 'jag'
 		# 'list' or 'array'
@@ -58,6 +59,8 @@ class TestSingleTurnDialogRecorder():
 								   to_list=(type == 'list'), pad=(shape == 'pad'),
 								   gen_len=gen_len, ref_len=ref_len)
 		_data = copy.deepcopy(data)
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 		if argument == 'default':
 			sr = SingleTurnDialogRecorder(dataloader)
 		else:
@@ -76,6 +79,7 @@ class TestSingleTurnDialogRecorder():
 
 
 multi_turn_dialog_test_parameter = generate_testcase(\
+	(zip(test_dataloader), "add"),
 	(zip(test_argument), "add"),
 	(zip(test_shape, test_type), "multi"),
 	(zip(test_batch_len), "add"),
@@ -125,8 +129,8 @@ class TestMultiTurnDialogRecorder:
 			assert len(_ans['gen'][i]) == len(turn)
 
 	@pytest.mark.parametrize( \
-		'argument, shape, type, batch_len, gen_len, ref_len, turn_len', multi_turn_dialog_test_parameter)
-	def test_close(self, argument, shape, type, batch_len, gen_len, ref_len, turn_len):
+		'data_loader, argument, shape, type, batch_len, gen_len, ref_len, turn_len', multi_turn_dialog_test_parameter)
+	def test_close(self, data_loader, argument, shape, type, batch_len, gen_len, ref_len, turn_len):
 		# 'default' or 'custom'
 		# 'pad' or 'jag'
 		# 'list' or 'array'
@@ -140,6 +144,8 @@ class TestMultiTurnDialogRecorder:
 								   to_list=(type == 'list'), pad=(shape == 'pad'), \
 								   gen_len=gen_len, ref_len=ref_len)
 		_data = copy.deepcopy(data)
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 		if argument == 'default':
 			mtbr = MultiTurnDialogRecorder(dataloader)
 		else:
@@ -166,6 +172,7 @@ class TestMultiTurnDialogRecorder:
 
 
 language_generation_test_parameter = generate_testcase(\
+	(zip(test_dataloader), "add"),
 	(zip(test_argument), "add"),
 	(zip(test_shape, test_type), "multi"),
 	(zip(test_gen_len), "multi"),
@@ -179,8 +186,8 @@ class TestLanguageGenerationRecorder():
 			ans.append(dataloader.convert_ids_to_tokens(sen))
 		return ans
 
-	@pytest.mark.parametrize('argument, shape, type, gen_len', language_generation_test_parameter)
-	def test_close(self, argument, shape, type, gen_len):
+	@pytest.mark.parametrize('data_loader, argument, shape, type, gen_len', language_generation_test_parameter)
+	def test_close(self, data_loader, argument, shape, type, gen_len):
 		# 'default' or 'custom'
 		# 'pad' or 'jag'
 		# 'list' or 'array'
@@ -192,6 +199,8 @@ class TestLanguageGenerationRecorder():
 								   to_list=(type == 'list'), pad=(shape == 'pad'),
 								   gen_len=gen_len)
 		_data = copy.deepcopy(data)
+		if data_loader == 'field':
+			dataloader = dataloader.get_default_field()
 		if argument == 'default':
 			lg = LanguageGenerationRecorder(dataloader)
 		else:
