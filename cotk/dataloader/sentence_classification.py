@@ -39,7 +39,7 @@ class SentenceClassification(LanguageProcessing):
 
 		if pretrained is None:
 			if fields is None:
-				fields = OrderedDict([('sentence', 'SentenceDefault')])
+				fields = OrderedDict([('sent', 'SentenceDefault')])
 			with FieldContext.set_parameters(tokenizer=tokenizer,
 											 max_sent_length=max_sent_length,
 											 convert_to_lower_letter=convert_to_lower_letter):
@@ -48,7 +48,7 @@ class SentenceClassification(LanguageProcessing):
 					super().__init__(file_id, fields)
 		elif pretrained == 'gpt2':
 			if fields is None:
-				fields = OrderedDict(['sentence', 'SentenceGPT2'])
+				fields = OrderedDict(['sent', 'SentenceGPT2'])
 			if not isinstance(tokenizer, PretrainedTokenizer):
 				raise ValueError("tokenize should be loaded first if you want a gpt2 dataloader")
 			vocab = PretrainedVocab(tokenizer.tokenizer)
