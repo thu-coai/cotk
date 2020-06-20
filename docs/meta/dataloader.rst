@@ -1,3 +1,5 @@
+.. _dataloader_reference:
+
 Data Loader
 ===================================
 .. automodule:: cotk.dataloader

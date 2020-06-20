@@ -1,16 +1,12 @@
 Extending Cotk: More Data, More Metrics!
 ============================================
 
-We hope ``cotk`` can be adapted to more datasets
-and more tasks. Therefore, we have a repository (TO BE ONLINE)
-to collect any contribution to cotk (**regardless of its quality**).
-Our maintainer will choose modules with high-quality
-and merge them to the main repository.
+We provide easy APIs for extend ``cotk`` to custom datasets and tasks.
 
 Add A New Dataset
 ----------------------------------------------
 
-For local use
+For Local Use
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Now you have a new dataset and want to load it with ``cotk`` and
 the task is similar with the existed tasks, like :class:`.dataloader.LanguageGeneration`,
@@ -34,8 +30,9 @@ Then you can load your data using :class:`.dataloader.LanguageGeneration` with a
 
 .. code-block:: python
 
-    dataloader = LanguageGeneration("./path/to/mydata", min_vocab_times, max_sent_length, invalid_vocab_times, \
-			tokenizer, remains_capital)
+    dataloader = LanguageGeneration("./path/to/mydata", min_frequent_vocab_times=min_frequent_vocab_times,
+                max_sent_length=max_sent_length, min_rare_vocab_times=min_rare_vocab_times,
+                tokenizer=tokenizer, convert_to_lower_letter=convert_to_lower_letter)
 
 .. note ::
 
@@ -44,9 +41,8 @@ Then you can load your data using :class:`.dataloader.LanguageGeneration` with a
 
 Download Dataset
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-If you want to publish your dataset and make them can be
-downloaded automatically. You can zip your data and upload to an server.
-The url path should be accessible for every one.
+If you want to publish your dataset and make it possible to download them automatically.
+You can zip your data and upload to an server. The url path should be accessible for every one.
 
 Using :class:`.dataloader.LanguageGeneration` with a url path is adequate for
 the requirements.
@@ -58,10 +54,10 @@ the requirements.
 .. note ::
 
     The zip file is downloaded then processed by
-    :class:`._utils.resource_processor.DefaultResourcesProcessor`.
-    For more about ``ResourcesProcessor``, refer to :ref:`this <resources_reference>`.
+    :class:`.file_utils.resource_processor.DefaultResourceProcessor`.
+    For more about ``ResourceProcessor``, refer to :ref:`this <resources_reference>`.
 
-Use a resources name
+Add A Resource
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. _resources_desc:
@@ -84,9 +80,9 @@ corresponds to a json file, like
         }
     }
 
-There are some places you have to pay attention:
+There are some places you have to pay attention to:
 
-    * ``type`` is the prefix of its ``ResourcesProcessor``.
+    * ``type`` is the prefix of its ``ResourceProcessor``.
     * ``link.default`` is necessary when no source is specified.
     * ``hashtag`` is required for checksum.
 
@@ -102,60 +98,96 @@ We use the following codes to hash the zip file.
                 hash_sha256.update(chunk)
         return hash_sha256.hexdigest()
 
-After accomplishment the config file, make a **Pull Request** and
-wait for update! And soon you can use the following code to load the data.
+After accomplishment the config file, you can use the following code to load the data.
 
 .. code-block:: python
 
-    dataloader = MSCOCO("resouces://new_name")
+    dataloader = MSCOCO("resources://new_name")
+
+We highly recommend that the developers make a **Pull Request** and add more datasets for ``cotk``.
 
 Add A New Task
 ----------------------------------------------
 
 Sometimes you want to deal with a totally different task
 from the predefined ones.
-In that case, you have to implement a subclass of :class:`.LanguageProcessingBase`,
-and some necessary function is necessary for your dataloader. You can click
-on the following links for its input and outputs.
+In that case, you have to implement a subclass of :class:`.LanguageProcessing`,
+and pass the parameters ``file_id`` and ``fields`` when invoking :meth:`.LanguageProcessing.__init__`.
+For more details about ``file_id``, refer :ref:`this <resources_reference>`.
+For more details about ``fields``, refer :ref:`this <dataloader_reference>`.
 
-* :class:`.LanguageProcessingBase`
-* :meth:`.LanguageProcessingBase._general_load_data`
-* :meth:`.LanguageProcessingBase._load_data`
-* :meth:`.LanguageProcessingBase.get_batch`
-* (Optional) some function like ``get_metric()`` to define the standard metric.
+.. note ::
 
-For example, we implement a new dataloader for sentence classification.
+    In the method ``__init__`` of your own dataloader class, :meth:`.LanguageProcessing.set_default_field` must be
+    called. If ``self.default_field_set_name`` and ``self.default_field_name`` are not set, some methods and properties
+    (such as :meth:`.LanguageProcessing.tokenize`, :attr:`.LanguageProcessing.all_vocab_size`, etc.) aren't available.
+
+For example, you can implement a new dataloader for sentence classification.
 
 .. code-block:: python
 
-    class SentenceClassification(LanguageProcessingBase):
+    from collections import OrderedDict
+    from cotk.dataloader import LanguageProcessing
+    from cotk.dataloader.context import FieldContext, VocabContext
+    class SentenceClassification(LanguageProcessing):
+        def __init__(self, file_id: str,
+                    tokenizer=None,
+                    max_sent_length=None,
+                    convert_to_lower_letter=None,
+                    min_frequent_vocab_times=None,
+                    min_rare_vocab_times=None):
+            fields = OrderedDict([('sent', 'SentenceDefault'), ('label', 'DenseLabel')])
+            with FieldContext.set_parameters(tokenizer=tokenizer,
+                                                max_sent_length=max_sent_length,
+                                                convert_to_lower_letter=convert_to_lower_letter):
+                with VocabContext.set_parameters(min_rare_vocab_times=min_rare_vocab_times,
+                                                    min_frequent_vocab_times=min_frequent_vocab_times):
+                    super().__init__(file_id, fields)
+            self.set_default_field('train', 'sent')
 
-        def __init__(self, file_id, invalid_vocab_times, min_vocab_times, max_sent_length):
-            self._file_id = file_id
-            self._file_path = get_resource_file_path(file_id)
-            self._invalid_vocab_times = invalid_vocab_times
-            self._min_vocab_times = min_vocab_times
-            self._max_sent_length = max_sent_length
-            super().__init__()
+Assume that there is a directory named ``mydata``, which contains 3 text files (``train.txt``, ``dev.txt`` and ``test.txt``) in the same format.
+For example, the content of ``test.txt`` is as follows. Each sentence is followed by an integer (the label), just as ``fields`` specifies.
 
-        def _load_data(self):
-            r'''Loading dataset, invoked by `LanguageProcessingBase.__init__`
-            '''
-            return super()._general_load_data(self._file_path, [['sent', 'Sentence'], ['label', 'Label']], \
-			    self._min_vocab_times, self._max_sent_length, None, self._invalid_vocab_times)
+.. code-block:: none
 
-        def get_batch(self, key, index):
-            '''Get a batch of specified `index`.'''
-            res = {"sent": [], "label": []}
+    effective but too-tepid biopic.
+    2
+    if you sometimes like to go to the movies to have fun, wasabi is a good place to start.
+    3
+    emerges as something rare, an issue movie that's so honest and keenly observed that it doesn't feel like one.
+    4
+    the film provides some great insight into the neurotic mindset of all comics -- even those who have reached the absolute top of the game.
+    2
+    offers that rare combination of entertainment and education.
+    4
 
-            # use the "self.data" you have stored
-            for i in index:
-                res["sent"].append(self.data[key]['sent'][i])
-                res["label"].append(self.data[key]['label'][i])
 
-            # the return value is exactly what you will get when ``get_batches`` is called
-            # may be you want to do padding before return
-            return res
+Then, you can use ``SentenceClassification`` to build the dataloader.
+
+.. code-block:: python
+
+    dl = SentenceClassification("mydata", tokenizer="nltk", convert_to_lower_letter=True)
+    dl.restart('test', batch_size=2, shuffle=False)
+    dl.get_next_batch('test')
+
+The returned value of ``dl.get_next_batch`` is as follows.
+
+.. code-block:: javascript
+
+    {'sent_length': array([ 9, 23]),
+    'sent': array([[  2,   1,  31,   1,  11,   1,   1,   5,   3,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+        [  2,   1, 112,   1,   1,  13,   1,  13,   4,   1,  13,  62,   1,
+        9,   1,  12,   8,   1,   1,  13,   1,   5,   3]]),
+    'sent_allvocabs': array([[  2, 138,  31, 191,  11, 189, 129,   5,   3,   0,   0,   0,   0,
+        0,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+        [  2, 114, 112, 185, 118,  13, 149,  13,   4, 165,  13,  62, 146,
+        9, 198,  12,   8, 151, 174,  13, 186,   5,   3]]),
+    'sent_str': ['effective but too-tepid biopic.',
+            'if you sometimes like to go to the movies to have fun, wasabi is a good place to start.'],
+    'label': array([2, 3])
+    }
+
 
 Add A New Metric
 ---------------------------------------------
@@ -182,24 +214,27 @@ sentences.
             self.gen_key = gen_key
             self.token_num = 0
             self.sent_num = 0
-        
+
         def forward(self, data):
             gen = data[gen_key]
             for sent in gen:
-                self.token_num += len(self.dataloader.trim_index(sent))
+                self.token_num += len(self.dataloader.trim_in_ids(sent))
                 self.sent_num += 1
-        
+
         def close(self):
-            return {"len_avg": self.token_num / self.sent_num}
+            metric_result = super().close()
+            metric_result.update({"len_avg": self.token_num / self.sent_num})
+            return metric_result
 
 There is some regulations to design an metric.
 
 * Using :ref:`allvocabs <vocabulary_ref>` for reference.
 * Dealing with ``<unk>``, which should be regarded as error or
-  using some methods to do smoothing. Pay atention the difference
+  using some methods to do smoothing. Pay attention to the connections
   between ``<unk>`` and
-  :ref:`unknown vocabularies <vocabulary_ref>`.
-* Record hash value. Hash value equal if and only if the metric is tested
-  under the same settings. (In the example, there is no hash value
-  because we don't have input and the setting is always the same)
+  :ref:`rare vocabularies <vocabulary_ref>`.
+* Record hash value. Hash value keeps the same if and only if the metric is tested
+  under the same settings. :meth:`.metric.MetricBase._hash_unordered_list` records unordered information. :meth:`.metric.MetricBase._hash_ordered_data` records the ordered information.
+  :meth:`.metric.MetricBase._hashvalue` returns the hash value.
+  (In the example, there is no hash value because we don't have input and the setting is always the same)
 
