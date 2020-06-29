@@ -174,10 +174,11 @@ def _get_resource(file_id, cache_dir=None, config_dir=None):
 	LOGGER.info('resource cached at %s', cache_path)
 	return cache_path
 
-def _download_data(url, cache_dir=None):
+def _download_data(url, cache_dir=None, config_dir=None):
 	r'''If not cached, download the resource using url.
 	'''
 	cache_dir = cache_dir or CACHE_DIR
+	config_dir = config_dir or CONFIG_DIR
 	os.makedirs(cache_dir, exist_ok=True)
 
 	url, _, res_type = _parse_file_id(url)
@@ -185,7 +186,7 @@ def _download_data(url, cache_dir=None):
 	LOGGER.info('url: %s', url)
 	LOGGER.info('processor type: %s', res_type)
 
-	resource_processor = ResourceProcessor.load_class(res_type + 'ResourceProcessor')()
+	resource_processor = ResourceProcessor.load_class(res_type + 'ResourceProcessor')(cache_dir=cache_dir,config_dir=config_dir)
 	cache_path = os.path.join(cache_dir, _url_to_filename(url))
 	meta_path = os.path.join(cache_dir, _url_to_filename(url) + '.json')
 
@@ -242,7 +243,7 @@ def get_resource_file_path(file_id, cache_dir=None, config_dir=None):
 		return _get_resource(res_id, cache_dir, config_dir)
 	elif file_id.startswith('http://') or file_id.startswith('https://'):
 		url = file_id
-		return _download_data(url, cache_dir)
+		return _download_data(url, cache_dir, config_dir)
 	else:
 		local_path = file_id
 		return _load_local_data(local_path, cache_dir, config_dir)
