@@ -7,9 +7,9 @@ import shutil
 import pytest
 import numpy as np
 
-from cotk.dataloader import MultiTurnDialog, Session, SwitchboardCorpus, UbuntuCorpus
+from cotk.dataloader import MultiTurnDialog, Session, SwitchboardCorpus, UbuntuCorpus, PretrainedTokenizer
 from cotk.metric import MetricBase
-from cotk.dataloader.field import SentenceCandidateDefault, SentenceCandidateGPT2
+from cotk.dataloader.field import SentenceCandidateDefault, SentenceCandidateGPT2, SentenceCandidateBERT
 from cotk.file_utils import file_utils
 from cotk.wordvector import Glove
 from test_dataloader import BaseTestLanguageProcessing
@@ -30,6 +30,13 @@ def teardown_module():
 
 class TestMultiTurnDialog(BaseTestLanguageProcessing):
 	def base_test_init(self, dl: MultiTurnDialog):
+		with pytest.raises(ValueError):
+			MultiTurnDialog("./tests/dataloader/dummy_switchboardcorpus#SwitchboardCorpus", pretrained='none')
+		with pytest.raises(ValueError):
+			MultiTurnDialog("./tests/dataloader/dummy_switchboardcorpus#SwitchboardCorpus", pretrained='gpt2')
+		with pytest.raises(ValueError):
+			MultiTurnDialog("./tests/dataloader/dummy_switchboardcorpus#SwitchboardCorpus", pretrained='bert')
+
 		assert isinstance(dl, MultiTurnDialog)
 		super().base_test_init(dl)
 		assert dl.default_field_name is not None and dl.default_field_set_name is not None
@@ -89,19 +96,36 @@ class TestMultiTurnDialog(BaseTestLanguageProcessing):
 	def base_test_multi_runs(self, dl_list):
 		assert all(x.all_vocab_list == dl_list[0].all_vocab_list for x in dl_list)
 
-@pytest.fixture
 def load_ubuntucorpus():
 	def _load_ubuntucorpus(min_rare_vocab_times=0):
 		return UbuntuCorpus("./tests/dataloader/dummy_ubuntucorpus#Ubuntu", min_rare_vocab_times=min_rare_vocab_times)
 	return _load_ubuntucorpus
 
+def load_ubuntucorpus_gpt2():
+	def _load_ubuntucorpus(min_rare_vocab_times=0):
+		from transformers import GPT2Tokenizer
+		toker = PretrainedTokenizer(GPT2Tokenizer('./tests/dataloader/dummy_gpt2vocab/vocab.json', './tests/dataloader/dummy_gpt2vocab/merges.txt'))
+		return UbuntuCorpus("./tests/dataloader/dummy_ubuntucorpus#Ubuntu", min_rare_vocab_times=min_rare_vocab_times, tokenizer=toker, pretrained="gpt2")
+	return _load_ubuntucorpus
+
+
+def load_ubuntucorpus_bert():
+	def _load_ubuntucorpus(min_rare_vocab_times=0):
+		from transformers import BertTokenizer
+		toker = PretrainedTokenizer(BertTokenizer('./tests/dataloader/dummy_bertvocab/vocab.txt'))
+		return UbuntuCorpus("./tests/dataloader/dummy_ubuntucorpus#Ubuntu", min_rare_vocab_times=min_rare_vocab_times, tokenizer=toker, pretrained="bert")
+	return _load_ubuntucorpus
+
+
+all_load_dataloaders = [load_ubuntucorpus(), load_ubuntucorpus_gpt2(), load_ubuntucorpus_bert()]
+
 class TestUbuntuCorpus(TestMultiTurnDialog):
 	def test_version(self):
 		base_test_version(UbuntuCorpus)
 
-	@pytest.mark.dependency()
-	def test_init(self, load_ubuntucorpus):
-		dl = load_ubuntucorpus()
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_init(self, load_dataloader):
+		dl = load_dataloader()
 		super().base_test_init(dl)
 		assert isinstance(dl, UbuntuCorpus)
 		assert set(dl.fields.keys()) == set(dl.data.keys()) == {'train', 'test', 'dev'}
@@ -109,37 +133,37 @@ class TestUbuntuCorpus(TestMultiTurnDialog):
 			assert isinstance(fields_of_one_set, OrderedDict)
 			assert len(fields_of_one_set) == 1
 			assert isinstance(fields_of_one_set.get('session', None), Session)
+		super().base_test_restart(load_dataloader())
+
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_get_batch(self, load_dataloader):
+		super().base_test_get_batch(load_dataloader())
+
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_get_next_batch(self, load_dataloader):
+		super().base_test_get_next_batch(load_dataloader())
+
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders[:1])
+	def test_convert(self, load_dataloader):
+		super().base_test_convert(load_dataloader())
+
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders[:1])
+	def test_multi_turn_convert(self, load_dataloader):
+		super().base_test_multi_turn_convert(load_dataloader())
+
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_teacher_forcing_metric(self, load_dataloader):
+		super().base_test_teacher_forcing_metric(load_dataloader())
+
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_teacher_inference_metric(self, load_dataloader):
+		super().base_test_teacher_inference_metric(load_dataloader())
+
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_init_multi_runs(self, load_dataloader):
+		super().base_test_multi_runs([load_dataloader() for i in range(3)])
 
 
-	def test_restart(self, load_ubuntucorpus):
-		super().base_test_restart(load_ubuntucorpus())
-
-	@pytest.mark.dependency(depends=["TestUbuntuCorpus::test_init"])
-	def test_get_batch(self, load_ubuntucorpus):
-		super().base_test_get_batch(load_ubuntucorpus())
-
-	@pytest.mark.dependency(depends=["TestUbuntuCorpus::test_init"])
-	def test_get_next_batch(self, load_ubuntucorpus):
-		super().base_test_get_next_batch(load_ubuntucorpus())
-
-	@pytest.mark.dependency(depends=["TestUbuntuCorpus::test_init"])
-	def test_convert(self, load_ubuntucorpus):
-		super().base_test_convert(load_ubuntucorpus())
-
-	def test_multi_turn_convert(self, load_ubuntucorpus):
-		super().base_test_multi_turn_convert(load_ubuntucorpus())
-
-	def test_teacher_forcing_metric(self, load_ubuntucorpus):
-		super().base_test_teacher_forcing_metric(load_ubuntucorpus())
-
-	def test_teacher_inference_metric(self, load_ubuntucorpus):
-		super().base_test_teacher_inference_metric(load_ubuntucorpus())
-
-	def test_init_multi_runs(self, load_ubuntucorpus):
-		super().base_test_multi_runs([load_ubuntucorpus() for i in range(3)])
-
-
-@pytest.fixture
 def load_switchboardcorpus():
 	def _load_switchboardcorpus(min_rare_vocab_times=0):
 		return SwitchboardCorpus("./tests/dataloader/dummy_switchboardcorpus#SwitchboardCorpus",
@@ -147,6 +171,25 @@ def load_switchboardcorpus():
 
 	return _load_switchboardcorpus
 
+def load_switchboardcorpus_gpt2():
+	def _load_switchboardcorpus(min_rare_vocab_times=0):
+		from transformers import GPT2Tokenizer
+		toker = PretrainedTokenizer(GPT2Tokenizer('./tests/dataloader/dummy_gpt2vocab/vocab.json', './tests/dataloader/dummy_gpt2vocab/merges.txt'))
+		return SwitchboardCorpus("./tests/dataloader/dummy_switchboardcorpus#SwitchboardCorpus",
+								 min_rare_vocab_times=min_rare_vocab_times, tokenizer=toker, pretrained="gpt2")
+
+	return _load_switchboardcorpus
+
+def load_switchboardcorpus_bert():
+	def _load_switchboardcorpus(min_rare_vocab_times=0):
+		from transformers import BertTokenizer
+		toker = PretrainedTokenizer(BertTokenizer('./tests/dataloader/dummy_bertvocab/vocab.txt'))
+		return SwitchboardCorpus("./tests/dataloader/dummy_switchboardcorpus#SwitchboardCorpus",
+								 min_rare_vocab_times=min_rare_vocab_times, tokenizer=toker, pretrained="bert")
+
+	return _load_switchboardcorpus
+
+all_load_dataloaders = [load_switchboardcorpus(), load_switchboardcorpus_gpt2(), load_switchboardcorpus_bert()]
 
 class TestSwitchboardCorpus(TestMultiTurnDialog):
 	def test_version(self):
@@ -154,9 +197,9 @@ class TestSwitchboardCorpus(TestMultiTurnDialog):
 
 	SwitchboardCorpusSetNames = ('train', 'test', 'dev', 'multi_ref')
 
-	@pytest.mark.dependency()
-	def test_init(self, load_switchboardcorpus):
-		dl = load_switchboardcorpus()
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_init(self, load_dataloader):
+		dl = load_dataloader()
 		super().base_test_init(dl)
 		assert isinstance(dl, SwitchboardCorpus)
 		set_names = self.SwitchboardCorpusSetNames
@@ -169,43 +212,50 @@ class TestSwitchboardCorpus(TestMultiTurnDialog):
 		assert len(dl.fields['multi_ref']) == 2
 		assert all(a == b for a, b in zip(dl.fields['multi_ref'].keys(), ['session', 'candidate']))
 		f1, f2 = dl.fields['multi_ref'].values()
-		assert isinstance(f1, Session) and isinstance(f2, SentenceCandidateDefault if dl._pretrained is None else SentenceCandidateGPT2)
+		assert isinstance(f1, Session)
+		if dl._pretrained is None:
+			assert isinstance(f2, SentenceCandidateDefault)
+		elif dl._pretrained == "gpt2" :
+			assert isinstance(f2, SentenceCandidateGPT2)
+		else:  # dl._pretrained == "bert"
+			assert isinstance(f2, SentenceCandidateBERT)
 
-	@pytest.mark.dependency()
-	def test_restart(self, load_switchboardcorpus):
-		super().base_test_restart(load_switchboardcorpus())
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_restart(self, load_dataloader):
+		super().base_test_restart(load_dataloader())
 
-	@pytest.mark.dependency()
-	def test_get_batch(self, load_switchboardcorpus):
-		dl: SwitchboardCorpus = load_switchboardcorpus()
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_get_batch(self, load_dataloader):
+		dl: SwitchboardCorpus = load_dataloader()
 		super().base_test_get_batch(dl)
 
-	@pytest.mark.dependency()
-	def test_get_next_batch(self, load_switchboardcorpus):
-		super().base_test_get_next_batch(load_switchboardcorpus())
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_get_next_batch(self, load_dataloader):
+		super().base_test_get_next_batch(load_dataloader())
 
-	@pytest.mark.dependency()
-	def test_convert(self, load_switchboardcorpus):
-		super().base_test_convert(load_switchboardcorpus())
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders[:1])
+	def test_convert(self, load_dataloader):
+		super().base_test_convert(load_dataloader())
 
-	@pytest.mark.dependency()
-	def test_teacher_forcing_metric(self, load_switchboardcorpus):
-		super().base_test_teacher_forcing_metric(load_switchboardcorpus())
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_teacher_forcing_metric(self, load_dataloader):
+		super().base_test_teacher_forcing_metric(load_dataloader())
 
-	@pytest.mark.dependency()
-	def test_teacher_inference_metric(self, load_switchboardcorpus):
-		super().base_test_teacher_inference_metric(load_switchboardcorpus())
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_teacher_inference_metric(self, load_dataloader):
+		super().base_test_teacher_inference_metric(load_dataloader())
 
-	@pytest.mark.dependency()
-	def test_teacher_precision_recall_metric(self, load_switchboardcorpus):
-		dl = load_switchboardcorpus()
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_teacher_precision_recall_metric(self, load_dataloader):
+		dl = load_dataloader()
 		glove = Glove("./tests/wordvector/dummy_glove/300d/")
 		embed = glove.load_dict(dl.all_vocab_list)
 		assert isinstance(dl.get_multi_ref_metric(generated_num_per_context=3, word2vec=embed), MetricBase)
 
-	@pytest.mark.dependency()
-	def test_init_multi_runs(self, load_switchboardcorpus):
-		super().base_test_multi_runs([load_switchboardcorpus() for i in range(3)])
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_init_multi_runs(self, load_dataloader):
+		super().base_test_multi_runs([load_dataloader() for i in range(3)])
 
-	def test_multi_turn_convert(self, load_switchboardcorpus):
-		super().base_test_multi_turn_convert(load_switchboardcorpus())
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders[:1])
+	def test_multi_turn_convert(self, load_dataloader):
+		super().base_test_multi_turn_convert(load_dataloader())

@@ -3,7 +3,7 @@ import shutil
 
 import pytest
 import numpy as np
-from cotk.dataloader import SentenceClassification, SST, Sentence
+from cotk.dataloader import PretrainedTokenizer, SentenceClassification, SST, Sentence
 from cotk.metric import MetricBase
 from cotk.file_utils import file_utils
 
@@ -28,20 +28,26 @@ class TestSentenceClassification(BaseTestLanguageProcessing):
 	def base_test_init(self, dl: SentenceClassification):
 		super().base_test_init(dl)
 		assert isinstance(dl, SentenceClassification)
-		assert list(dl.get_special_tokens_mapping().values())[:4] == ["<pad>", "<unk>", "<go>", "<eos>"]
-		assert [dl.pad_id, dl.unk_id, dl.go_id, dl.eos_id] == [0, 1, 2, 3]
+		if dl._pretrained is None:
+			assert list(dl.get_special_tokens_mapping().values()) == ["<pad>", "<unk>", "<go>", "<eos>"]
+			assert [dl.pad_id, dl.unk_id, dl.go_id, dl.eos_id] == [0, 1, 2, 3]
+		elif dl._pretrained == "gpt2":
+			assert list(dl.get_special_tokens_mapping().values()) == ["<|endoftext|>", "<|endoftext|>", "<|endoftext|>"]
+			assert [dl.unk_id, dl.go_id, dl.eos_id] == [413, 413, 413]
+		else:  # dl._pretraiend == "bert"
+			assert list(dl.get_special_tokens_mapping().values()) == ["[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]"]
+			assert dl.get_special_tokens_id("pad") == 0
+			assert dl.get_special_tokens_id("unk") == 100
+			assert dl.get_special_tokens_id("cls") == 101
+			assert dl.get_special_tokens_id("sep") == 102
+			assert dl.get_special_tokens_id("mask") == 103
+
 		assert isinstance(dl.all_vocab_list, list)
-		assert dl.all_vocab_list[:len(dl.get_special_tokens_mapping())] == list(dl.get_special_tokens_mapping().values())
 		assert dl.all_vocab_size == len(dl.all_vocab_list)
 		for i, word in enumerate(dl.all_vocab_list):
 			assert isinstance(word, str)
 			assert dl.convert_tokens_to_ids([word])[0] == i
 		assert dl.all_vocab_size == len(dl.all_vocab_list)
-
-		# assert the data has valid token
-		assert dl.frequent_vocab_size > 4
-		# assert the data has invalid token
-		assert dl.all_vocab_size > dl.frequent_vocab_size
 
 	def base_test_all_unknown(self, dl: SentenceClassification):
 		# if min_rare_vocab_times very big, there is no rare words.
@@ -85,39 +91,57 @@ class TestSentenceClassification(BaseTestLanguageProcessing):
 					if isinstance(dl.fields[set_name][field_name], Sentence):
 						CheckGetBatch.check_result_of_get_batch(dl.fields[set_name][field_name], field_name, dl.data[set_name][field_name], indexes, batch_data)
 
-
-@pytest.fixture
 def load_sst():
 	def _load_sst(min_rare_vocab_times=0):
 		return SST("./tests/dataloader/dummy_sst#SST", min_rare_vocab_times=min_rare_vocab_times)
 	return _load_sst
 
+def load_sst_gpt2():
+	def _load_sst(min_rare_vocab_times=0):
+		from transformers import GPT2Tokenizer
+		toker = PretrainedTokenizer(GPT2Tokenizer('./tests/dataloader/dummy_gpt2vocab/vocab.json', './tests/dataloader/dummy_gpt2vocab/merges.txt'))
+		return SST("./tests/dataloader/dummy_sst#SST", tokenizer=toker, min_rare_vocab_times=min_rare_vocab_times, pretrained="gpt2")
+	return _load_sst
+
+def load_sst_bert():
+	def _load_sst(min_rare_vocab_times=0):
+		from transformers import BertTokenizer
+		toker = PretrainedTokenizer(BertTokenizer('./tests/dataloader/dummy_bertvocab/vocab.txt'))
+		return SST("./tests/dataloader/dummy_sst#SST", tokenizer=toker, min_rare_vocab_times=min_rare_vocab_times, pretrained="bert")
+	return _load_sst
+
+all_load_dataloaders = [load_sst(), load_sst_gpt2(), load_sst_bert()]
+
 class TestSST(TestSentenceClassification):
 	def test_version(self):
 		base_test_version(SST)
 
-	@pytest.mark.dependency()
-	def test_init(self, load_sst):
-		super().base_test_init(load_sst())
-		super().base_test_all_unknown(load_sst(1000000))
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_init(self, load_dataloader):
+		super().base_test_init(load_dataloader())
+		super().base_test_all_unknown(load_dataloader(1000000))
 
-	def test_restart(self, load_sst):
-		super().base_test_restart(load_sst())
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_restart(self, load_dataloader):
+		super().base_test_restart(load_dataloader())
 
-	@pytest.mark.dependency(depends=["TestSST::test_init"])
-	def test_get_batch(self, load_sst):
-		super().base_test_get_batch(load_sst())
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_get_batch(self, load_dataloader):
+		super().base_test_get_batch(load_dataloader())
 
-	@pytest.mark.dependency(depends=["TestSST::test_init"])
-	def test_get_next_batch(self, load_sst):
-		super().base_test_get_next_batch(load_sst())
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_get_next_batch(self, load_dataloader):
+		super().base_test_get_next_batch(load_dataloader())
 
-	@pytest.mark.dependency(depends=["TestSST::test_init"])
-	def test_convert(self, load_sst):
-		super().base_test_convert(load_sst())
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders[:1])
+	def test_convert(self, load_dataloader):
+		 # test only when not pretrained tokenizer
+		super().base_test_convert(load_dataloader())
 
-	def test_metric(self, load_sst):
-		super().base_test_metric(load_sst())
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_metric(self, load_dataloader):
+		super().base_test_metric(load_dataloader())
 
-	def test_init_multi_runs(self, load_sst):
-		super().base_test_multi_runs([load_sst() for i in range(3)])
+	@pytest.mark.parametrize("load_dataloader", all_load_dataloaders)
+	def test_init_multi_runs(self, load_dataloader):
+		super().base_test_multi_runs([load_dataloader() for i in range(3)])

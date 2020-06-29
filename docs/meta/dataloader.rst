@@ -168,9 +168,11 @@ They define how dataloaders read the file, process the data, and provide the dat
 * :class:`Sentence`
    * :class:`SentenceDefault`
    * :class:`SentenceGPT2`
+   * :class:`SentenceBERT`
 * :class:`Session`
    * :class:`SessionDefault`
    * :class:`SessionGPT2`
+   * :class:`SessionBERT`
 * :class:`DenseLabel`
 * :class:`SparseLabel`
 
@@ -249,6 +251,7 @@ For some pretrained models like ``GPT2``, ``<go>`` are not pretrained in the voc
 We design different field for different pretrained models, including:
 
 * GPT2: :class:`SentenceGPT2`, :class:`SessionGPT2`
+* BERT: :class:`SentenceBERT`, :class:`SessionBERT`
 
 .. _tokenizer_ref:
 
@@ -601,6 +604,12 @@ SentenceGPT2
 
     .. automethod:: get_batch
 
+SentenceBERT
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autoclass:: SentenceBERT
+
+    .. automethod:: get_batch
+
 Session
 #########################################
 .. autoclass:: Session
@@ -635,6 +644,18 @@ Session
 SessionDefault
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. autoclass:: SessionDefault
+
+    .. automethod:: get_batch
+
+SessionGPT2
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autoclass:: SessionGPT2
+
+    .. automethod:: get_batch
+
+SessionBERT
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. autoclass:: SessionBERT
 
     .. automethod:: get_batch
 
