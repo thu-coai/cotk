@@ -16,6 +16,7 @@ from .dataloader import LanguageProcessing
 from .tokenizer import PretrainedTokenizer
 from .vocab import PretrainedVocab
 from .context import FieldContext, VocabContext
+from .field import Sentence
 
 if False: # for type check # pylint: disable=using-constant-test
 	from ..metric import MetricChain #pylint: disable=unused-import
@@ -50,15 +51,17 @@ class SingleTurnDialog(LanguageProcessing):
 					super().__init__(file_id, OrderedDict([("post", "SentenceDefault"), ('resp', 'SentenceDefault')]))
 			self.set_default_field("train", "post")
 
-		elif pretrained == "gpt2":
+		elif pretrained == "gpt2" or pretrained == "bert":
 			if not isinstance(tokenizer, PretrainedTokenizer):
-				raise ValueError("tokenize should be loaded first if you want a gpt2 dataloader")
+				raise ValueError("tokenize should be loaded first if you want a %s dataloader" % (pretrained))
 			vocab = PretrainedVocab(tokenizer.tokenizer)
 			with FieldContext.set_parameters(tokenizer=tokenizer,\
 					vocab=vocab, \
 					max_sent_length=max_sent_length, \
 					convert_to_lower_letter=convert_to_lower_letter):
-				super().__init__(file_id, OrderedDict([("post", "SentenceGPT2"), ("resp", "SentenceGPT2")]))
+					super().__init__(file_id, OrderedDict([("post", Sentence.get_pretrained_class(
+						pretrained).__name__), ("resp", Sentence.get_pretrained_class(pretrained).__name__)]))
+
 			self.set_default_field("train", "post")
 
 		else:

@@ -244,7 +244,7 @@ class Sentence(Field):
 	'''Bases: :class:`.dataloader.Field`
 
 	A field for sentence. This class is a virtual class and the base of
-	:class:`Sentence` and :class:`SentenceGPT2`.
+	:class:`Sentence`, :class:`SentenceGPT2` and :class:`SentenceBERT`.
 
 	{INIT_DOCSTRING}
 
@@ -327,6 +327,13 @@ class Sentence(Field):
 			return _SentenceContent(self, self.vocab_from_mappings[set_name])
 		except KeyError:
 			raise KeyError("Unknown set_name %s, do not specify in the vocab_from_mappings" % set_name) from None
+
+	@classmethod
+	def get_pretrained_class(cls, pretrained):
+		return {
+			"gpt2": SentenceGPT2,
+			"bert": SentenceBERT
+		}[pretrained]
 
 	def get_tokenizer(self):
 		return self.tokenizer
@@ -731,6 +738,95 @@ class SentenceGPT2(Sentence):
 			ids = trim_before_target(list(ids), self.vocab.eos_id)
 		return ids
 
+class SentenceBERT(Sentence):
+	'''Bases: :class:`.dataloader.Sentence`, :class:`.dataloader.Field`
+
+	A field for sentence in the format of BERT.
+
+	{INIT_DOCSTRING}
+
+	{SENTENCE_INPUT_FORMAT}
+	'''
+
+	INIT_DOCSTRING = Sentence.INIT_DOCSTRING.replace(":class:Vocab", ":class:PretrainedVocab")
+
+	def __init__(self, tokenizer: Union[None, PretrainedTokenizer] = None, \
+			vocab: Optional[PretrainedVocab] = None, \
+			vocab_from_mappings: Optional[Dict[str, str]] = None, \
+			max_sent_length: Union[int, None, _InfiniteLength] = None, \
+			convert_to_lower_letter: Optional[bool] = None):
+
+		super().__init__(tokenizer=tokenizer, \
+				vocab=vocab, vocab_from_mappings=vocab_from_mappings,\
+				max_sent_length=max_sent_length, \
+				convert_to_lower_letter=convert_to_lower_letter)
+
+		if not isinstance(self.tokenizer, PretrainedTokenizer) or self.tokenizer.get_tokenizer_class() != "BertTokenizer":
+			raise ValueError("You have to specify a pretrained tokenizer compatible with BERT")
+		self.inner_tokenizer = self.tokenizer.tokenizer
+
+		if not isinstance(self.vocab, PretrainedVocab):
+			raise ValueError("You have to specify a PretrainedVocab for SentenceBERT field")
+		self.vocab: PretrainedVocab
+
+	def add_special_to_ids(self, ids: List[int]) -> List[int]:
+		return [self.vocab.get_special_tokens_id("cls")] + ids + [self.vocab.get_special_tokens_id("sep")]
+
+	def remove_special_in_ids(self, ids: List[int], remove_special=True, trim=True) -> List[int]:
+		if trim:
+			ids = self.trim_in_ids(ids)
+		if remove_special:
+			ids = self._remove_special_in_ids(ids, self.vocab.get_special_tokens_id("cls"), self.vocab.get_special_tokens_id("sep"))
+		return ids
+
+	_GET_BATCH_RETURN_VALUE = SentenceDefault._GET_BATCH_RETURN_VALUE
+
+	_GET_BATCH_EXAMPLE = """
+		Examples:
+			>>> # This example is based on BertTokenizer. The vocab files are in ./tests/dummy_bertvocab.
+			>>> field.get_batch('sent', data, [0, 1])
+			{
+				"sent": numpy.array([
+					[101, 147,  37,  29, 359, 102,   0,   0,   0,   0,   0,   0,   0],
+						# ['<cls>', 'How', 'are', 'you', '?', '<sep>', '<pad>', '<pad>', '<pad>', '<pad>', '<pad>', '<pad>', '<pad>']
+				[101, 375, 334, 379, 127, 341, 350,  29, 328,   9,  29, 359, 102]
+						# ['<cls>', 'i', ''', 'm', 'fine', '.',  'thank', 'you', '!', 'and', 'you', '?', '<sep>']
+				]),
+				"sent_length": numpy.array([6, 13]), # length of sentences,
+				"sent_allvocabs": numpy.array([
+					[101, 147,  37,  29, 359, 102,   0,   0,   0,   0,   0,   0,   0],
+						# ['<cls>', 'how', 'are', 'you', '?', '<sep>', '<pad>', '<pad>', '<pad>', '<pad>', '<pad>', '<pad>', '<pad>']
+				[101, 375, 334, 379, 127, 341, 350,  29, 328,   9,  29, 359, 102]
+						# ['<cls>', 'i', ''', 'm', 'fine', '.',  'thank', 'you', '!', 'and', 'you', '?', '<sep>']
+				]),
+				"sent_str": [
+					"How are you?",
+					"I'm fine. Thank you! And you?"
+				],
+			}
+		"""
+
+	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
+		res: Dict[str, Any] = {}
+		data_id, data_str = data["id"], data["str"]
+		batch_size = len(indexes)
+		res[name + "_length"] = np.array([len(data_id[i]) for i in indexes], dtype=int)
+		res_sent = res[name] = np.ones((batch_size, np.max(res[name + "_length"])), dtype=int) * self.vocab.pad_id
+		#res_attn = res[name + "_attnmask"] = np.zeros((batch_size, np.max(res[name + "_length"])), dtype=int)
+		for i, j in enumerate(indexes):
+			sent = data_id[j]
+			res_sent[i, :len(sent)] = sent
+		#	res_attn[i, :len(sent)] = 1
+		res[name + "_allvocabs"] = res_sent.copy()
+		res[name + "_str"] = [data_str[i] for i in indexes]
+		return res
+
+	def trim_in_ids(self, ids: List[int]) -> List[int]:
+		# The first token can't be the sep token
+		ids = trim_before_target(list(ids), self.vocab.get_special_tokens_id("sep"))
+		return ids
+
+
 class _SessionContent(_FieldContent):
 	'''Store the content data of :class:`Session` Field.
 		Different from :class:`Field`, it won't be shared between fields or dataloader,
@@ -927,6 +1023,20 @@ class Session(Sentence):
 		'''
 		return [self.trim_in_ids(sent_ids) for sent_ids in session_ids]
 
+	@classmethod
+	def get_pretrained_class(cls, pretrained):
+		return {
+			"gpt2": SessionGPT2,
+			"bert": SessionBERT
+		}[pretrained]
+
+	@classmethod
+	def get_candidate_pretrained_class(cls, pretrained):
+		return {
+			"gpt2": SentenceCandidateGPT2,
+			"bert": SentenceCandidateBERT
+		}[pretrained]
+
 
 class SessionDefault(Session):
 	'''Bases: :class:`.dataloader.Session`, :class:`.dataloader.Field`
@@ -1080,7 +1190,7 @@ class SessionGPT2(Session):
 				 convert_to_lower_letter: Optional[bool] = None,
 				 max_turn_length: Union[int, None, _InfiniteLength] = None,):
 		super().__init__(tokenizer, vocab, vocab_from_mappings, max_sent_length, convert_to_lower_letter, max_turn_length)
-		if not isinstance(self.tokenizer, PretrainedTokenizer) or not self.tokenizer.get_tokenizer_class() != "GPT2Tokenizer":
+		if not isinstance(self.tokenizer, PretrainedTokenizer) or self.tokenizer.get_tokenizer_class() != "GPT2Tokenizer":
 			raise ValueError("You have to specify a pretrained tokenizer compatible with gpt2")
 		self.inner_tokenizer = self.tokenizer.tokenizer
 		if not isinstance(self.vocab, PretrainedVocab):
@@ -1095,6 +1205,7 @@ class SessionGPT2(Session):
 	# TODO: update return value of get_batch. I have trouble with `GPT2Tokenizer.from_pretrained('gpt2')`
 	# the following codes in Examples haven't been run.
 	_GET_BATCH_EXAMPLE = r"""
+	# NOTE: We only show the structure of return value of get_batch. The real value of each entry may depends on the loaded vocab.
 	Examples:
 		>>> from transformers.tokenization_gpt2 import GPT2Tokenizer
 		>>> from cotk.dataloader.tokenizer import PretrainedTokenizer
@@ -1152,6 +1263,97 @@ class SessionGPT2(Session):
 		return res
 
 
+class SessionBERT(Session):
+	'''Bases: :class:`.dataloader.Session`, :class:`.dataloader.Field`
+
+	A field for session in the format of BERT.
+
+	{INIT_DOCSTRING}
+
+	{SESSION_INPUT_FORMAT}
+	'''
+	INIT_DOCSTRING = Sentence.INIT_DOCSTRING.replace(":class:Vocab", ":class:PretrainedVocab")
+
+	def __init__(self, tokenizer: Union[None, PretrainedTokenizer] = None,
+				 vocab: Optional[PretrainedVocab] = None,
+				 vocab_from_mappings: Optional[Dict[str, str]] = None,
+				 max_sent_length: Union[int, None, _InfiniteLength] = None,
+				 convert_to_lower_letter: Optional[bool] = None,
+				 max_turn_length: Union[int, None, _InfiniteLength] = None,):
+		super().__init__(tokenizer, vocab, vocab_from_mappings, max_sent_length, convert_to_lower_letter, max_turn_length)
+		if not isinstance(self.tokenizer, PretrainedTokenizer) or self.tokenizer.get_tokenizer_class() != "BertTokenizer":
+			raise ValueError("You have to specify a pretrained tokenizer compatible with bert")
+		self.inner_tokenizer = self.tokenizer.tokenizer
+		if not isinstance(self.vocab, PretrainedVocab):
+			raise ValueError("You have to specify a PretrainedVocab for SentenceBERT field")
+		self.vocab: PretrainedVocab
+
+	add_special_to_ids = SentenceBERT.add_special_to_ids
+	remove_special_in_ids = SentenceBERT.remove_special_in_ids
+	trim_in_ids = SentenceBERT.trim_in_ids
+
+	_GET_BATCH_DATA_DOCSTRING = SessionDefault._GET_BATCH_DATA_DOCSTRING
+	# TODO: update return value of get_batch. I have trouble with `BertTokenizer.from_pretrained('bert')`
+	# the following codes in Examples haven't been run.
+	_GET_BATCH_EXAMPLE = r"""
+	# NOTE: We only show the structure of return value of get_batch. The real value of each entry may depends on the loaded vocab.
+	Examples:
+		>>> from transformers.tokenization_bert import BertTokenizer
+		>>> from cotk.dataloader.tokenizer import PretrainedTokenizer
+		>>> tokenizer = BertTokenizer.from_pretrained('bert')
+		>>> field = SessionBERT(PretrainedTokenizer(tokenizer))
+		>>> field_content = field._create('train')
+		>>> dataset = iter(['How are you?\n', "I'm fine. Thank you! And you?\n", "I'm fine, too.\n", "\n", "How to install CoTk?\n", "pip install cotk.\n", "\n"])
+		>>> while True:
+		... 	try:
+		... 		field_content.read_next(dataset)
+		... 	except StopIteration:
+		... 		break
+		>>> field_content.process_before_vocab()
+		>>> field.vocab.build_vocab()
+		>>> data = field_content.get_data()
+		>>> data
+		{'id': [[[2, 8, 18, 6, 5, 3],
+				[2, 9, 7, 12, 10, 4, 17, 6, 13, 15, 6, 5, 3],
+				[2, 9, 7, 12, 10, 14, 22, 4, 3]],
+			   [[2, 8, 21, 11, 16, 5, 3], [2, 20, 11, 19, 4, 3]]],
+		  'str': [['How are you?', "I'm fine. Thank you! And you?", "I'm fine, too."],
+			  ['How to install CoTk?', 'pip install cotk.']]}
+		>>> batch_data = field.get_batch('session', data, [1])
+		>>> batch_data
+		{'session_turn_length': array([2]),
+		  'session_sent_length': [[7, 6]],
+		  'session': array([[[ 2,  8, 21, 11, 16,  5,  3],
+						 [ 2, 20, 11, 19,  4,  3,  0]]]),
+		  'session_allvocabs': array([[[ 2,  8, 21, 11, 16,  5,  3],
+						 [ 2, 20, 11, 19,  4,  3,  0]]]),
+		  'session_str': [['How to install CoTk?', 'pip install cotk.']]}
+		>>> # 'session_turn_length' (`name` + '_turn_length') is a :class:`np.ndarray` object with shape == (batch size, ). Each element is the length of corresponding sssion.
+		>>> # 'session_sent_length' (`name` + '_sent_length') is List[List[int]]. Each integer is the length of corresponding sentence.
+		>>> # 'session' (`name`) is a :class:`np.ndarray` object with shape == (batch size, max turn length, max sentence length).
+		>>>				# batch_data['session'][i, j] is a sentence. batch_data['session'][i, j, k] is an id.
+		>>>				# If `self.max_turn_length` is not None and j >= `self.max_turn_length` or `self.max_sent_length` is not None and k >= `self.max_sent_length`,
+		>>>				# batch_data['session'][i, j, k] is `self.pad_id`.
+		>>> # 'session_allvocabs' (`name` + '_allvocabs') is the same with 'session'."""
+
+
+	def get_batch(self, name: str, data: Dict[str, Any], indexes: List[int]) -> Dict[str, Any]:
+		res = {}
+		data_id, data_str = data['id'], data['str']
+		batch_size = len(indexes)
+		turn_lengths = res[name + "_turn_length"] = np.array([len(data_id[i]) for i in indexes], dtype=int)
+		res[name + "_sent_length"] = [[len(sent) for sent in data_id[i]] for i in indexes]
+		max_sent_length = max(map(max, res[name + "_sent_length"]))
+		res_session = res[name] = np.ones((batch_size, turn_lengths.max(), max_sent_length), dtype=int) * self.vocab.pad_id
+		for i, j in enumerate(indexes):
+			session = data_id[j]
+			session = [list(sent) + [self.vocab.pad_id] * (max_sent_length - len(sent)) for sent in session]
+			res_session[i, :len(session)] = np.array(session, dtype=int)
+		res[name + "_allvocabs"] = res_session.copy()
+		res[name + "_str"] = [data_str[i] for i in indexes]
+		return res
+
+
 class SentenceCandidateDefault(SessionDefault):
 	"""Bases: :class:`.dataloader.Field`.
 	A Field for candidate. Several sentences represent candidate answers of a dialog task.
@@ -1168,6 +1370,19 @@ class SentenceCandidateDefault(SessionDefault):
 class SentenceCandidateGPT2(SessionGPT2):
 	"""Bases: :class:`.dataloader.Field`.
 	A Field for candidate. Several sentences represent candidate answers of a dialog task. These sentences are in the format of GPT2.
+	"""
+	def __init__(self, tokenizer: Union[None, Tokenizer, str] = None,
+				 vocab: Optional[Vocab] = None,
+				 vocab_from_mappings: Optional[Dict[str, str]] = None,
+				 max_sent_length: Union[int, None, _InfiniteLength] = None,
+				 convert_to_lower_letter: Optional[bool] = None):
+		super().__init__(tokenizer, vocab, vocab_from_mappings, max_sent_length, convert_to_lower_letter,
+						 max_turn_length=Sentence.INFINITE_LENGTH)
+
+
+class SentenceCandidateBERT(SessionBERT):
+	"""Bases: :class:`.dataloader.Field`.
+	A Field for candidate. Several sentences represent candidate answers of a dialog task. These sentences are in the format of BERT.
 	"""
 	def __init__(self, tokenizer: Union[None, Tokenizer, str] = None,
 				 vocab: Optional[Vocab] = None,

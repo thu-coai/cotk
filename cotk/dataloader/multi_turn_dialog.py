@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 from .._utils.metaclass import copy_func
 from .dataloader import LanguageProcessing
-from .field import Session, SessionGPT2, Field
+from .field import Session, Field
 from .tokenizer import PretrainedTokenizer
 from .vocab import PretrainedVocab
 from .context import FieldContext, VocabContext
@@ -100,11 +100,11 @@ class MultiTurnDialog(LanguageProcessing):
 				with VocabContext.set_parameters(min_rare_vocab_times=min_rare_vocab_times,
 											 	min_frequent_vocab_times=min_frequent_vocab_times):
 					super().__init__(file_id, fields)
-		elif pretrained == 'gpt2':
+		elif pretrained == 'gpt2' or pretrained == 'bert':
 			if fields is None:
-				fields = OrderedDict(['session', 'SessionGPT2'])
+				fields = OrderedDict([('session', Session.get_pretrained_class(pretrained).__name__)])
 			if not isinstance(tokenizer, PretrainedTokenizer):
-				raise ValueError("tokenize should be loaded first if you want a gpt2 dataloader")
+				raise ValueError("tokenize should be loaded first if you want a %s dataloader" % (pretrained))
 			vocab = PretrainedVocab(tokenizer.tokenizer)
 			with FieldContext.set_parameters(tokenizer=tokenizer,
 											 vocab=vocab,
@@ -117,13 +117,13 @@ class MultiTurnDialog(LanguageProcessing):
 
 		self.set_default_field('train', 'session')
 
-		if pretrained == 'gpt2':
-			# check whether SessionGPT2 is used.
+		if pretrained == 'gpt2' or pretrained == 'bert':
+			# check whether SessionGPT2 or SessionBERT is used.
 			for set_name, set_fields in self.fields.items():
 				for field_name, field in set_fields.items():
-					if isinstance(field, Session) and not isinstance(field, SessionGPT2):
-						warnings.warn("If you want to use a gpt2 multi_turn_dialog, you'd better use %s instead of %s."
-									  % (SessionGPT2.__name__, type(field).__name__))
+					if isinstance(field, Session) and not isinstance(field, Session.get_pretrained_class(pretrained)):
+						warnings.warn("If you want to use a %s multi_turn_dialog, you'd better use %s instead of %s."
+									  % (pretrained, Session.get_pretrained_class(pretrained).__name__, type(field).__name__))
 
 	_SESSION_MORE_DOCSTRING = '''It calls the identical method of the :class:`Session` instance ``session``,\
 		from :meth:`.get_default_field()`.'''
@@ -268,10 +268,10 @@ class SwitchboardCorpus(MultiTurnDialog):
 				**{k: OrderedDict([['session', 'SessionDefault']]) for k in ['train', 'dev', 'test']},
 				'multi_ref': OrderedDict([['session', 'SessionDefault'], ['candidate', "SentenceCandidateDefault"]])
 			}
-		elif pretrained == 'gpt2':
+		elif pretrained == 'gpt2' or pretrained == 'bert':
 			fields = {
-				**{k: OrderedDict([['session', 'SessionGPT2']]) for k in ['train', 'dev', 'test']},
-				'multi_ref': OrderedDict([['session', 'SessionGPT2'], ['candidate', "SentenceCandidateGPT2"]])
+				**{k: OrderedDict([('session', Session.get_pretrained_class(pretrained).__name__)]) for k in ['train', 'dev', 'test']},
+				'multi_ref': OrderedDict([['session', Session.get_pretrained_class(pretrained).__name__], ['candidate', Session.get_candidate_pretrained_class(pretrained).__name__]])
 			}
 		else:
 			raise ValueError("No pretrained name %s" % pretrained)

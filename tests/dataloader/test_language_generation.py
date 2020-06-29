@@ -30,6 +30,8 @@ class TestLanguageGeneration():
 			LanguageGeneration("./tests/dataloader/dummy_mscoco#MSCOCO", pretrained='none')
 		with pytest.raises(ValueError):
 			LanguageGeneration("./tests/dataloader/dummy_mscoco#MSCOCO", pretrained='gpt2')
+		with pytest.raises(ValueError):
+			LanguageGeneration("./tests/dataloader/dummy_mscoco#MSCOCO", pretrained='bert')
 
 		assert isinstance(dl, LanguageGeneration)
 		assert isinstance(dl.file_id, str)
@@ -72,8 +74,12 @@ class TestLanguageGeneration():
 			ids = sent['id']
 			assert isinstance(ids, list)
 			assert isinstance(ids[0], list)
-			assert ids[0][0] == dl.go_id
-			assert ids[0][-1] == dl.eos_id
+			if dl._pretrained is None or dl._pretrained == "gpt2":
+				assert ids[0][0] == dl.go_id
+				assert ids[0][-1] == dl.eos_id
+			else:
+				assert ids[0][0] == dl.get_special_tokens_id("cls")
+				assert ids[0][-1] == dl.get_special_tokens_id("sep")
 			strs = sent['str']
 			assert isinstance(strs, list)
 			assert isinstance(strs[0], str)
@@ -118,12 +124,20 @@ class TestLanguageGeneration():
 
 			assert len(batch["sent_length"]) == 2
 			assert batch["sent"].shape[0] == 2
-			if batch["sent_length"][0] < batch['sent'].shape[1]:
-				assert batch["sent"][0][batch["sent_length"][0]-1] == dl.eos_id
-			assert batch["sent"][0][0] == dl.go_id
-			if batch["sent_length"][1] < batch['sent'].shape[1]:
-				assert batch["sent"][1][batch["sent_length"][1]-1] == dl.eos_id
-			assert batch["sent"][1][0] == dl.go_id
+			if dl._pretrained is None or dl._pretrained == "gpt2":
+				if batch["sent_length"][0] < batch['sent'].shape[1]:
+					assert batch["sent"][0][batch["sent_length"][0]-1] == dl.eos_id
+				assert batch["sent"][0][0] == dl.go_id
+				if batch["sent_length"][1] < batch['sent'].shape[1]:
+					assert batch["sent"][1][batch["sent_length"][1]-1] == dl.eos_id
+				assert batch["sent"][1][0] == dl.go_id
+			else:  # dl._pretrained == "bert"
+				if batch["sent_length"][0] < batch['sent'].shape[1]:
+					assert batch["sent"][0][batch["sent_length"][0]-1] == dl.get_special_tokens_id("sep")
+				assert batch["sent"][0][0] == dl.get_special_tokens_id("cls")
+				if batch["sent_length"][1] < batch['sent'].shape[1]:
+					assert batch["sent"][1][batch["sent_length"][1]-1] == dl.get_special_tokens_id("sep")
+				assert batch["sent"][1][0] == dl.get_special_tokens_id("cls")
 
 		if not dl._pretrained: # test only when not pretrained tokenizer
 			# this is true, only when there is no unknown words in dl
@@ -220,14 +234,21 @@ def load_mscoco():
 		return MSCOCO("./tests/dataloader/dummy_mscoco#MSCOCO", min_rare_vocab_times=invalid_vocab_times)
 	return _load_mscoco
 
-def load_mscoco_pretrain():
+def load_mscoco_gpt():
 	def _load_mscoco(invalid_vocab_times=0):
 		from transformers import GPT2Tokenizer
 		toker = PretrainedTokenizer(GPT2Tokenizer('./tests/dataloader/dummy_gpt2vocab/vocab.json', './tests/dataloader/dummy_gpt2vocab/merges.txt'))
 		return MSCOCO("./tests/dataloader/dummy_mscoco#MSCOCO", tokenizer=toker, pretrained='gpt2', min_rare_vocab_times=invalid_vocab_times)
 	return _load_mscoco
 
-all_load_dataloaders = [load_mscoco(), load_mscoco_pretrain()]
+def load_mscoco_bert():
+	def _load_mscoco(invalid_vocab_times=0):
+		from transformers import BertTokenizer
+		toker = PretrainedTokenizer(BertTokenizer('./tests/dataloader/dummy_bertvocab/vocab.txt'))
+		return MSCOCO("./tests/dataloader/dummy_mscoco#MSCOCO", tokenizer=toker, pretrained='bert', min_rare_vocab_times=invalid_vocab_times)
+	return _load_mscoco
+
+all_load_dataloaders = [load_mscoco(), load_mscoco_gpt(), load_mscoco_bert()]
 
 class TestMSCOCO(TestLanguageGeneration):
 	def test_version(self):

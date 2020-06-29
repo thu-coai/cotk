@@ -2,11 +2,12 @@
 import warnings
 from collections import OrderedDict
 
-from .field import Sentence, SentenceGPT2
+from .field import Sentence, SentenceGPT2, SentenceBERT
 from .dataloader import LanguageProcessing
 from .context import FieldContext, VocabContext
 from .vocab import GeneralVocab, PretrainedVocab
 from .tokenizer import PretrainedTokenizer
+from .field import Sentence
 
 if False: # for type check # pylint: disable=using-constant-test
 	from ..metric import MetricChain #pylint: disable=unused-import
@@ -37,18 +38,18 @@ class SentenceClassification(LanguageProcessing):
 
 		if pretrained is None:
 			if fields is None:
-				fields = OrderedDict([('sent', 'SentenceDefault')])
+				fields = OrderedDict([('sent', 'SentenceDefault'), ('label', 'DenseLabel')])
 			with FieldContext.set_parameters(tokenizer=tokenizer,
 											 max_sent_length=max_sent_length,
 											 convert_to_lower_letter=convert_to_lower_letter):
 				with VocabContext.set_parameters(min_rare_vocab_times=min_rare_vocab_times,
 												 min_frequent_vocab_times=min_frequent_vocab_times):
 					super().__init__(file_id, fields)
-		elif pretrained == 'gpt2':
+		elif pretrained == 'gpt2' or pretrained == 'bert':
 			if fields is None:
-				fields = OrderedDict(['sent', 'SentenceGPT2'])
+				fields = OrderedDict([('sent', Sentence.get_pretrained_class(pretrained).__name__), ('label', 'DenseLabel')])
 			if not isinstance(tokenizer, PretrainedTokenizer):
-				raise ValueError("tokenize should be loaded first if you want a gpt2 dataloader")
+				raise ValueError("tokenize should be loaded first if you want a %s dataloader" % (pretrained))
 			vocab = PretrainedVocab(tokenizer.tokenizer)
 			with FieldContext.set_parameters(tokenizer=tokenizer,
 											 vocab=vocab,
@@ -60,14 +61,13 @@ class SentenceClassification(LanguageProcessing):
 
 		self.set_default_field('train', 'sent')
 
-		if pretrained == 'gpt2':
-			# check whether SentenceGPT2 is used.
+		if pretrained == 'gpt2' or pretrained == 'bert':
+			# check whether SentenceGPT2 or SentenceBERT is used.
 			for set_name, set_fields in self.fields.items():
 				for field_name, field in set_fields.items():
-					if isinstance(field, Sentence) and not isinstance(field, SentenceGPT2):
-						warnings.warn("If you want to use a gpt2 multi_turn_dialog, you'd better use %s instead of %s."
-									  % (SentenceGPT2.__name__, type(field).__name__))
-
+					if isinstance(field, Sentence) and not isinstance(field, Sentence.get_pretrained_class(pretrained)):
+						warnings.warn("If you want to use a %s sentence_classification, you'd better use %s instead of %s."
+									  % (pretrained, Sentence.get_pretrained_class(pretrained).__name__, type(field).__name__))
 
 	def get_batch(self, set_name, indexes):
 		'''Get a batch of specified `indexes`.
@@ -161,12 +161,10 @@ class SST(SentenceClassification):
 
 	def __init__(self, file_id, min_frequent_vocab_times=10, \
 				 max_sent_length=50, min_rare_vocab_times=0, tokenizer='space', pretrained=None):
-		fields = OrderedDict([['sent', 'SentenceDefault'], ['label', 'DenseLabel']])
 		super().__init__(file_id,
 						 tokenizer=tokenizer,
 						 max_sent_length=max_sent_length,
 						 convert_to_lower_letter=False,
 						 min_frequent_vocab_times=min_frequent_vocab_times,
 						 min_rare_vocab_times=min_rare_vocab_times,
-						 fields=fields,
 						 pretrained=pretrained)
