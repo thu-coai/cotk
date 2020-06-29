@@ -20,7 +20,7 @@ def unzip_file(src_path, dst_dir):
 class ResourceProcessor(LoadClassInterface):
 	'''Base class for processor.
 	'''
-	def __init__(self, cache_dir=None, config_dir=None):
+	def __init__(self, cache_dir, config_dir):
 		self.cache_dir = cache_dir
 		self.config_dir = config_dir
 

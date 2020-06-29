@@ -105,16 +105,16 @@ Load common used dataset and do preprocessing:
     >>> # or import from local file
     >>> dl_zip = cotk.dataloader.MSCOCO("./MSCOCO.zip#MSCOCO")
 
-    >>> print("Dataset is split into:", dataloader.key_name)
-    ["train", "dev", "test"]
+    >>> print("Dataset is split into:", dataloader.fields.keys())
+    dict_keys(['train', 'dev', 'test'])
 ```
 
 Inspect vocabulary list
 
 ```python
-    >>> print("Vocabulary size:", dataloader.vocab_size)
-    Vocabulary size: 2588
-    >>> print("First 10 tokens in vocabulary:", dataloader.vocab_list[:10])
+    >>> print("Vocabulary size:", dataloader.frequent_vocab_size)
+    Vocabulary size: 2597
+    >>> print("First 10 tokens in vocabulary:", dataloader.frequent_vocab_list[:10])
     First 10 tokens in vocabulary: ['<pad>', '<unk>', '<go>', '<eos>', '.', 'a', 'A', 'on', 'of', 'in']
 ```
 
@@ -123,15 +123,16 @@ Convert between ids and strings
 ```python
     >>> print("Convert string to ids", \
     ...           dataloader.convert_tokens_to_ids(["<go>", "hello", "world", "<eos>"]))
-    Convert string to string [2, 1379, 1897, 3]
+    Convert string to ids [2, 6107, 1875, 3]
     >>> print("Convert ids to string", \
     ...           dataloader.convert_ids_to_tokens([2, 1379, 1897, 3]))
+	Convert ids to string ['hello', 'world']
 ```
 
 Iterate over batches
 
 ```python
-    >>> for data in dataloader.get_batch("train", batch_size=1):
+    >>> for data in dataloader.get_batches("train", batch_size=1):
     ...     print(data)
     {'sent':
         array([[ 2, 181, 13, 26, 145, 177, 8, 22, 12, 5, 1, 1099, 4, 3]]),
@@ -143,7 +144,7 @@ Iterate over batches
     ......
 ```
 
-Or using ``while`` if you like
+Or using ``while`` (another iteration method) if you like
 
 ```python
     >>> dataloader.restart("train", batch_size=1):
@@ -175,8 +176,7 @@ checking whether the same data is used. The metric object receives mini-batches.
     ...         [2, 46, 145, 500, 1764, 207, 11, 5, 93, 7, 31, 4, 3]]
     ... })
     >>> print(metric.close())
-    {'self-bleu': 0.02206768072402293,
-     'self-bleu hashvalue': 'c206893c2272af489147b80df306ee703e71d9eb178f6bb06c73cb935f474452'}
+    {'self-bleu': 0.02253475750490193, 'self-bleu hashvalue': 'f7d75c0d0dbf53ffba4b845d1f61487fd2d6d3c0594b075c43111816c84c65fc'}
 ```
 
 You can merge multiple metrics together by cotk.metric.MetricChain.
@@ -185,17 +185,15 @@ You can merge multiple metrics together by cotk.metric.MetricChain.
 ```python
     >>> metric = cotk.metric.MetricChain()
     >>> metric.add_metric(cotk.metric.SelfBleuCorpusMetric(dataloader, gen_key="gen"))
-    >>> metric.add_metric(cotk.metric.FwBwBleuCorpusMetric(dataloader, reference_test_list=dataloader.get_all_batch()['sent_allvocabs'], gen_key="gen"))
+    >>> metric.add_metric(cotk.metric.FwBwBleuCorpusMetric(dataloader, reference_test_list=dataloader.get_all_batch('test')['sent_allvocabs'], gen_key="gen"))
     >>> metric.forward({
     ...    "gen":
     ...        [[2, 181, 13, 26, 145, 177, 8, 22, 12, 5, 3755, 1099, 4, 3],
     ...         [2, 46, 145, 500, 1764, 207, 11, 5, 93, 7, 31, 4, 3]]
     ... })
     >>> print(metric.close())
-    {'self-bleu': 0.02206768072402293,
-     'self-bleu hashvalue': 'c206893c2272af489147b80df306ee703e71d9eb178f6bb06c73cb935f474452',
-     'fw-bleu': 0.3831004349785445, 'bw-bleu': 0.025958979254273006, 'fw-bw-bleu': 0.04862323612604027,
-     'fw-bw-bleu hashvalue': '530d449a096671d13705e514be13c7ecffafd80deb7519aa7792950a5468549e'}
+    100%|██████████| 1000/1000 [00:00<00:00, 5281.95it/s]
+	{'self-bleu': 0.02253475750490193, 'self-bleu hashvalue': 'f7d75c0d0dbf53ffba4b845d1f61487fd2d6d3c0594b075c43111816c84c65fc', 'fw-bleu': 0.28135593382545376, 'bw-bleu': 0.027021522872801896, 'fw-bw-bleu': 0.04930753293488745, 'fw-bw-bleu hashvalue': '60a39f381e065e8df6fb5eb272984128c9aea7dee4ba50a43bfb768395a70762'}
 ```
 
 We also provide recommended metrics for selected dataloader.
@@ -208,14 +206,9 @@ We also provide recommended metrics for selected dataloader.
     ...         [2, 46, 145, 500, 1764, 207, 11, 5, 93, 7, 31, 4, 3]]
     ... })
     >>> print(metric.close())
-    {'self-bleu': 0.02206768072402293,
-     'self-bleu hashvalue': 'c206893c2272af489147b80df306ee703e71d9eb178f6bb06c73cb935f474452',
-     'fw-bleu': 0.3831004349785445, 'bw-bleu': 0.025958979254273006, 'fw-bw-bleu': 0.04862323612604027,
-     'fw-bw-bleu hashvalue': '530d449a096671d13705e514be13c7ecffafd80deb7519aa7792950a5468549e',
-     'gen': [
-         ['<go>', 'This', 'is', 'an', 'old', 'photo', 'of', 'people', 'and', 'a', 'horse-drawn', 'wagon', '.'],
-         ['<go>', 'An', 'old', 'stone', 'castle', 'tower', 'with', 'a', 'clock', 'on', 'it', '.']
-     ]}
+    100%|██████████| 1000/1000 [00:00<00:00, 4857.36it/s]
+	100%|██████████| 1250/1250 [00:00<00:00, 4689.29it/s]
+	{'self-bleu': 0.02253475750490193, 'self-bleu hashvalue': 'f7d75c0d0dbf53ffba4b845d1f61487fd2d6d3c0594b075c43111816c84c65fc', 'fw-bleu': 0.3353037449663603, 'bw-bleu': 0.027327995838287513, 'fw-bw-bleu': 0.050537105917262654, 'fw-bw-bleu hashvalue': 'c254aa4008ae11b1bc4955e7cd1f7f3aad34b664178a585a218b1474970e3f23', 'gen': [['inside', 'is', 'an', 'elephant', 'shirt', 'of', 'people', 'and', 'a', 'grasslands', 'pulls', '.'], ['An', 'elephant', 'girls', 'baggage', 'sidewalk', 'with', 'a', 'clock', 'on', 'it', '.']]}
 ```
 
 

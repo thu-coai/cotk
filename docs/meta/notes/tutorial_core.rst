@@ -17,7 +17,7 @@ However, this tutorial constructs neural networks with
 ``pytorch``, so make sure you have installed the following package:
 
 - Python >= 3.5
-- cotk
+- cotk >= 0.1.0
 - pytorch >= 1.0.0
 - livelossplot (optional, just for showing loss)
 
@@ -38,9 +38,9 @@ Therefore, we first construct a :class:`cotk.dataloader.MSCOCO` to load MSCOCO d
     from cotk.dataloader import MSCOCO
     from pprint import pprint
     dataloader = MSCOCO("resources://MSCOCO_small") # "resources://MSCOCO_small" is a predefined resources name
-    print("Vocab Size:", dataloader.vocab_size)
-    print("First 10 tokens:",  dataloader.vocab_list[:10])
-    print("Dataset is split into:", dataloader.key_name)
+    print("Vocab Size:", dataloader.frequent_vocab_size)
+    print("First 10 tokens:",  dataloader.frequent_vocab_list[:10])
+    print("Dataset is split into:", dataloader.fields.keys())
     data = dataloader.get_batch("train", [0]) # get the sample of id 0
     pprint(data, width=200)
     print(dataloader.convert_ids_to_tokens(data['sent'][0]))
@@ -51,27 +51,23 @@ Therefore, we first construct a :class:`cotk.dataloader.MSCOCO` to load MSCOCO d
 
  .. code-block:: none
 
+    INFO: downloading resources
     INFO: name: MSCOCO_small
     INFO: source: default
-    INFO: processor type: MSCOCO
+    INFO: url: https://cotk-data.s3-ap-northeast-1.amazonaws.com/mscoco_small.zip
+    INFO: processor: MSCOCO
+    100%|██████████| 1020154/1020154 [00:00<00:00, 1265532.43B/s]INFO: resource cached at /root/.cotk_cache/bd12bbf8ce8b157cf620e929bb36379443876ad115951dfeafb63d50b280cff2_temp
 
-    100%|██████████| 1020154/1020154 [00:00<00:00, 1853831.54B/s]
-
-    INFO: resource cached at /root/.cotk_cache/9e4c0afe33d98fa249e472206a39e5553d739234d0a27e055044ae8880e314b1_unzip/mscoco
-    valid vocab list length = 2588
-    vocab list length = 12411
-    train set. invalid rate: 0.031716, unknown rate: 0.000000, max length before cut: 55, cut word rate: 0.000022
-    dev set. invalid rate: 0.034089, unknown rate: 0.000000, max length before cut: 46, cut word rate: 0.000000
-    test set. invalid rate: 0.031213, unknown rate: 0.000000, max length before cut: 27, cut word rate: 0.000000
-    Vocab Size: 2588
+    Vocab Size: 2597
     First 10 tokens: ['<pad>', '<unk>', '<go>', '<eos>', '.', 'a', 'A', 'on', 'of', 'in']
-    Dataset is split into: ['train', 'dev', 'test']
-    {'sent': array([[  2,   6,  67, 651, 549,  11,   5,  65,  89,  10, 115, 349,  83,
-            4,   3]]),
-    'sent_allvocabs': array([[  2,   6,  67, 651, 549,  11,   5,  65,  89,  10, 115, 349,  83,
-            4,   3]]),
-    'sent_length': array([15])}
-    ['<go>', 'A', 'blue', 'lamp', 'post', 'with', 'a', 'sign', 'for', 'the', 'yellow', 'brick', 'road', '.']
+    Dataset is split into: dict_keys(['train', 'dev', 'test'])
+    {'sent': array([[  2,   6,  67, 653, 550,  11,   5,  65,  89,  10, 115, 352,  83,
+              4,   3]]),
+     'sent_allvocabs': array([[  2,   6,  67, 653, 550,  11,   5,  65,  89,  10, 115, 352,  83,
+              4,   3]]),
+     'sent_length': array([15]),
+     'sent_str': ['A blue lamp post with a sign for the yellow brick road .']}
+    ['A', 'blue', 'lamp', 'post', 'with', 'a', 'sign', 'for', 'the', 'yellow', 'brick', 'road', '.']
 
 
 :class:`cotk.dataloader.MSCOCO` has helped us construct vocabulary list and
@@ -104,9 +100,9 @@ First we construct a simple GRU Language model using ``pytorch``.
     class LanguageModel(nn.Module):
         def __init__(self):
             super().__init__()
-            self.embedding_layer = nn.Embedding(dataloader.vocab_size, embedding_size)
+            self.embedding_layer = nn.Embedding(dataloader.frequent_vocab_size, embedding_size)
             self.rnn = nn.GRU(embedding_size, hidden_size, batch_first=True)
-            self.output_layer = nn.Linear(hidden_size, dataloader.vocab_size)
+            self.output_layer = nn.Linear(hidden_size, dataloader.frequent_vocab_size)
             self.crossentropy = nn.CrossEntropyLoss()
 
         def forward(self, data):
@@ -121,7 +117,7 @@ First we construct a simple GRU Language model using ``pytorch``.
             incoming, _ = self.rnn(incoming)
             # incoming: (batch_size, max(sent_length), hidden_size)
             incoming = self.output_layer(incoming)
-            # incoming: (batch_size, max(sent_length), dataloader.vocab_size)
+            # incoming: (batch_size, max(sent_length), dataloader.frequent_vocab_size)
 
             loss = []
             for i, length in enumerate(sent_length):
@@ -177,7 +173,7 @@ the help of ``cotk``. (It may takes several minutes to train the model.)
 .. code-block:: none
 
     loss:
-    training   (min:    3.126, max:    6.401, cur:    3.152)
+    training   (min:    3.161, max:    6.577, cur:    3.239)
     epoch 100/100
 
 Evaluations
@@ -213,7 +209,7 @@ section, we use it right now.
  .. code-block:: none
 
     test set restart, 78 batches and 2 left
-    {'perplexity': 32.94079849259241, 'perplexity hashvalue': '4f101c2986f1fe10ce1d2197c3086d3659aec3e6495f381d67f00b4dbb40a538'}
+    {'perplexity': 34.22552934535805, 'perplexity hashvalue': '2cc7ecfad6f2b41949648225e043d0b2f8bcf283aae5ef773e821f641b8a9763'}
 
 The codes above evaluated the model in teacher forcing mode, where every input
 token is the real data. 
@@ -258,29 +254,30 @@ Out:
 
 .. code-block:: none
 
-    100%|██████████| 1000/1000 [00:00<00:00, 1063.21it/s]
-    {'bw-bleu': 0.04871277607530735,
-     'fw-bleu': 0.22873635755754274,
-     'fw-bw-bleu': 0.08032018568655393,
-     'fw-bw-bleu hashvalue': '3018dc317f82b6013f011c1f8ccd90c5affed710b7d7d06a7235cf455c233542',
-     'gen': [['A', 'red', 'bus', 'car', 'being', 'snow', 'behind', 'much', 'to', 'it', '.'],
-             ['The', 'pair', 'of', 'cover', 'position', 'two', 'vases', 'screen', '.'],
-             ['A', 'black', 'dog', 'walking', 'from', 'a', 'bush', '.'],
-             ['The', 'zebra', 'sits', 'in', 'front', 'of', 'a', 'bathroom', 'lamp', '.'],
-             ['<unk>', 'single', 'boys', 'using', 'a', 'baseball', 'game', ',', 'holds', 'her', 'dog', '.'],
-             ['A', 'picture', 'of', 'a', 'shopping', 'colored', 'restroom', 'with', 'broccoli', 'on', 'it', '.'],
-             ['A', 'people', 'that', 'is', 'stopped', 'seen', 'on', 'back', 'it', '.'],
-             ['A', 'street', 'holding', 'black', 'with', 'grass', 'up', 'up', 'at', 'a', 'white', 'mirror', '.'],
-             ['A', 'cow', 'sits', 'in', 'front', 'of', 'the', 'bowl', 'with', 'a', 'pan', 'are', 'playing'],
-             ['A', 'woman', 'looking', 'hardwood', '<unk>', 'of', 'some', 'is', 'open', '.'],
-             ['A', 'fire', 'hydrant', 'taking', 'a', 'red', 'toy', 'feet', '.'],
-             ['A', 'woman', 'is', 'flying', 'on', 'a', 'cell', 'phone', 'somewhere', '.'],
-             ['A', 'bear', 'holding', 'a', 'hill', 'suit', 'it', 'on', 'a', 'wooden', 'board', '.'],
-             ['Woman', 'playing', 'frisbee', 'below', 'food', 'across', 'the', 'ocean', '.'],
-             ['There', 'has', 'some', 'two', 'rice', 'screens', 'with', 'several', 'colorful', 'toy', 'on', 'a', 'white', 'tile', 'toilet', '.'],
-             ['Large', '<unk>', 'with', 'many', 'pretty', 'an', 'apple', '.']],
-     'self-bleu': 0.07416490324471028,
-     'self-bleu hashvalue': '9f1121d3988ef4789943ef18c1c0b749eec0d8eee3f12270671605ce670225f6'}
+    100%|██████████| 1000/1000 [00:00<00:00, 1104.71it/s]
+    100%|██████████| 1250/1250 [00:01<00:00, 1092.16it/s]
+    {'bw-bleu': 0.0552594607682451,
+     'fw-bleu': 0.26895525176213,
+     'fw-bw-bleu': 0.0916819725247384,
+     'fw-bw-bleu hashvalue': 'b8b072913c122176b5a4bd3954eb1f48c921bb6c9e90b0e4547f2ad98cee56a5',
+     'gen': [['A', 'herd', 'of', 'items', 'with', 'different', 'toppings', 'on', 'a', 'snow', 'competition', '.'],
+         ['A', 'woman', 'oven', 'sits', 'decorated', 'and', 'forks', 'and', 'flowers', '.'],
+         ['A', 'couple', 'of', '<unk>', 'made', 'with', 'into', 'a', 'container', 'of', 'people', '.'],
+         ['A', 'person', 'sitting', 'at', 'the', 'snow', 'flower', 'by', 'a', 'drink', 'shows', 'his', 'giraffe', '.'],
+         ['A', 'girl', 'standing', 'on', 'the', 'wall', 'outfit', 'in', 'the', 'pedestrian', 'roses', '.'],
+         ['A', 'young', 'girl', 'is', 'standing', 'by', 'businesses', 'raised', '.'],
+         ['A', 'small', 'baseball', 'pitcher', 'down', 'a', 'tennis', 'ball', '.'],
+         ['A', 'boat', 'and', 'bananas', 'train', 'in', 'a', 'field', '.'],
+         ['A', 'white', 'double', 'decker', 'dock', 'sitting', 'inside', 'of', 'an', 'airplane', '.'],
+         ['A', 'boy', 'being', 'transit', 'fire', 'hydrant', 'in', 'a', 'room', '.'],
+         ['A', 'white', 'sink', '<unk>', 'a', 'vase', 'with', 'two', 'drinks', '.'],
+         ['A', 'very', 'cute', 'black', 'clock', 'sitting', 'on', 'ski', '<unk>', 'near', 'a', 'hallway', '.'],
+         ['A', 'large', 'plate', 'sliced', 'with', 'tomatoes', 'in', 'the', 'water', '.'],
+         ['A', 'plane', 'with', 'a', 'laptop', 'and', 'set', 'of', 'furniture', '.'],
+         ['A', 'person', 'sitting', 'on', 'a', 'skateboard', 'walk', 'a', 'dirt', 'area', 'near', 'the', '.'],
+         ['A', 'young', 'boy', 'laying', 'around', 'with', 'a', 'red', 'table', '.']],
+    'self-bleu': 0.05696094523203348,
+    'self-bleu hashvalue': '90865484e69f47cf7aea7f89b1b1b563972ed140e8f0e6e8ec8064b7155c534c'}
 
 Hash value
 ~~~~~~~~~~~~~~~~~~
@@ -311,7 +308,7 @@ Out:
 .. code-block:: none
 
     test set restart, 78 batches and 2 left
-    {'perplexity': 31.883897093289583, 'perplexity hashvalue': '125a45af618245364a722ad3fcac59534f30e64aa7e2dfefd35402cd67a74cec'}
+    {'perplexity': 31.935582929323076, 'perplexity hashvalue': 'd38265b09387b07be8461f54a7879250b196b0f5bbd3669dc5c6cd17958d81f8'}
 
 
 Additional: Word Vector
@@ -325,7 +322,7 @@ that help you downloading and get word vectors.
 
     from cotk.wordvector import Glove
     wordvec = Glove("resources://Glove50d_small")
-    self.embedding_layer.weight = nn.Parameter(torch.Tensor(wordvec.load(embedding_size, dataloader.vocab_list)))
+    self.embedding_layer.weight = nn.Parameter(torch.Tensor(wordvec.load(embedding_size, dataloader.frequent_vocab_list)))
 
 We can add these lines at the end of ``LanguageModel.__init__``.
 
@@ -335,3 +332,4 @@ You can find the results and codes with pretrained word vector at
 `here <https://github.com/thu-coai/cotk/blob/master/docs/source/notes/tutorial_core_2.ipynb>`__ for ipynb files
 or run `the code <http://colab.research.google.com/github/thu-coai/cotk/blob/master/docs/source/notes/tutorial_core_2.ipynb>`__
 on google colab.
+
