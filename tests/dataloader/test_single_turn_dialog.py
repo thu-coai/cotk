@@ -33,6 +33,8 @@ class TestSingleTurnDialog():
 			SingleTurnDialog("./tests/dataloader/dummy_opensubtitles#OpenSubtitles", pretrained='none')
 		with pytest.raises(ValueError):
 			SingleTurnDialog("./tests/dataloader/dummy_opensubtitles#OpenSubtitles", pretrained='gpt2')
+		with pytest.raises(ValueError):
+			SingleTurnDialog("./tests/dataloader/dummy_opensubtitles#OpenSubtitles", pretrained='bert')
 
 		assert isinstance(dl, SingleTurnDialog)
 		assert isinstance(dl.file_id, str)
@@ -75,8 +77,12 @@ class TestSingleTurnDialog():
 			post_ids = post['id']
 			assert isinstance(post_ids, list)
 			assert isinstance(post_ids[0], list)
-			assert post_ids[0][0] == dl.go_id
-			assert post_ids[0][-1] == dl.eos_id
+			if dl._pretrained is None or dl._pretrained == "gpt2":
+				assert post_ids[0][0] == dl.go_id
+				assert post_ids[0][-1] == dl.eos_id
+			else:  # dl._pretrained == "bert"
+				assert post_ids[0][0] == dl.get_special_tokens_id("cls")
+				assert post_ids[0][-1] == dl.get_special_tokens_id("sep")
 			post_strs = post['str']
 			assert isinstance(post_strs, list)
 			assert isinstance(post_strs[0], str)
@@ -85,8 +91,12 @@ class TestSingleTurnDialog():
 			resp_ids = resp['id']
 			assert isinstance(resp_ids, list)
 			assert isinstance(resp_ids[0], list)
-			assert resp_ids[0][0] == dl.go_id
-			assert resp_ids[0][-1] == dl.eos_id
+			if dl._pretrained is None or dl._pretrained == "gpt2":
+				assert post_ids[0][0] == dl.go_id
+				assert post_ids[0][-1] == dl.eos_id
+			else:  # dl._pretrained == "bert"
+				assert post_ids[0][0] == dl.get_special_tokens_id("cls")
+				assert post_ids[0][-1] == dl.get_special_tokens_id("sep")
 			resp_strs = resp['str']
 			assert isinstance(resp_strs, list)
 			assert isinstance(resp_strs[0], str)
@@ -139,8 +149,12 @@ class TestSingleTurnDialog():
 			for sent, length in [("post", "post_length"), ("resp", "resp_length")]:
 				for idx in [0, 1]:
 					if batch[length][idx] < batch[sent].shape[1]:
-						assert batch[sent][idx][batch[length][idx]-1] == dl.eos_id
-					assert batch[sent][idx][0] == dl.go_id
+						if dl._pretrained is None or dl._pretrained == "gpt2":
+							assert batch[sent][idx][batch[length][idx]-1] == dl.eos_id
+							assert batch[sent][idx][0] == dl.go_id
+						else:  # dl._pretrained == "bert":
+							assert batch[sent][idx][batch[length][idx]-1] == dl.get_special_tokens_id("sep")
+							assert batch[sent][idx][0] == dl.get_special_tokens_id("cls")
 
 		if not dl._pretrained: # test only when not pretrained tokenizer
 			# this is true, only when there is no unknown words in dl
@@ -241,14 +255,22 @@ def load_opensubtitles():
 		return OpenSubtitles("./tests/dataloader/dummy_opensubtitles#OpenSubtitles", min_rare_vocab_times=invalid_vocab_times)
 	return _load_opensubtitles
 
-def load_opensubtitles_pretrain():
+def load_opensubtitles_gpt2():
 	def _load_opensubtitles(invalid_vocab_times=0):
 		from transformers import GPT2Tokenizer
 		toker = PretrainedTokenizer(GPT2Tokenizer('./tests/dataloader/dummy_gpt2vocab/vocab.json', './tests/dataloader/dummy_gpt2vocab/merges.txt'))
 		return OpenSubtitles("./tests/dataloader/dummy_opensubtitles#OpenSubtitles", tokenizer=toker, pretrained='gpt2', min_rare_vocab_times=invalid_vocab_times)
 	return _load_opensubtitles
 
-all_load_dataloaders = [load_opensubtitles(), load_opensubtitles_pretrain()]
+def load_opensubtitles_bert():
+	def _load_opensubtitles(invalid_vocab_times=0):
+		from transformers import BertTokenizer
+		toker = PretrainedTokenizer(BertTokenizer('./tests/dataloader/dummy_bertvocab/vocab.txt'))
+		return OpenSubtitles("./tests/dataloader/dummy_opensubtitles#OpenSubtitles", tokenizer=toker, pretrained='bert', min_rare_vocab_times=invalid_vocab_times)
+	return _load_opensubtitles
+
+
+all_load_dataloaders = [load_opensubtitles(), load_opensubtitles_gpt2(), load_opensubtitles_bert()]
 
 class TestOpenSubtitles(TestSingleTurnDialog):
 	def test_version(self):

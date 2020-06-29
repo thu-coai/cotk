@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 from cotk.file_utils import file_utils
 from cotk.dataloader.field import Field, _FieldContent, Sentence, Session, DenseLabel, SparseLabel, SessionDefault, \
-	SentenceDefault, SentenceGPT2
+	SentenceDefault, SentenceGPT2, SentenceBERT, SessionGPT2, SessionBERT
 from cotk.dataloader import SimpleVocab
 from cotk.dataloader import Vocab, Tokenizer, GeneralVocab
 from cache_dir import CACHE_DIR
