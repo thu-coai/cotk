@@ -14,7 +14,7 @@ class LibTest(TestCommand):
 
 setup(
 	name='cotk',
-	version='0.0.1',
+	version='0.0.2',
 	packages=find_packages(exclude=[]),
 	license='Apache',
 	description='Conversational Toolkits',
