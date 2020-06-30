@@ -23,7 +23,7 @@ Features included:
 
 This project is a part of ``dialtk`` (Toolkits for Dialog System by Tsinghua University), you can follow [dialtk](http://coai.cs.tsinghua.edu.cn/dialtk/) or [cotk](http://coai.cs.tsinghua.edu.cn/dialtk/cotk/) on our home page.
 
-**Note: ``master`` branch is the developing branch. The newest release is [v0.1.0](https://github.com/thu-coai/cotk/tree/v0.1.0). **
+**Note: ``master`` branch is the developing branch. The newest release is [v0.1.0](https://github.com/thu-coai/cotk/tree/v0.1.0).**
 
 **Quick links**
 
