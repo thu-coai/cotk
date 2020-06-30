@@ -14,7 +14,7 @@ class LibTest(TestCommand):
 
 setup(
 	name='cotk',
-	version='0.0.1',
+	version='0.1.0',
 	packages=find_packages(exclude=[]),
 	license='Apache',
 	description='Conversational Toolkits',
@@ -46,7 +46,7 @@ setup(
 			"pytest-cov==2.4.0",
 			"coverage<5.0",
 			"checksumdir",
-			"transformers"
+			"transformers<3.0"
 		]
 	},
 	cmdclass={'test': LibTest},
