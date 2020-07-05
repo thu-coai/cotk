@@ -44,6 +44,15 @@ class MetricBase(LoadClassInterface, metaclass=DocStringInheritor):
 				  Contains start token (eg: ``<go>``) and end token (eg: ``<eos>``). \
 				  Size: ``[batch_size, ~ref_sentence_length]``, \
 				  where "~" means different sizes in this dimension is allowed."""
+	FORWARD_BLEU_REFERENCE_ALLVOCABS_ARGUMENTS = \
+				"""* **data[reference_allvocabs_key]** (list, :class:`numpy.ndarray`): \
+				  A 2-d (3-d) jagged or padded array of int. Reference sentences with \
+				  :ref:`allvocabs <vocabulary_ref>` in index form. \
+				  Contains start token (eg: ``<go>``) and end token (eg: ``<eos>``). \
+				  Size: ``[batch_size, ~ref_sentence_length]`` (``[batch_size, ~ref_num, ~ref_sentence_length]``), \
+				  where "~" means different sizes in this dimension is allowed.
+				  Note that if this is a 3-d array, the second dim ``ref_num`` must be ``reference_num`` unless ``reference_num`` \
+				  is explicitly set ``None``."""
 	FORWARD_REFERENCE_ALLVOCABS_ARGUMENTS_WITH_TORCH = \
 		FORWARD_REFERENCE_ALLVOCABS_ARGUMENTS.replace("list, :class:`numpy.ndarray`", \
 			"list, :class:`numpy.ndarray`, :class:`torch.Tensor`")

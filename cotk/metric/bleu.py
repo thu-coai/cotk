@@ -92,7 +92,7 @@ class BleuCorpusMetric(MetricBase):
 		Arguments:
 			data (dict): A dict at least contains the following keys:
 
-				{MetricBase.FORWARD_REFERENCE_ALLVOCABS_ARGUMENTS}
+				{MetricBase.FORWARD_BLEU_REFERENCE_ALLVOCABS_ARGUMENTS}
 				{MetricBase.FORWARD_GEN_ARGUMENTS}
 
 				Here is an example for data:
