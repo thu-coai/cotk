@@ -52,26 +52,38 @@ class TestBleuCorpusMetric:
 		gens = replace_unk(gens)
 		return corpus_bleu(refs, gens, smoothing_function=SmoothingFunction().method3)
 
-	@pytest.mark.parametrize('data_loader, to_list, pad', [['dataloader', True, False], ['field', True, True], ['dataloader', False, True]])
-	def test_hashvalue(self, data_loader, to_list, pad):
+	all_dataloader = [
+		['dataloader', True, False, 1, 1], 
+		['field', True, True, 1, 1], 
+		['dataloader', False, True, 1, 1], 
+		['dataloader', True, False, 5, 5], 
+		['dataloader', True, False, 5, 2]
+	]
+	@pytest.mark.parametrize('data_loader, to_list, pad, reference_num, data_reference_num', all_dataloader)
+	def test_hashvalue(self, data_loader, to_list, pad, reference_num, data_reference_num):
 		dataloader = FakeDataLoader()
 		reference_key, gen_key = self.default_keywords
 		key_list = [reference_key, gen_key]
 		data = dataloader.get_data(reference_key=reference_key, gen_key=gen_key, \
 								   to_list=to_list, pad=pad, \
-								   gen_len='non-empty', ref_len='non-empty')
+								   gen_len='non-empty', ref_len='non-empty', reference_num=data_reference_num)
 		if data_loader == 'field':
 			dataloader = dataloader.get_default_field()
-		bcm = BleuCorpusMetric(dataloader)
-		bcm_shuffle = BleuCorpusMetric(dataloader)
+		bcm = BleuCorpusMetric(dataloader, reference_num=reference_num)
+		bcm_shuffle = BleuCorpusMetric(dataloader, reference_num=reference_num)
 
 		data_shuffle = shuffle_instances(data, key_list)
 		batches_shuffle = split_batch(data_shuffle, key_list, \
 									  less_pad=pad, to_list=to_list, \
 									  reference_key=reference_key, reference_is_3D=False)
 
-		bcm.forward(data)
-		res = bcm.close()
+		if reference_num != data_reference_num:
+			with pytest.raises(RuntimeError):
+				bcm.forward(data)
+			return
+		else:
+			bcm.forward(data)
+			res = bcm.close()
 
 		for batch in batches_shuffle:
 			bcm_shuffle.forward(batch)
@@ -80,8 +92,8 @@ class TestBleuCorpusMetric:
 		assert same_dict(res, res_shuffle, False)
 
 		for data_unequal in generate_unequal_data(data, key_list, dataloader.pad_id, \
-												  reference_key, reference_is_3D=False):
-			bcm_unequal = BleuCorpusMetric(dataloader)
+												  reference_key, reference_is_3D=(data_reference_num > 1)):
+			bcm_unequal = BleuCorpusMetric(dataloader, reference_num=reference_num)
 
 			bcm_unequal.forward(data_unequal)
 			res_unequal = bcm_unequal.close()

@@ -90,7 +90,7 @@ class FakeDataLoader(LanguageProcessing):
 				 pad=True, gen_prob_check='no_check', \
 				 gen_len='random', ref_len='random', \
 				 ref_vocab='all_vocab', gen_vocab='all_vocab', gen_prob_vocab='all_vocab', \
-				 resp_len='>=2', batch=5, max_len=10):
+				 resp_len='>=2', batch=5, max_len=10, reference_num=1):
 		data = { \
 			reference_key: [], \
 			reference_len_key: [], \
@@ -100,18 +100,26 @@ class FakeDataLoader(LanguageProcessing):
 		}
 
 		for i in range(batch):
-			if resp_len == '<2':
-				ref_nowlen = 1
-			elif ref_len == "random":
-				ref_nowlen = random.randrange(2, 5)
-			elif ref_len == "non-empty":
-				ref_nowlen = 8
-			elif ref_len == 'empty':
-				ref_nowlen = 2
-			data[reference_key].append(self.get_sen(max_len, ref_nowlen, pad=pad, \
-													all_vocab=ref_vocab=='all_vocab'))
-			data[reference_len_key].append(ref_nowlen)
-
+			data[reference_key].append([])
+			data[reference_len_key].append([])
+			for _ in range(reference_num):
+				if resp_len == '<2':
+					ref_nowlen = 1
+				elif ref_len == "random":
+					ref_nowlen = random.randrange(2, 5)
+				elif ref_len == "non-empty":
+					ref_nowlen = 8
+				elif ref_len == 'empty':
+					ref_nowlen = 2
+				
+				sen = self.get_sen(max_len, ref_nowlen, pad=pad, all_vocab=ref_vocab=='all_vocab')
+				if reference_num == 1:
+					data[reference_key][-1] = sen
+					data[reference_len_key][-1] = ref_nowlen
+				else:
+					data[reference_key][-1].append(sen)
+					data[reference_len_key][-1].append(ref_nowlen)
+	
 			data[post_key].append(self.get_sen(max_len, ref_nowlen, pad=pad))
 
 			if gen_len == "random":
