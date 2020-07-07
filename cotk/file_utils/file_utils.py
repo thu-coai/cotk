@@ -106,7 +106,7 @@ def _parse_file_id(file_id):
 	name = name[::-1]
 	return name, source, processor
 
-def _get_resource(file_id, cache_dir=None, config_dir=None):
+def _get_resource(file_id, cache_dir=None, config_dir=None, download=True):
 	'''Get the resource with the given name.
 	If not cached, download it using the URL stored in config file.
 	If cached, check the hashtag.
@@ -131,14 +131,17 @@ def _get_resource(file_id, cache_dir=None, config_dir=None):
 	url = config['link'][src_name]
 	cache_path = os.path.join(cache_dir, _url_to_filename(res_name))
 	meta_path = os.path.join(cache_dir, _url_to_filename(res_name) + '.json')
-
-	LOGGER.info('downloading resources')
-	LOGGER.info('name: %s', res_name)
-	LOGGER.info('source: %s', src_name)
-	LOGGER.info('url: %s', url)
-	LOGGER.info('processor: %s', res_type)
+	if download:
+		LOGGER.info('downloading resources')
+		LOGGER.info('name: %s', res_name)
+		LOGGER.info('source: %s', src_name)
+		LOGGER.info('url: %s', url)
+		LOGGER.info('processor: %s', res_type)
 
 	if not os.path.exists(meta_path):
+		if not download:
+			#print("The resource does not exist, set download as True to download automatically")
+			return None
 		with tempfile.NamedTemporaryFile()  as temp_file:
 			_http_get(url, temp_file)
 			temp_file.flush() # flush to avoid truncation
@@ -164,14 +167,15 @@ def _get_resource(file_id, cache_dir=None, config_dir=None):
 			meta = json.load(meta_file)
 			cache_path = meta['local_path']
 			content_hash = meta['hashtag']
-
-		LOGGER.info('{} exists in cache'.format(res_name))
+		if download:
+			LOGGER.info('{} exists in cache'.format(res_name))
 		if content_hash != config['hashtag']:
 			raise ValueError("bad hashtag of {}, name conflication or mismatched content. \
 							meta path {}. cache path {}".format(res_name, meta_path, cache_path))
 
 	cache_path = resource_processor.postprocess(cache_path)
-	LOGGER.info('resource cached at %s', cache_path)
+	if download:
+		LOGGER.info('resource cached at %s', cache_path)
 	return cache_path
 
 def _download_data(url, cache_dir=None, config_dir=None):
@@ -233,14 +237,14 @@ def _load_local_data(local_path, cache_dir=None, config_dir=None):
 	return resource_processor.postprocess(local_path)
 
 
-def get_resource_file_path(file_id, cache_dir=None, config_dir=None):
+def get_resource_file_path(file_id, cache_dir=None, config_dir=None, download=True):
 	'''Get file_path of resource of all types
 	'''
 	cache_dir = cache_dir or CACHE_DIR
 	config_dir = config_dir or CONFIG_DIR
 	if file_id.startswith('resources://'):
 		res_id = file_id[12:]
-		return _get_resource(res_id, cache_dir, config_dir)
+		return _get_resource(res_id, cache_dir, config_dir, download)
 	elif file_id.startswith('http://') or file_id.startswith('https://'):
 		url = file_id
 		return _download_data(url, cache_dir, config_dir)
@@ -322,3 +326,13 @@ def load_file_from_url(url, force=False, cache_dir=None):
 
 	LOGGER.info('model cached at %s', cache_path)
 	return cache_path
+
+def get_resource_list():
+	'''get the name list of all resources'''
+	files = os.listdir(CONFIG_DIR)
+	files.sort()
+	resources = []
+	for file in files:
+		resources.append(file[:file.rfind('.')])
+
+	return resources

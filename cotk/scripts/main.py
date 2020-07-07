@@ -3,7 +3,7 @@ A command library help user upload their results to dashboard.
 '''
 #!/usr/bin/env python
 import sys
-from . import import_local_resources, config
+from . import import_local_resources, config, resources
 
 def show_command():
 	'''show help'''
@@ -12,7 +12,7 @@ def show_command():
 command list:
    import       Import local files to cotk cache.
    config       Set variables at the config file (at ~/.cotk_config).
-
+   resources    Show the path of stored or cached resources.
 You can type `cotk <command>` for details of each command.
 """)
 
@@ -27,6 +27,8 @@ def dispatch(sub_entrance, args):
 		import_local_resources.entry(args)
 	elif sub_entrance == 'config':
 		config.entry(args)
+	elif sub_entrance == 'resources':
+		resources.entry(args)
 	else:
 		print("Unknown command.\n")
 		show_command()
