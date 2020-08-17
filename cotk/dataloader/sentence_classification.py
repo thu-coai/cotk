@@ -2,7 +2,6 @@
 import warnings
 from collections import OrderedDict
 
-from .field import Sentence, SentenceGPT2, SentenceBERT
 from .dataloader import LanguageProcessing
 from .context import FieldContext, VocabContext
 from .vocab import GeneralVocab, PretrainedVocab
@@ -16,15 +15,26 @@ if False: # for type check # pylint: disable=using-constant-test
 class SentenceClassification(LanguageProcessing):
 	r"""Base class for sentence classification datasets. This is an abstract class.
 
-	Arguments:
+	Arguments:{LanguageProcessing.FILE_ID_DOCS}
+		{LanguageProcessing.TOKENIZER_DOCS}
+		{LanguageProcessing.MAX_SENT_LENGTH_DOCS}
+		{LanguageProcessing.CONVERT_TO_LOWER_LETTER_DOCS}
+		{LanguageProcessing.MIN_FREQUENT_VOCAB_TIMES_DOCS}
+		{LanguageProcessing.MIN_RARE_VOCAB_TIMES_DOCS}
+		{FIELD_DETAILS}
+		{PRETRAINED_DOCS}
 
-	Notes:
-		A :class:`Sentence` field must be set as default field. When invoking :meth:`__init__` of :class:`SentenceClassification`,
-		the default field, which may be reset in subclass, is set as self.fields['train']['sent'].
 	"""
 
-	_version = 2
+	PRETRAINED_DOCS = r"""
+			pretrained (str, optional): Using a pretrained field. If specific,
+				pretrained fields will be used instead of :class:`SentenceDefault` as the default field.
+				See :ref:`Pretrained Fields<pretrained_field_ref>` for explainations and possible values."""
 
+	# Notes: A :class:`Sentence` field must be set as default field. When invoking :meth:`__init__` of :class:`SentenceClassification`,
+	# the default field, which may be reset in subclass, is set as self.fields['train']['sent'].
+
+	_version = 2
 
 	def __init__(self, file_id: str,
 				 tokenizer=None,

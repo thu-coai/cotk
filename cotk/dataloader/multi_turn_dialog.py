@@ -20,14 +20,31 @@ if False:  # for type check # pylint: disable=using-constant-test
 class MultiTurnDialog(LanguageProcessing):
 	r"""Base class for multi-turn dialog datasets. This is an abstract class.
 
-	Arguments:
-
-	Attributes:{ATTRIBUTES}
-
-	Notes:
-		A :class:`Session` field must be set as default field. When invoking :meth:`__init__` of :class:`MultiTurnDialog`,
-		the default field, which may be reset in subclass, is set as self.fields['train']['session'].
+	Arguments:{LanguageProcessing.FILE_ID_DOCS}
+		{LanguageProcessing.TOKENIZER_DOCS}
+		{LanguageProcessing.MAX_SENT_LENGTH_DOCS}
+		{MAX_TURN_LENGTH_DOCS}
+		{LanguageProcessing.CONVERT_TO_LOWER_LETTER_DOCS}
+		{LanguageProcessing.MIN_FREQUENT_VOCAB_TIMES_DOCS}
+		{LanguageProcessing.MIN_RARE_VOCAB_TIMES_DOCS}
+		{FIELD_DETAILS}
+		{PRETRAINED_DOCS}
 	"""
+	MAX_TURN_LENGTH_DOCS = Session.MAX_TURN_LENGTH_DOCS
+
+	FIELD_DETAILS = r"""
+			fields (List, OrderedDict, Dict, optional):
+				Overriding the default ``fields`` passed to :class:`LanguageProcessing`, see :ref:`how to create a dataloader<customized_tasks_ref>`
+				for the use of ``fields``. If not specific, the default ``fields`` are set as ``OrderedDict([['session', 'SessionDefault']])``
+				when no pretrained fields are used.	If pretrained fields are used , it will be set as ``OrderedDict([['session', `<Pretrained Field>`]])``."""
+
+	PRETRAINED_DOCS = r"""
+			pretrained (str, optional): Using a pretrained field. If specific,
+				pretrained fields will be used instead of :class:`SessionDefault` as the default field.
+				See :ref:`Pretrained Fields<pretrained_field_ref>` for explainations and possible values."""
+
+	# Notes: A :class:`Session` field must be set as default field. When invoking :meth:`__init__` of :class:`MultiTurnDialog`,
+	# the default field, which may be reset in subclass, is set as self.fields['train']['session'].
 
 	_version = 2
 
@@ -240,11 +257,27 @@ class SwitchboardCorpus(MultiTurnDialog):
 
 	In this dataset, all sessions start with a ``<d>`` representing empty context.
 
-	Arguments:
-		file_id (str): a string indicating the source of SwitchboardCorpus dataset.
-			Default: ``resources://SwitchboardCorpus``. A preset dataset is downloaded and cached.
+	Arguments:{LanguageProcessing.FILE_ID_DOCS} Default: ``"resources://SwitchboardCorpus"``.
+		{LanguageProcessing.MIN_FREQUENT_VOCAB_TIMES_DOCS} Default: ``5``
+		{LanguageProcessing.MAX_SENT_LENGTH_DOCS} Default: ``50``
+		{MAX_TURN_LENGTH_DOCS}  Default: ``1000``
+		{LanguageProcessing.MIN_RARE_VOCAB_TIMES_DOCS}  Default: ``0``
+		{LanguageProcessing.TOKENIZER_DOCS}  Default: ``"nltk"``
+		{PRETRAINED_DOCS} Default: ``None``
 
 	Refer to :class:`.MultiTurnDialog` for attributes and methods.
+
+
+	Examples:
+		>>> from cotk.dataloader.tokenizer import PretrainedTokenizer
+		>>> from transformers import BertTokenizer
+		>>> # use default params
+		>>> dl1 = SwitchboardCorpus()
+		>>> # use a pretrained dataloader
+		>>> bert_tokenizer = PretrainedTokenizer.from_pretrained("bert-base-uncased")
+		>>> tokenizer = PretrainedTokenizer(bert_tokenizer)  # use PretrainedTokenizer to wrap bert_tokenizer
+		>>> dl2 = SwitchboardCorpus(tokenizer=tokenizer, pretrained='bert')  # specify parameter `tokenizer` and `pretrained`
+
 
 	References:
 		[1] https://catalog.ldc.upenn.edu/LDC97S62
