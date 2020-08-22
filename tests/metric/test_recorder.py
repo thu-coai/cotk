@@ -38,11 +38,11 @@ class TestSingleTurnDialogRecorder():
 			'gen': [], \
 			}
 		for sen in data[post_key]:
-			ans['post'].append(dataloader.convert_ids_to_tokens(sen[1:]))
+			ans['post'].append(dataloader.convert_ids_to_sentence(sen[1:]))
 		for sen in data[reference_key]:
-			ans['resp'].append(dataloader.convert_ids_to_tokens(sen[1:]))
+			ans['resp'].append(dataloader.convert_ids_to_sentence(sen[1:]))
 		for sen in data[gen_key]:
-			ans['gen'].append(dataloader.convert_ids_to_tokens(sen))
+			ans['gen'].append(dataloader.convert_ids_to_sentence(sen))
 
 		return ans
 
@@ -183,7 +183,7 @@ class TestLanguageGenerationRecorder():
 	def get_sen_from_index(self, dataloader, data, gen_key='gen'):
 		ans = []
 		for sen in data[gen_key]:
-			ans.append(dataloader.convert_ids_to_tokens(sen))
+			ans.append(dataloader.convert_ids_to_sentence(sen))
 		return ans
 
 	@pytest.mark.parametrize('data_loader, argument, shape, type, gen_len', language_generation_test_parameter)
