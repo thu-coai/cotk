@@ -235,7 +235,7 @@ class SSTResourceProcessor(BaseResourceProcessor):
 	def _parseline(self, line):
 		label = int(line[1])
 		line = line.split(')')
-		sent = [x.split(' ')[-1].lower() for x in line if x != '']
+		sent = [x.split(' ')[-1] for x in line if x != '']
 		return label, ' '.join(sent)
 
 	def _postprocess(self, src, dest, key):
